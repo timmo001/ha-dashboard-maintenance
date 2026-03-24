@@ -1,5 +1,7 @@
 import {
+  limitItems,
   MAINTENANCE_COLUMN_SPAN,
+  makeShowMoreCard,
   SUMMARY_COLUMN_SPAN,
   type LovelaceSectionConfig,
   makeEmptyStateCard,
@@ -14,17 +16,27 @@ import {
 
 export const makeUpdateSummarySection = (
   updates: MaintenanceUpdateEntity[],
+  options?: {
+    limit?: number;
+    showMorePath?: string;
+  },
 ): LovelaceSectionConfig => {
   const summaryUpdates = updates.filter(
     (update) =>
       update.inProgress || update.skippedCurrentVersion || updateCanInstall(update),
   );
+  const limitedUpdates = limitItems(summaryUpdates, options?.limit);
 
   return makeSection(
     "Updates",
     "mdi:package-up",
     summaryUpdates.length > 0
-      ? summaryUpdates.map(makeUpdateCard)
+      ? [
+          ...limitedUpdates.items.map(makeUpdateCard),
+          ...(options?.showMorePath && limitedUpdates.hiddenCount > 0
+            ? [makeShowMoreCard(limitedUpdates.hiddenCount, options.showMorePath)]
+            : []),
+        ]
       : [
           makeEmptyStateCard(
             "No updates available",

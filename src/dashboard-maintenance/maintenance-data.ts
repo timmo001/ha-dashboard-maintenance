@@ -119,7 +119,7 @@ const sortDevices = (
   left.level - right.level ||
   compareText(left.deviceName, right.deviceName);
 
-const fetchEntityRegistry = async (
+export const fetchEntityRegistry = async (
   hass: HomeAssistant,
 ): Promise<Record<string, EntityRegistryEntry>> => {
   if (hass.entities) {
@@ -142,7 +142,7 @@ const fetchEntityRegistry = async (
   return entityRegistryPromise;
 };
 
-const fetchDeviceRegistry = async (
+export const fetchDeviceRegistry = async (
   hass: HomeAssistant,
 ): Promise<Record<string, DeviceRegistryEntry>> => {
   if (hass.devices) {

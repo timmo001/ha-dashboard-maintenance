@@ -1,4 +1,8 @@
 import type { MaintenanceBatteryDevice } from "./maintenance-data";
+import {
+  availabilityIssueIcon,
+  type MaintenanceAvailabilityEntity,
+} from "./availability-data";
 import type { MaintenanceUpdateEntity } from "./update-data";
 import { updateCanInstall } from "./update-data";
 import type {
@@ -19,6 +23,12 @@ export const MAINTENANCE_COLUMN_SPAN = 3;
 export const ATTENTION_BATTERY_NAME: EntityNameItem[] = [
   { type: "area" },
   { type: "device" },
+];
+
+export const ATTENTION_AVAILABILITY_NAME: EntityNameItem[] = [
+  { type: "area" },
+  { type: "device" },
+  { type: "entity" },
 ];
 
 export const VIEW_DEFAULTS: Record<
@@ -42,6 +52,12 @@ export const VIEW_DEFAULTS: Record<
     title: "Updates",
     path: "updates",
     icon: "mdi:package-up",
+  },
+  availability: {
+    columnSpan: MAINTENANCE_COLUMN_SPAN,
+    title: "Availability",
+    path: "availability",
+    icon: "mdi:help-circle-outline",
   },
 };
 
@@ -123,6 +139,50 @@ export const makeUpdateCard = (
     : [],
 });
 
+export const makeShowMoreCard = (
+  hiddenCount: number,
+  navigationPath: string,
+): LovelaceCardConfig => ({
+  ...makeHeadingCard(`Show ${hiddenCount} more`, {
+    headingStyle: "subtitle",
+    icon: "mdi:chevron-right",
+    navigationPath,
+  }),
+  grid_options: {
+    rows: "auto",
+  },
+});
+
+export const limitItems = <T,>(
+  items: T[],
+  limit?: number,
+): { hiddenCount: number; items: T[] } => {
+  if (limit === undefined || items.length <= limit) {
+    return { hiddenCount: 0, items };
+  }
+
+  return {
+    hiddenCount: items.length - limit,
+    items: items.slice(0, limit),
+  };
+};
+
+export const makeAvailabilityCard = (
+  entity: MaintenanceAvailabilityEntity,
+  options?: { name?: string | EntityNameItem[] },
+): LovelaceCardConfig => ({
+  type: "tile",
+  entity: entity.entityId,
+  name: options?.name || entity.displayName,
+  icon: availabilityIssueIcon(entity),
+  tap_action: entity.deviceId
+    ? {
+        action: "navigate",
+        navigation_path: `/config/devices/device/${entity.deviceId}`,
+      }
+    : { action: "more-info" },
+});
+
 export const makeGridSection = (
   cards: LovelaceCardConfig[],
   columnSpan: number,
@@ -151,6 +211,13 @@ export const makeSection = (
   ),
 });
 
+export const makeShowMoreSection = (
+  hiddenCount: number,
+  navigationPath: string,
+  columnSpan: number,
+): LovelaceSectionConfig =>
+  makeGridSection([makeShowMoreCard(hiddenCount, navigationPath)], columnSpan);
+
 export const makeViewConfig = (
   config: MaintenanceViewStrategyConfig,
   view: MaintenanceViewMode,
@@ -163,6 +230,7 @@ export const makeViewConfig = (
     title: config.title || defaults.title,
     path: config.path || defaults.path,
     icon: config.icon || defaults.icon,
+    ...(config.subview ? { subview: true } : {}),
     show_icon_and_title: true,
     max_columns: defaults.columnSpan,
     sections,

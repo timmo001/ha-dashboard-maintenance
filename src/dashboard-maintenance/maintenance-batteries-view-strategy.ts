@@ -5,14 +5,18 @@ import { makeBatterySections } from "./maintenance-battery-sections";
 import {
   MAINTENANCE_COLUMN_SPAN,
   ATTENTION_BATTERY_NAME,
+  limitItems,
   type LovelaceSectionConfig,
   type LovelaceViewConfig,
   makeBatteryCard,
   makeEmptyStateCard,
   makeSection,
+  makeShowMoreSection,
   makeViewConfig,
 } from "./maintenance-view-helpers";
 import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
+
+const VIEW_ITEM_LIMIT = 24;
 
 @customElement("ll-strategy-view-maintenance-batteries")
 export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
@@ -20,10 +24,14 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,
   ): Promise<LovelaceViewConfig> {
-    const batteryDevices = await getMaintenanceBatteryDevices(
+    const allBatteryDevices = await getMaintenanceBatteryDevices(
       hass,
       config.battery_attention_threshold,
     );
+    const limitedBatteryDevices = config.subview
+      ? { hiddenCount: 0, items: allBatteryDevices }
+      : limitItems(allBatteryDevices, VIEW_ITEM_LIMIT);
+    const batteryDevices = limitedBatteryDevices.items;
     const attentionDevices = batteryDevices.filter((device) => device.needsAttention);
     const showAttentionBatteriesInAreas =
       config.show_attention_batteries_in_areas ?? true;
@@ -64,6 +72,15 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
                 ]
               : []),
             ...(await makeBatterySections(hass, areaSectionDevices)),
+            ...(!config.subview && limitedBatteryDevices.hiddenCount > 0
+              ? [
+                  makeShowMoreSection(
+                    limitedBatteryDevices.hiddenCount,
+                    "batteries-all",
+                    MAINTENANCE_COLUMN_SPAN,
+                  ),
+                ]
+              : []),
           ];
 
     return makeViewConfig(config, "batteries", sections);

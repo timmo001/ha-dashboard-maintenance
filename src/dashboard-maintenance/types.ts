@@ -65,13 +65,18 @@ export interface MaintenanceStrategyConfig {
   show_attention_batteries_in_areas?: boolean;
 }
 
-export type MaintenanceViewMode = "summary" | "batteries" | "updates";
+export type MaintenanceViewMode =
+  | "summary"
+  | "batteries"
+  | "updates"
+  | "availability";
 
 export interface MaintenanceViewStrategyConfig extends MaintenanceStrategyConfig {
   icon?: string;
   path?: string;
   title?: string;
   heading_navigation_path?: string;
+  subview?: boolean;
   view?: MaintenanceViewMode;
 }
 

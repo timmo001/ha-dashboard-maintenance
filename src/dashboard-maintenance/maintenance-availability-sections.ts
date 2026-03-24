@@ -1,29 +1,28 @@
 import {
+  type MaintenanceAvailabilityEntity,
+  getMaintenanceAvailabilityEntities,
+  groupAvailabilityEntitiesByArea,
+} from "./availability-data";
+import {
   getAreasFloorHierarchy,
   getMaintenanceAreas,
   getMaintenanceFloors,
-  type MaintenanceBatteryDevice,
 } from "./maintenance-data";
 import {
-  ATTENTION_BATTERY_NAME,
+  ATTENTION_AVAILABILITY_NAME,
   limitItems,
   MAINTENANCE_COLUMN_SPAN,
   makeShowMoreCard,
   SUMMARY_COLUMN_SPAN,
   type LovelaceCardConfig,
   type LovelaceSectionConfig,
-  makeBatteryCard,
+  makeAvailabilityCard,
   makeEmptyStateCard,
   makeGridSection,
   makeHeadingCard,
   makeSection,
 } from "./maintenance-view-helpers";
-import type {
-  AreaRegistryEntry,
-  FloorRegistryEntry,
-  HomeAssistant,
-  MaintenanceViewStrategyConfig,
-} from "./types";
+import type { AreaRegistryEntry, FloorRegistryEntry, HomeAssistant } from "./types";
 
 const floorHeadingIcon = (floor: FloorRegistryEntry): string =>
   floor.icon || "mdi:floor-plan";
@@ -32,7 +31,7 @@ const makeAreaCards = (
   areaIds: string[],
   areas: Record<string, AreaRegistryEntry>,
   hass: HomeAssistant,
-  devices: MaintenanceBatteryDevice[],
+  entities: MaintenanceAvailabilityEntity[],
 ): LovelaceCardConfig[] => {
   const cards: LovelaceCardConfig[] = [];
 
@@ -42,8 +41,8 @@ const makeAreaCards = (
       continue;
     }
 
-    const areaDevices = devices.filter((device) => device.areaId === areaId);
-    if (areaDevices.length === 0) {
+    const areaEntities = groupAvailabilityEntitiesByArea(areaId, entities);
+    if (areaEntities.length === 0) {
       continue;
     }
 
@@ -55,68 +54,71 @@ const makeAreaCards = (
           : undefined,
       }),
     );
-    cards.push(...areaDevices.map((device) => makeBatteryCard(device)));
+    cards.push(...areaEntities.map((entity) => makeAvailabilityCard(entity)));
   }
 
   return cards;
 };
 
-export const makeBatteryAttentionSection = (
-  batteryDevices: MaintenanceBatteryDevice[],
-  config: MaintenanceViewStrategyConfig,
+export const makeAvailabilitySummarySection = (
+  entities: MaintenanceAvailabilityEntity[],
   options?: {
     limit?: number;
     showMorePath?: string;
   },
 ): LovelaceSectionConfig => {
-  const attentionDevices = batteryDevices.filter((device) => device.needsAttention);
-  const limitedAttentionDevices = limitItems(attentionDevices, options?.limit);
-  const cards =
-    batteryDevices.length === 0
-      ? [
-          makeEmptyStateCard(
-            "No battery devices found",
-            "Home Assistant could not find any devices with numeric battery sensors.",
-          ),
-        ]
-      : attentionDevices.length === 0
-        ? [
-            makeEmptyStateCard(
-              "No batteries need attention",
-              "All battery devices are at or above the attention threshold.",
-            ),
-          ]
-        : [
-            ...limitedAttentionDevices.items.map((device) =>
-              makeBatteryCard(device, {
-                name: device.deviceId ? ATTENTION_BATTERY_NAME : device.deviceName,
-              }),
-            ),
-            ...(options?.showMorePath && limitedAttentionDevices.hiddenCount > 0
-              ? [
-                  makeShowMoreCard(
-                    limitedAttentionDevices.hiddenCount,
-                    options.showMorePath,
-                  ),
-                ]
-              : []),
-          ];
+  const limitedEntities = limitItems(entities, options?.limit);
 
   return makeSection(
-    "Batteries needing attention",
-    "mdi:alert",
-    cards,
+    "Unavailable or unknown",
+    "mdi:help-circle-outline",
+    entities.length > 0
+      ? [
+          ...limitedEntities.items.map((entity) =>
+            makeAvailabilityCard(entity, {
+              name: entity.deviceId ? ATTENTION_AVAILABILITY_NAME : entity.displayName,
+            }),
+          ),
+          ...(options?.showMorePath && limitedEntities.hiddenCount > 0
+            ? [
+                makeShowMoreCard(
+                  limitedEntities.hiddenCount,
+                  options.showMorePath,
+                ),
+              ]
+            : []),
+        ]
+      : [
+          makeEmptyStateCard(
+            "No availability issues",
+            "Home Assistant could not find any unavailable or unknown entities.",
+            "mdi:lan-connect",
+          ),
+        ],
     SUMMARY_COLUMN_SPAN,
-    config.heading_navigation_path,
+    "availability",
   );
 };
 
-export const makeBatterySections = async (
+export const makeAvailabilitySections = async (
   hass: HomeAssistant,
-  batteryDevices: MaintenanceBatteryDevice[],
+  entities: MaintenanceAvailabilityEntity[],
 ): Promise<LovelaceSectionConfig[]> => {
-  if (batteryDevices.length === 0) {
-    return [];
+  if (entities.length === 0) {
+    return [
+      makeSection(
+        "Availability",
+        "mdi:lan-connect",
+        [
+          makeEmptyStateCard(
+            "No availability issues",
+            "Home Assistant could not find any unavailable or unknown entities.",
+            "mdi:lan-connect",
+          ),
+        ],
+        MAINTENANCE_COLUMN_SPAN,
+      ),
+    ];
   }
 
   const [areas, floors] = await Promise.all([
@@ -127,9 +129,9 @@ export const makeBatterySections = async (
   if (Object.keys(areas).length === 0) {
     return [
       makeSection(
-        "Battery devices",
-        "mdi:battery-heart-variant",
-        batteryDevices.map((device) => makeBatteryCard(device)),
+        "Availability issues",
+        "mdi:help-circle-outline",
+        entities.map((entity) => makeAvailabilityCard(entity)),
         MAINTENANCE_COLUMN_SPAN,
       ),
     ];
@@ -146,12 +148,7 @@ export const makeBatterySections = async (
       continue;
     }
 
-    const areaCards = makeAreaCards(
-      floorStructure.areas,
-      areas,
-      hass,
-      batteryDevices,
-    );
+    const areaCards = makeAreaCards(floorStructure.areas, areas, hass, entities);
     if (areaCards.length === 0) {
       continue;
     }
@@ -170,7 +167,7 @@ export const makeBatterySections = async (
   }
 
   if (hierarchy.areas.length > 0) {
-    const areaCards = makeAreaCards(hierarchy.areas, areas, hass, batteryDevices);
+    const areaCards = makeAreaCards(hierarchy.areas, areas, hass, entities);
 
     if (areaCards.length > 0) {
       sections.push(
@@ -185,15 +182,15 @@ export const makeBatterySections = async (
     }
   }
 
-  const unassignedCards = batteryDevices
-    .filter((device) => !device.areaId)
-    .map((device) => makeBatteryCard(device));
+  const unassignedCards = entities
+    .filter((entity) => !entity.areaId)
+    .map((entity) => makeAvailabilityCard(entity));
 
   if (unassignedCards.length > 0) {
     sections.push(
       makeGridSection(
         [
-          makeHeadingCard(sections.length > 0 ? "Other devices" : "Devices"),
+          makeHeadingCard(sections.length > 0 ? "Other entities" : "Entities"),
           ...unassignedCards,
         ],
         MAINTENANCE_COLUMN_SPAN,
@@ -207,10 +204,14 @@ export const makeBatterySections = async (
 
   return [
     makeSection(
-      "Battery devices",
-      "mdi:battery-heart-variant",
-      batteryDevices.map((device) => makeBatteryCard(device)),
+      "Availability issues",
+      "mdi:help-circle-outline",
+      entities.map((entity) => makeAvailabilityCard(entity)),
       MAINTENANCE_COLUMN_SPAN,
     ),
   ];
 };
+
+export const getAvailabilitySummaryData = async (
+  hass: HomeAssistant,
+): Promise<MaintenanceAvailabilityEntity[]> => getMaintenanceAvailabilityEntities(hass);
