@@ -20,10 +20,10 @@ interface ModuleDescriptor {
 
 const MODULES: ReadonlyArray<ModuleDescriptor> = [
   { id: "batteries", icon: "mdi:battery-heart-variant", headerKey: "editor.batteries_header", enabledKey: "batteries_enabled" },
-  { id: "updates", icon: "mdi:package-up", headerKey: "editor.updates_header", enabledKey: "updates_enabled" },
   { id: "repairs", icon: "mdi:wrench", headerKey: "editor.repairs_header", enabledKey: "repairs_enabled" },
-  { id: "stale", icon: "mdi:clock-alert-outline", headerKey: "editor.stale_header", enabledKey: "stale_enabled" },
+  { id: "updates", icon: "mdi:package-up", headerKey: "editor.updates_header", enabledKey: "updates_enabled" },
   { id: "availability", icon: "mdi:help-circle-outline", headerKey: "editor.availability_header", enabledKey: "availability_enabled" },
+  { id: "stale", icon: "mdi:clock-alert-outline", headerKey: "editor.stale_header", enabledKey: "stale_enabled" },
 ];
 
 @customElement("dashboard-maintenance-strategy-editor")

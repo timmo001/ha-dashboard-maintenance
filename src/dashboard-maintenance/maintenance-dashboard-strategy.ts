@@ -3,15 +3,15 @@ import { customElement } from "lit/decorators.js";
 import "./editor";
 import { setupLocalize } from "./localize";
 import { getMaintenanceAreas } from "./maintenance-data";
-import { buildAvailabilityAreaShowMorePath } from "./maintenance-availability-sections";
-import { MaintenanceAvailabilityViewStrategy } from "./maintenance-availability-view-strategy";
 import { buildBatteryAreaShowMorePath } from "./maintenance-battery-sections";
 import { MaintenanceBatteriesViewStrategy } from "./maintenance-batteries-view-strategy";
 import { MaintenanceRepairsViewStrategy } from "./maintenance-repairs-view-strategy";
+import { MaintenanceUpdatesViewStrategy } from "./maintenance-updates-view-strategy";
+import { buildAvailabilityAreaShowMorePath } from "./maintenance-availability-sections";
+import { MaintenanceAvailabilityViewStrategy } from "./maintenance-availability-view-strategy";
 import { buildStaleAreaShowMorePath } from "./maintenance-stale-sections";
 import { MaintenanceStaleViewStrategy } from "./maintenance-stale-view-strategy";
 import { MaintenanceSummaryViewStrategy } from "./maintenance-summary-view-strategy";
-import { MaintenanceUpdatesViewStrategy } from "./maintenance-updates-view-strategy";
 import type {
   AreaRegistryEntry,
   HomeAssistant,
@@ -93,33 +93,6 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
       );
     }
 
-    /* --- Updates --- */
-    if (isModuleEnabled(config, "updates")) {
-      views.push(
-        await MaintenanceUpdatesViewStrategy.generate(
-          {
-            ...config,
-            view: "updates",
-            title: localize("view.updates"),
-            path: "updates",
-            icon: "mdi:package-up",
-          },
-          hass,
-        ),
-        await MaintenanceUpdatesViewStrategy.generate(
-          {
-            ...config,
-            view: "updates",
-            title: localize("view.all_updates"),
-            path: "updates-all",
-            icon: "mdi:package-up",
-            subview: true,
-          },
-          hass,
-        ),
-      );
-    }
-
     /* --- Repairs --- */
     if (isModuleEnabled(config, "repairs")) {
       views.push(
@@ -147,46 +120,30 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
       );
     }
 
-    /* --- Stale --- */
-    if (isModuleEnabled(config, "stale")) {
+    /* --- Updates --- */
+    if (isModuleEnabled(config, "updates")) {
       views.push(
-        await MaintenanceStaleViewStrategy.generate(
+        await MaintenanceUpdatesViewStrategy.generate(
           {
             ...config,
-            view: "stale",
-            title: localize("view.stale"),
-            path: "stale",
-            icon: "mdi:clock-alert-outline",
+            view: "updates",
+            title: localize("view.updates"),
+            path: "updates",
+            icon: "mdi:package-up",
           },
           hass,
         ),
-        await MaintenanceStaleViewStrategy.generate(
+        await MaintenanceUpdatesViewStrategy.generate(
           {
             ...config,
-            view: "stale",
-            title: localize("view.all_stale"),
-            path: "stale-all",
-            icon: "mdi:clock-alert-outline",
+            view: "updates",
+            title: localize("view.all_updates"),
+            path: "updates-all",
+            icon: "mdi:package-up",
             subview: true,
           },
           hass,
         ),
-        ...(await Promise.all(
-          areas.map((area) =>
-            MaintenanceStaleViewStrategy.generate(
-              {
-                ...config,
-                area_id: area.area_id,
-                view: "stale",
-                title: localize("view.stale_area", { area: area.name }),
-                path: buildStaleAreaShowMorePath(area.area_id),
-                icon: "mdi:clock-alert-outline",
-                subview: true,
-              },
-              hass,
-            ),
-          ),
-        )),
       );
     }
 
@@ -224,6 +181,49 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
                 title: localize("view.availability_area", { area: area.name }),
                 path: buildAvailabilityAreaShowMorePath(area.area_id),
                 icon: "mdi:help-circle-outline",
+                subview: true,
+              },
+              hass,
+            ),
+          ),
+        )),
+      );
+    }
+
+    /* --- Stale --- */
+    if (isModuleEnabled(config, "stale")) {
+      views.push(
+        await MaintenanceStaleViewStrategy.generate(
+          {
+            ...config,
+            view: "stale",
+            title: localize("view.stale"),
+            path: "stale",
+            icon: "mdi:clock-alert-outline",
+          },
+          hass,
+        ),
+        await MaintenanceStaleViewStrategy.generate(
+          {
+            ...config,
+            view: "stale",
+            title: localize("view.all_stale"),
+            path: "stale-all",
+            icon: "mdi:clock-alert-outline",
+            subview: true,
+          },
+          hass,
+        ),
+        ...(await Promise.all(
+          areas.map((area) =>
+            MaintenanceStaleViewStrategy.generate(
+              {
+                ...config,
+                area_id: area.area_id,
+                view: "stale",
+                title: localize("view.stale_area", { area: area.name }),
+                path: buildStaleAreaShowMorePath(area.area_id),
+                icon: "mdi:clock-alert-outline",
                 subview: true,
               },
               hass,

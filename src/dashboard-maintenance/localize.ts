@@ -3,10 +3,10 @@ const en = {
   "view.summary": "Summary",
   "view.batteries": "Batteries",
   "view.all_batteries": "All batteries",
-  "view.updates": "Updates",
-  "view.all_updates": "All updates",
   "view.repairs": "Repairs",
   "view.all_repairs": "All repairs",
+  "view.updates": "Updates",
+  "view.all_updates": "All updates",
   "view.availability": "Availability",
   "view.all_availability": "All availability",
   "view.availability_area": "Availability - {area}",
@@ -24,6 +24,18 @@ const en = {
   "battery.empty_no_attention_content":
     "All battery devices are at or above the attention threshold.",
 
+  // Repair sections
+  "repair.heading": "Repairs",
+  "repair.heading_critical": "Critical",
+  "repair.heading_error": "Errors",
+  "repair.heading_warning": "Warnings",
+  "repair.empty_no_issues_title": "No repair issues",
+  "repair.empty_no_issues_content":
+    "Home Assistant has no active repair issues.",
+  "repair.severity_critical": "Critical",
+  "repair.severity_error": "Error",
+  "repair.severity_warning": "Warning",
+
   // Update sections
   "update.heading": "Updates",
   "update.heading_in_progress": "Updates in progress",
@@ -38,18 +50,6 @@ const en = {
     "Home Assistant could not find any update entities.",
   "update.empty_up_to_date_content":
     "All update entities are currently up to date.",
-
-  // Repair sections
-  "repair.heading": "Repairs",
-  "repair.heading_critical": "Critical",
-  "repair.heading_error": "Errors",
-  "repair.heading_warning": "Warnings",
-  "repair.empty_no_issues_title": "No repair issues",
-  "repair.empty_no_issues_content":
-    "Home Assistant has no active repair issues.",
-  "repair.severity_critical": "Critical",
-  "repair.severity_error": "Error",
-  "repair.severity_warning": "Warning",
 
   // Availability sections
   "availability.heading": "Availability",
@@ -85,13 +85,13 @@ const en = {
     "Devices below this battery level are marked as needing attention.",
   "editor.show_attention_in_areas_helper":
     "When enabled, low-battery devices appear in the top attention section and again in their area sections.",
-  "editor.updates_header": "Updates",
   "editor.repairs_header": "Repairs",
+  "editor.updates_header": "Updates",
+  "editor.availability_header": "Availability",
   "editor.stale_header": "Stale entities",
   "editor.stale_threshold_label": "Stale threshold (hours)",
   "editor.stale_threshold_helper":
     "Entities that have not reported within this many hours are shown as stale.",
-  "editor.availability_header": "Availability",
   "editor.module_enabled_label": "Enabled",
   "editor.module_enabled_helper":
     "When disabled, this module is hidden from the dashboard and its data is not loaded.",

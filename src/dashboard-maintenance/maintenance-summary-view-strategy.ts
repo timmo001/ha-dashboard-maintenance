@@ -1,17 +1,17 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { setupLocalize } from "./localize";
-import { getMaintenanceAvailabilityEntities } from "./availability-data";
-import { makeAvailabilitySummarySection } from "./maintenance-availability-sections";
 import { getMaintenanceBatteryDevices } from "./maintenance-data";
 import { makeBatteryAttentionSection } from "./maintenance-battery-sections";
 import { makeRepairsSummarySection } from "./maintenance-repairs-sections";
-import { makeStaleSummarySection } from "./maintenance-stale-sections";
-import { makeUpdateSummarySection } from "./maintenance-update-sections";
-import { makeViewConfig, type LovelaceViewConfig } from "./maintenance-view-helpers";
 import { getMaintenanceRepairIssues } from "./repairs-data";
-import { getMaintenanceStaleEntities } from "./stale-data";
+import { makeUpdateSummarySection } from "./maintenance-update-sections";
 import { getMaintenanceUpdates } from "./update-data";
+import { makeAvailabilitySummarySection } from "./maintenance-availability-sections";
+import { getMaintenanceAvailabilityEntities } from "./availability-data";
+import { makeStaleSummarySection } from "./maintenance-stale-sections";
+import { getMaintenanceStaleEntities } from "./stale-data";
+import { makeViewConfig, type LovelaceViewConfig } from "./maintenance-view-helpers";
 import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
 import { isModuleEnabled } from "./types";
 
@@ -40,6 +40,16 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
       );
     }
 
+    if (isModuleEnabled(config, "repairs")) {
+      const repairIssues = await getMaintenanceRepairIssues(hass);
+      sections.push(
+        makeRepairsSummarySection(localize, repairIssues, {
+          limit: SUMMARY_ITEM_LIMIT,
+          showMorePath: "repairs",
+        }),
+      );
+    }
+
     if (isModuleEnabled(config, "updates")) {
       const updates = await getMaintenanceUpdates(hass);
       sections.push(
@@ -50,12 +60,13 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
       );
     }
 
-    if (isModuleEnabled(config, "repairs")) {
-      const repairIssues = await getMaintenanceRepairIssues(hass);
+    if (isModuleEnabled(config, "availability")) {
+      const availabilityEntities =
+        await getMaintenanceAvailabilityEntities(hass);
       sections.push(
-        makeRepairsSummarySection(localize, repairIssues, {
+        makeAvailabilitySummarySection(localize, availabilityEntities, {
           limit: SUMMARY_ITEM_LIMIT,
-          showMorePath: "repairs",
+          showMorePath: "availability",
         }),
       );
     }
@@ -69,17 +80,6 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
         makeStaleSummarySection(localize, staleEntities, {
           limit: SUMMARY_ITEM_LIMIT,
           showMorePath: "stale",
-        }),
-      );
-    }
-
-    if (isModuleEnabled(config, "availability")) {
-      const availabilityEntities =
-        await getMaintenanceAvailabilityEntities(hass);
-      sections.push(
-        makeAvailabilitySummarySection(localize, availabilityEntities, {
-          limit: SUMMARY_ITEM_LIMIT,
-          showMorePath: "availability",
         }),
       );
     }

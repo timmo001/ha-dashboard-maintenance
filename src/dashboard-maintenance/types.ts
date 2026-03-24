@@ -63,30 +63,30 @@ export interface HomeAssistant {
 
 export type MaintenanceModuleId =
   | "batteries"
-  | "updates"
   | "repairs"
-  | "stale"
-  | "availability";
+  | "updates"
+  | "availability"
+  | "stale";
 
 export interface MaintenanceStrategyConfig {
   type: "custom:maintenance";
   batteries_enabled?: boolean;
   battery_attention_threshold?: number;
   show_attention_batteries_in_areas?: boolean;
-  updates_enabled?: boolean;
   repairs_enabled?: boolean;
+  updates_enabled?: boolean;
+  availability_enabled?: boolean;
   stale_enabled?: boolean;
   stale_threshold_hours?: number;
-  availability_enabled?: boolean;
 }
 
 export type MaintenanceViewMode =
   | "summary"
   | "batteries"
-  | "updates"
   | "repairs"
-  | "stale"
-  | "availability";
+  | "updates"
+  | "availability"
+  | "stale";
 
 export interface MaintenanceViewStrategyConfig extends MaintenanceStrategyConfig {
   area_id?: string;
