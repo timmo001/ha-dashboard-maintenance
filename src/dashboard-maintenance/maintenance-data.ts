@@ -1,6 +1,8 @@
 import type {
+  AreaRegistryEntry,
   DeviceRegistryEntry,
   EntityRegistryEntry,
+  FloorRegistryEntry,
   HassEntity,
   HomeAssistant,
 } from "./types";
@@ -9,10 +11,19 @@ export const DEFAULT_BATTERY_ATTENTION_THRESHOLD = 30;
 
 export interface MaintenanceBatteryDevice {
   deviceId?: string;
+  areaId?: string | null;
   deviceName: string;
   entityId: string;
   level: number;
   needsAttention: boolean;
+}
+
+export interface MaintenanceAreaHierarchy {
+  floors: Array<{
+    id: string;
+    areas: string[];
+  }>;
+  areas: string[];
 }
 
 let entityRegistryPromise:
@@ -21,6 +32,14 @@ let entityRegistryPromise:
 
 let deviceRegistryPromise:
   | Promise<Record<string, DeviceRegistryEntry>>
+  | undefined;
+
+let areaRegistryPromise:
+  | Promise<Record<string, AreaRegistryEntry>>
+  | undefined;
+
+let floorRegistryPromise:
+  | Promise<Record<string, FloorRegistryEntry>>
   | undefined;
 
 const clamp = (value: number, min: number, max: number): number =>
@@ -115,6 +134,81 @@ const fetchDeviceRegistry = async (
   return deviceRegistryPromise;
 };
 
+export const getAreasFloorHierarchy = (
+  areas: Record<string, AreaRegistryEntry>,
+  floors: Record<string, FloorRegistryEntry>,
+): MaintenanceAreaHierarchy => {
+  const floorAreas: Record<string, string[]> = {};
+  const unassignedAreas: string[] = [];
+
+  for (const area of Object.values(areas)) {
+    if (area.floor_id) {
+      if (!(area.floor_id in floorAreas)) {
+        floorAreas[area.floor_id] = [];
+      }
+
+      floorAreas[area.floor_id].push(area.area_id);
+      continue;
+    }
+
+    unassignedAreas.push(area.area_id);
+  }
+
+  return {
+    floors: Object.values(floors).map((floor) => ({
+      id: floor.floor_id,
+      areas: floorAreas[floor.floor_id] || [],
+    })),
+    areas: unassignedAreas,
+  };
+};
+
+export const getMaintenanceAreas = async (
+  hass: HomeAssistant,
+): Promise<Record<string, AreaRegistryEntry>> => {
+  if (hass.areas) {
+    return hass.areas;
+  }
+
+  if (!hass.connection) {
+    return {};
+  }
+
+  areaRegistryPromise ??= hass.connection
+    .sendMessagePromise<AreaRegistryEntry[]>({
+      type: "config/area_registry/list",
+    })
+    .then((entries) =>
+      Object.fromEntries(entries.map((entry) => [entry.area_id, entry])),
+    )
+    .catch(() => ({}));
+
+  return areaRegistryPromise;
+};
+
+export const getMaintenanceFloors = async (
+  hass: HomeAssistant,
+): Promise<Record<string, FloorRegistryEntry>> => {
+  if (hass.floors) {
+    return hass.floors;
+  }
+
+  if (!hass.connection) {
+    return {};
+  }
+
+  floorRegistryPromise ??= hass.connection
+    .sendMessagePromise<FloorRegistryEntry[]>({
+      type: "config/floor_registry/list",
+    })
+    .then((entries) =>
+      Object.fromEntries(entries.map((entry) => [entry.floor_id, entry])),
+    )
+    .catch(() => ({}));
+
+  return floorRegistryPromise;
+};
+
 const fallbackDevicesFromStates = (
   hass: HomeAssistant,
   attentionThreshold: number,
@@ -125,6 +219,7 @@ const fallbackDevicesFromStates = (
       const level = Number(stateObj.state);
 
       return {
+        areaId: undefined,
         entityId: stateObj.entity_id,
         deviceName: stateObj.attributes.friendly_name || stateObj.entity_id,
         level,
@@ -184,6 +279,9 @@ export const getMaintenanceBatteryDevices = async (
 
       return {
         deviceId,
+        areaId:
+          devices[deviceId]?.area_id ||
+          entities[selectedBatteryState.entity_id]?.area_id,
         deviceName: computeDeviceName(devices[deviceId], selectedBatteryState),
         entityId: selectedBatteryState.entity_id,
         level,
