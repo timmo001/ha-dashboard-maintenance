@@ -1,18 +1,26 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
-import { getMaintenanceBatteryDevices } from "./maintenance-data";
+import {
+  getMaintenanceBatteryDevices,
+  type MaintenanceBatteryDevice,
+} from "./maintenance-data";
 import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
 
 type LovelaceCardConfig = Record<string, unknown>;
 type LovelaceViewConfig = Record<string, unknown>;
+type LovelaceSectionConfig = Record<string, unknown>;
 
 const defaultTitle = "Maintenance";
+const FULL_WIDTH_COLUMN_SPAN = 3;
 
-const makeHeadingCard = (): LovelaceCardConfig => ({
+const makeHeadingCard = (
+  heading: string,
+  icon: string,
+): LovelaceCardConfig => ({
   type: "heading",
-  heading: "Devices",
+  heading,
   heading_style: "title",
-  icon: "mdi:battery-heart-variant",
+  icon,
 });
 
 const makeEmptyStateCard = (): LovelaceCardConfig => ({
@@ -23,6 +31,36 @@ const makeEmptyStateCard = (): LovelaceCardConfig => ({
   title: "No battery devices found",
   content:
     "Home Assistant could not find any devices with numeric battery sensors.",
+});
+
+const makeBatteryCard = (device: MaintenanceBatteryDevice): LovelaceCardConfig => ({
+  type: "tile",
+  entity: device.entityId,
+  name: device.deviceName,
+  color: device.needsAttention ? "warning" : undefined,
+  tap_action: device.deviceId
+    ? {
+        action: "navigate",
+        navigation_path: `/config/devices/device/${device.deviceId}`,
+      }
+    : { action: "more-info" },
+  features: [
+    {
+      type: "bar-gauge",
+      min: 0,
+      max: 100,
+    },
+  ],
+});
+
+const makeSection = (
+  heading: string,
+  icon: string,
+  cards: LovelaceCardConfig[],
+): LovelaceSectionConfig => ({
+  type: "grid",
+  column_span: FULL_WIDTH_COLUMN_SPAN,
+  cards: [makeHeadingCard(heading, icon), ...cards],
 });
 
 @customElement("ll-strategy-view-maintenance")
@@ -36,30 +74,43 @@ export class MaintenanceViewStrategy extends ReactiveElement {
       config.battery_attention_threshold,
     );
 
-    const cards: LovelaceCardConfig[] =
+    const attentionDevices = batteryDevices.filter(
+      (device) => device.needsAttention,
+    );
+    const healthyDevices = batteryDevices.filter(
+      (device) => !device.needsAttention,
+    );
+
+    const sections: LovelaceSectionConfig[] =
       batteryDevices.length === 0
-        ? [makeEmptyStateCard()]
+        ? [
+            makeSection("Battery devices", "mdi:battery-heart-variant", [
+              makeEmptyStateCard(),
+            ]),
+          ]
         : [
-            makeHeadingCard(),
-            ...batteryDevices.map((device) => ({
-              type: "tile",
-              entity: device.entityId,
-              name: device.deviceName,
-              color: device.needsAttention ? "warning" : undefined,
-              tap_action: device.deviceId
-                ? {
-                    action: "navigate",
-                    navigation_path: `/config/devices/device/${device.deviceId}`,
-                  }
-                : { action: "more-info" },
-              features: [
-                {
-                  type: "bar-gauge",
-                  min: 0,
-                  max: 100,
-                },
-              ],
-            })),
+            ...(attentionDevices.length > 0
+              ? [
+                  makeSection(
+                    "Needs attention",
+                    "mdi:alert",
+                    attentionDevices.map(makeBatteryCard),
+                  ),
+                ]
+              : []),
+            ...(healthyDevices.length > 0
+              ? [
+                  makeSection(
+                    attentionDevices.length > 0
+                      ? "Other batteries"
+                      : "Battery devices",
+                    attentionDevices.length > 0
+                      ? "mdi:battery-check"
+                      : "mdi:battery-heart-variant",
+                    healthyDevices.map(makeBatteryCard),
+                  ),
+                ]
+              : []),
           ];
 
     return {
@@ -67,13 +118,8 @@ export class MaintenanceViewStrategy extends ReactiveElement {
       title: config.title || defaultTitle,
       path: config.path || "maintenance",
       icon: config.icon || "mdi:battery-heart-variant",
-      max_columns: 1,
-      sections: [
-        {
-          type: "grid",
-          cards,
-        },
-      ],
+      max_columns: FULL_WIDTH_COLUMN_SPAN,
+      sections,
     };
   }
 }
