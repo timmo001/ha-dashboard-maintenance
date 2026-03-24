@@ -30,13 +30,13 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
         limit: SUMMARY_ITEM_LIMIT,
         showMorePath: "batteries",
       }),
-      makeAvailabilitySummarySection(localize, availabilityEntities, {
-        limit: SUMMARY_ITEM_LIMIT,
-        showMorePath: "availability",
-      }),
       makeUpdateSummarySection(localize, updates, {
         limit: SUMMARY_ITEM_LIMIT,
         showMorePath: "updates",
+      }),
+      makeAvailabilitySummarySection(localize, availabilityEntities, {
+        limit: SUMMARY_ITEM_LIMIT,
+        showMorePath: "availability",
       }),
     ]);
   }
