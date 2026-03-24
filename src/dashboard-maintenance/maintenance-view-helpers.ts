@@ -5,6 +5,10 @@ import {
 } from "./availability-data";
 import type { LocalizeFunc, TranslationKey } from "./localize";
 import { severityIcon, type MaintenanceRepairIssue } from "./repairs-data";
+import {
+  staleEntityIcon,
+  type MaintenanceStaleEntity,
+} from "./stale-data";
 import type { MaintenanceUpdateEntity } from "./update-data";
 import { updateCanInstall } from "./update-data";
 import type {
@@ -28,6 +32,12 @@ export const ATTENTION_BATTERY_NAME: EntityNameItem[] = [
 ];
 
 export const ATTENTION_AVAILABILITY_NAME: EntityNameItem[] = [
+  { type: "area" },
+  { type: "device" },
+  { type: "entity" },
+];
+
+export const ATTENTION_STALE_NAME: EntityNameItem[] = [
   { type: "area" },
   { type: "device" },
   { type: "entity" },
@@ -60,6 +70,12 @@ export const VIEW_DEFAULTS: Record<
     titleKey: "view.repairs",
     path: "repairs",
     icon: "mdi:wrench",
+  },
+  stale: {
+    columnSpan: MAINTENANCE_COLUMN_SPAN,
+    titleKey: "view.stale",
+    path: "stale",
+    icon: "mdi:clock-alert-outline",
   },
   availability: {
     columnSpan: MAINTENANCE_COLUMN_SPAN,
@@ -204,6 +220,22 @@ export const makeAvailabilityCard = (
   entity: entity.entityId,
   name: options?.name || entity.displayName,
   icon: availabilityIssueIcon(entity),
+  tap_action: entity.deviceId
+    ? {
+        action: "navigate",
+        navigation_path: `/config/devices/device/${entity.deviceId}`,
+      }
+    : { action: "more-info" },
+});
+
+export const makeStaleCard = (
+  entity: MaintenanceStaleEntity,
+  options?: { name?: string | EntityNameItem[] },
+): LovelaceCardConfig => ({
+  type: "tile",
+  entity: entity.entityId,
+  name: options?.name || entity.displayName,
+  icon: staleEntityIcon(),
   tap_action: entity.deviceId
     ? {
         action: "navigate",

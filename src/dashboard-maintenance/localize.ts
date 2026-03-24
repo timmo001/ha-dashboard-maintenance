@@ -10,6 +10,9 @@ const en = {
   "view.availability": "Availability",
   "view.all_availability": "All availability",
   "view.availability_area": "Availability - {area}",
+  "view.stale": "Stale",
+  "view.all_stale": "All stale",
+  "view.stale_area": "Stale - {area}",
 
   // Battery sections
   "battery.heading_devices": "Battery devices",
@@ -56,6 +59,14 @@ const en = {
   "availability.empty_no_issues_content":
     "Home Assistant could not find any unavailable or unknown entities.",
 
+  // Stale sections
+  "stale.heading": "Stale entities",
+  "stale.heading_not_reporting": "Not recently reported",
+  "stale.heading_issues": "Stale entities",
+  "stale.empty_no_issues_title": "No stale entities",
+  "stale.empty_no_issues_content":
+    "All entities have reported within the configured threshold.",
+
   // Common / shared
   "common.areas": "Areas",
   "common.other_areas": "Other areas",
@@ -74,6 +85,10 @@ const en = {
     "Devices below this battery level are marked as needing attention.",
   "editor.show_attention_in_areas_helper":
     "When enabled, low-battery devices appear in the top attention section and again in their area sections.",
+  "editor.stale_header": "Stale entities",
+  "editor.stale_threshold_label": "Stale threshold (hours)",
+  "editor.stale_threshold_helper":
+    "Entities that have not reported within this many hours are shown as stale.",
 };
 
 export type TranslationKey = keyof typeof en;

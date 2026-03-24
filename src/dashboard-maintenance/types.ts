@@ -1,6 +1,7 @@
 export interface HassEntity {
   entity_id: string;
   last_changed?: string;
+  last_updated?: string;
   state: string;
   attributes: {
     device_class?: string;
@@ -64,6 +65,7 @@ export interface MaintenanceStrategyConfig {
   type: "custom:maintenance";
   battery_attention_threshold?: number;
   show_attention_batteries_in_areas?: boolean;
+  stale_threshold_hours?: number;
 }
 
 export type MaintenanceViewMode =
@@ -71,6 +73,7 @@ export type MaintenanceViewMode =
   | "batteries"
   | "updates"
   | "repairs"
+  | "stale"
   | "availability";
 
 export interface MaintenanceViewStrategyConfig extends MaintenanceStrategyConfig {

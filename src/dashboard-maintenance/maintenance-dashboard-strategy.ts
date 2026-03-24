@@ -8,6 +8,8 @@ import { MaintenanceAvailabilityViewStrategy } from "./maintenance-availability-
 import { buildBatteryAreaShowMorePath } from "./maintenance-battery-sections";
 import { MaintenanceBatteriesViewStrategy } from "./maintenance-batteries-view-strategy";
 import { MaintenanceRepairsViewStrategy } from "./maintenance-repairs-view-strategy";
+import { buildStaleAreaShowMorePath } from "./maintenance-stale-sections";
+import { MaintenanceStaleViewStrategy } from "./maintenance-stale-view-strategy";
 import { MaintenanceSummaryViewStrategy } from "./maintenance-summary-view-strategy";
 import { MaintenanceUpdatesViewStrategy } from "./maintenance-updates-view-strategy";
 import type {
@@ -122,6 +124,43 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           },
           hass,
         ),
+        await MaintenanceStaleViewStrategy.generate(
+          {
+            ...config,
+            view: "stale",
+            title: localize("view.stale"),
+            path: "stale",
+            icon: "mdi:clock-alert-outline",
+          },
+          hass,
+        ),
+        await MaintenanceStaleViewStrategy.generate(
+          {
+            ...config,
+            view: "stale",
+            title: localize("view.all_stale"),
+            path: "stale-all",
+            icon: "mdi:clock-alert-outline",
+            subview: true,
+          },
+          hass,
+        ),
+        ...(await Promise.all(
+          areas.map((area) =>
+            MaintenanceStaleViewStrategy.generate(
+              {
+                ...config,
+                area_id: area.area_id,
+                view: "stale",
+                title: localize("view.stale_area", { area: area.name }),
+                path: buildStaleAreaShowMorePath(area.area_id),
+                icon: "mdi:clock-alert-outline",
+                subview: true,
+              },
+              hass,
+            ),
+          ),
+        )),
         await MaintenanceAvailabilityViewStrategy.generate(
           {
             ...config,

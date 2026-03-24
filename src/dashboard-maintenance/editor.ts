@@ -6,6 +6,7 @@ import type {
   MaintenanceDashboardStrategyConfig,
 } from "./types";
 import { DEFAULT_BATTERY_ATTENTION_THRESHOLD } from "./maintenance-data";
+import { DEFAULT_STALE_THRESHOLD_HOURS } from "./stale-data";
 
 const DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS = true;
 
@@ -32,6 +33,9 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     const showAttentionBatteriesInAreas =
       this._config.show_attention_batteries_in_areas ??
       DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS;
+    const staleThreshold =
+      this._config.stale_threshold_hours ??
+      DEFAULT_STALE_THRESHOLD_HOURS;
 
     const settingsContent = !customElements.get("ha-form")
       ? html`
@@ -101,6 +105,54 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
           </div>
         `;
 
+    const staleSettingsContent = !customElements.get("ha-form")
+      ? html`
+          <div class="fallback-editor content">
+            <label for="stale-threshold">
+              ${localize("editor.stale_threshold_label")}
+            </label>
+            <input
+              id="stale-threshold"
+              type="range"
+              min="1"
+              max="168"
+              step="1"
+              .value=${String(staleThreshold)}
+              @input=${this._nativeStaleValueChanged}
+            />
+            <div class="helper">
+              ${localize("editor.stale_threshold_helper")}
+            </div>
+            <div class="value">${staleThreshold}h</div>
+          </div>
+        `
+      : html`
+          <div class="content">
+            <ha-form
+              .hass=${this.hass}
+              .data=${{
+                stale_threshold_hours: staleThreshold,
+              }}
+              .schema=${[
+                {
+                  name: "stale_threshold_hours",
+                  selector: {
+                    number: {
+                      min: 1,
+                      max: 168,
+                      mode: "slider",
+                      unit_of_measurement: "h",
+                    },
+                  },
+                },
+              ]}
+              .computeLabel=${this._computeLabel}
+              .computeHelper=${this._computeHelper}
+              @value-changed=${this._staleValueChanged}
+            ></ha-form>
+          </div>
+        `;
+
     return html`
       <ha-expansion-panel expanded outlined>
         <ha-icon
@@ -109,6 +161,14 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
         ></ha-icon>
         <h3 slot="header">${localize("editor.batteries_header")}</h3>
         ${settingsContent}
+      </ha-expansion-panel>
+      <ha-expansion-panel outlined>
+        <ha-icon
+          slot="leading-icon"
+          icon="mdi:clock-alert-outline"
+        ></ha-icon>
+        <h3 slot="header">${localize("editor.stale_header")}</h3>
+        ${staleSettingsContent}
       </ha-expansion-panel>
     `;
   }
@@ -120,6 +180,8 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
       ? localize("editor.battery_threshold_label")
       : schema.name === "show_attention_batteries_in_areas"
         ? localize("editor.show_attention_in_areas_label")
+      : schema.name === "stale_threshold_hours"
+        ? localize("editor.stale_threshold_label")
       : "";
   };
 
@@ -130,6 +192,8 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
       ? localize("editor.battery_threshold_helper")
       : schema.name === "show_attention_batteries_in_areas"
         ? localize("editor.show_attention_in_areas_helper")
+      : schema.name === "stale_threshold_hours"
+        ? localize("editor.stale_threshold_helper")
       : "";
   };
 
@@ -143,30 +207,68 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     const threshold = ev.detail.value.battery_attention_threshold as number;
     const showAttentionBatteriesInAreas =
       ev.detail.value.show_attention_batteries_in_areas as boolean;
-    this._emitConfigChanged(threshold, showAttentionBatteriesInAreas);
+    this._emitConfigUpdate({
+      battery_attention_threshold:
+        threshold === DEFAULT_BATTERY_ATTENTION_THRESHOLD
+          ? undefined
+          : threshold,
+      show_attention_batteries_in_areas:
+        showAttentionBatteriesInAreas === DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS
+          ? undefined
+          : showAttentionBatteriesInAreas,
+    });
+  }
+
+  private _staleValueChanged(ev: CustomEvent): void {
+    if (!this._config) {
+      return;
+    }
+
+    ev.stopPropagation();
+
+    const staleThreshold = ev.detail.value.stale_threshold_hours as number;
+    this._emitConfigUpdate({
+      stale_threshold_hours:
+        staleThreshold === DEFAULT_STALE_THRESHOLD_HOURS
+          ? undefined
+          : staleThreshold,
+    });
   }
 
   private _nativeValueChanged(ev: Event): void {
     const threshold = Number((ev.currentTarget as HTMLInputElement).value);
-    const showAttentionBatteriesInAreas =
-      this._config?.show_attention_batteries_in_areas ??
-      DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS;
-    this._emitConfigChanged(threshold, showAttentionBatteriesInAreas);
+    this._emitConfigUpdate({
+      battery_attention_threshold:
+        threshold === DEFAULT_BATTERY_ATTENTION_THRESHOLD
+          ? undefined
+          : threshold,
+    });
   }
 
   private _nativeBooleanChanged(ev: Event): void {
     const showAttentionBatteriesInAreas = (
       ev.currentTarget as HTMLInputElement
     ).checked;
-    const threshold =
-      this._config?.battery_attention_threshold ??
-      DEFAULT_BATTERY_ATTENTION_THRESHOLD;
-    this._emitConfigChanged(threshold, showAttentionBatteriesInAreas);
+    this._emitConfigUpdate({
+      show_attention_batteries_in_areas:
+        showAttentionBatteriesInAreas === DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS
+          ? undefined
+          : showAttentionBatteriesInAreas,
+    });
   }
 
-  private _emitConfigChanged(
-    threshold: number,
-    showAttentionBatteriesInAreas: boolean,
+  private _nativeStaleValueChanged(ev: Event): void {
+    const staleThreshold = Number((ev.currentTarget as HTMLInputElement).value);
+    this._emitConfigUpdate({
+      stale_threshold_hours:
+        staleThreshold === DEFAULT_STALE_THRESHOLD_HOURS
+          ? undefined
+          : staleThreshold,
+    });
+  }
+
+  private _emitConfigUpdate(
+    updates: Partial<MaintenanceDashboardStrategyConfig>,
   ): void {
     if (!this._config) {
       return;
@@ -174,15 +276,7 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
 
     const config: MaintenanceDashboardStrategyConfig = {
       ...this._config,
-      battery_attention_threshold:
-        threshold === DEFAULT_BATTERY_ATTENTION_THRESHOLD
-          ? undefined
-          : threshold,
-      show_attention_batteries_in_areas:
-        showAttentionBatteriesInAreas ===
-        DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS
-          ? undefined
-          : showAttentionBatteriesInAreas,
+      ...updates,
     };
 
     this.dispatchEvent(
@@ -196,6 +290,11 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
 
   static styles = [
     css`
+      :host {
+        display: grid;
+        gap: 8px;
+      }
+
       .fallback-editor {
         display: grid;
         gap: 8px;
