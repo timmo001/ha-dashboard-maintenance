@@ -12,14 +12,18 @@ The generated dashboard focuses on battery-powered devices with numeric battery 
 
 ## Install with HACS
 
-1. Install this repository as a `Dashboard` repo in HACS.
-2. Open `Settings -> Dashboards -> three dots menu -> Resources`.
-3. Add this Lovelace resource:
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=timmo001&repository=ha-dashboard-maintenance&category=dashboard)
+
+1. Open the button above to add this repository in HACS.
+2. If you add it manually, open HACS, go to the top-right menu, choose `Custom repositories`, add `https://github.com/timmo001/ha-dashboard-maintenance`, and select `Dashboard`.
+3. Install the repository from HACS.
+4. Open `Settings -> Dashboards -> three dots menu -> Resources`.
+5. Add this Lovelace resource:
 
    - URL: `/hacsfiles/ha-dashboard-maintenance/dashboard-maintenance.js`
    - Type: `module`
 
-4. Reload Lovelace resources or refresh Home Assistant.
+6. Reload Lovelace resources or refresh Home Assistant.
 
 ## Local development setup
 
