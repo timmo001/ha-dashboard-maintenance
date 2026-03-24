@@ -14,6 +14,7 @@ export interface MaintenanceAvailabilityEntity {
   deviceId?: string;
   displayName: string;
   entityId: string;
+  lastChanged?: string;
   state: "unavailable" | "unknown";
 }
 
@@ -73,18 +74,50 @@ const computeEntityDisplayName = (
   return deviceName ? `${deviceName} ${entityName}` : entityName;
 };
 
-const issueSeverity = (state: MaintenanceAvailabilityEntity["state"]): number =>
-  state === "unavailable" ? 0 : 1;
-
 const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
+
+interface CommonControlResult {
+  entities: string[];
+}
+
+const getCommonControlUsagePrediction = async (
+  hass: HomeAssistant,
+): Promise<string[]> => {
+  if (!hass.connection) {
+    return [];
+  }
+
+  try {
+    const result = await hass.connection.sendMessagePromise<CommonControlResult>({
+      type: "usage_prediction/common_control",
+    });
+
+    return result.entities;
+  } catch {
+    return [];
+  }
+};
+
+const parseTimestamp = (value?: string): number => {
+  if (!value) {
+    return 0;
+  }
+
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+};
 
 export const getMaintenanceAvailabilityEntities = async (
   hass: HomeAssistant,
 ): Promise<MaintenanceAvailabilityEntity[]> => {
-  const [entities, devices] = await Promise.all([
+  const [entities, devices, mostUsedEntities] = await Promise.all([
     fetchEntityRegistry(hass),
     fetchDeviceRegistry(hass),
+    getCommonControlUsagePrediction(hass),
   ]);
+  const mostUsedEntityOrder = new Map(
+    mostUsedEntities.map((entityId, index) => [entityId, index]),
+  );
 
   return Object.values(hass.states)
     .filter(isRelevantAvailabilityIssue)
@@ -103,13 +136,18 @@ export const getMaintenanceAvailabilityEntities = async (
         deviceId,
         displayName: computeEntityDisplayName(entry, device, stateObj),
         entityId: stateObj.entity_id,
+        lastChanged: stateObj.last_changed,
         state: stateObj.state,
       } satisfies MaintenanceAvailabilityEntity;
     })
     .filter(isDefined)
     .sort(
       (left, right) =>
-        issueSeverity(left.state) - issueSeverity(right.state) ||
+        Number(mostUsedEntityOrder.has(left.entityId) === false) -
+          Number(mostUsedEntityOrder.has(right.entityId) === false) ||
+        (mostUsedEntityOrder.get(left.entityId) ?? Number.MAX_SAFE_INTEGER) -
+          (mostUsedEntityOrder.get(right.entityId) ?? Number.MAX_SAFE_INTEGER) ||
+        parseTimestamp(right.lastChanged) - parseTimestamp(left.lastChanged) ||
         compareText(left.displayName, right.displayName),
     );
 };

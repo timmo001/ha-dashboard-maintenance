@@ -1,5 +1,6 @@
 export interface HassEntity {
   entity_id: string;
+  last_changed?: string;
   state: string;
   attributes: {
     device_class?: string;
