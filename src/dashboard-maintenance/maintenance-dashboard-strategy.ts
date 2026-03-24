@@ -38,6 +38,16 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           },
           hass,
         ),
+        await MaintenanceViewStrategy.generate(
+          {
+            ...config,
+            view: "updates",
+            title: "Updates",
+            path: "updates",
+            icon: "mdi:package-up",
+          },
+          hass,
+        ),
       ],
     };
   }

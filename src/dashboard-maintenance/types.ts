@@ -65,7 +65,7 @@ export interface MaintenanceStrategyConfig {
   show_attention_batteries_in_areas?: boolean;
 }
 
-export type MaintenanceViewMode = "summary" | "batteries";
+export type MaintenanceViewMode = "summary" | "batteries" | "updates";
 
 export interface MaintenanceViewStrategyConfig extends MaintenanceStrategyConfig {
   icon?: string;

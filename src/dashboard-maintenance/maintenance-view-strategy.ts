@@ -7,6 +7,12 @@ import {
   getMaintenanceFloors,
   type MaintenanceBatteryDevice,
 } from "./maintenance-data";
+import {
+  getMaintenanceUpdates,
+  updateCanInstall,
+  updateCanNotInstall,
+  type MaintenanceUpdateEntity,
+} from "./update-data";
 import type {
   AreaRegistryEntry,
   FloorRegistryEntry,
@@ -38,6 +44,12 @@ const VIEW_DEFAULTS: Record<
     path: "batteries",
     icon: "mdi:battery-heart-variant",
   },
+  updates: {
+    columnSpan: BATTERIES_COLUMN_SPAN,
+    title: "Updates",
+    path: "updates",
+    icon: "mdi:package-up",
+  },
 };
 
 const makeHeadingCard = (
@@ -65,9 +77,10 @@ const makeHeadingCard = (
 const makeEmptyStateCard = (
   title: string,
   content: string,
+  icon = "mdi:battery-outline",
 ): LovelaceCardConfig => ({
   type: "empty-state",
-  icon: "mdi:battery-outline",
+  icon,
   icon_color: "primary",
   content_only: true,
   title,
@@ -93,6 +106,141 @@ const makeBatteryCard = (device: MaintenanceBatteryDevice): LovelaceCardConfig =
     },
   ],
 });
+
+const makeUpdateCard = (update: MaintenanceUpdateEntity): LovelaceCardConfig => ({
+  type: "tile",
+  entity: update.entityId,
+  name: update.title,
+  grid_options: {
+    columns: 12,
+  },
+  tap_action: { action: "more-info" },
+  features: updateCanInstall(update)
+    ? [
+        {
+          type: "update-actions",
+          backup: "ask",
+        },
+      ]
+    : [],
+});
+
+const makeUpdateSummarySection = (
+  updates: MaintenanceUpdateEntity[],
+): LovelaceSectionConfig => {
+  const summaryUpdates = updates.filter(
+    (update) =>
+      update.inProgress || update.skippedCurrentVersion || updateCanInstall(update),
+  );
+
+  return makeSection(
+    "Updates",
+    "mdi:package-up",
+    summaryUpdates.length > 0
+      ? summaryUpdates.map(makeUpdateCard)
+      : [
+          makeEmptyStateCard(
+            "No updates available",
+            "Home Assistant could not find any update entities that need attention.",
+            "mdi:package-up",
+          ),
+        ],
+    SUMMARY_COLUMN_SPAN,
+    "updates",
+  );
+};
+
+const makeUpdatesSections = (
+  updates: MaintenanceUpdateEntity[],
+): LovelaceSectionConfig[] => {
+  if (updates.length === 0) {
+    return [
+      makeSection(
+        "Updates",
+        "mdi:package-up",
+        [
+          makeEmptyStateCard(
+            "No update entities found",
+            "Home Assistant could not find any update entities.",
+            "mdi:package-up",
+          ),
+        ],
+        BATTERIES_COLUMN_SPAN,
+      ),
+    ];
+  }
+
+  const inProgressUpdates = updates.filter((update) => update.inProgress);
+  const skippedUpdates = updates.filter(
+    (update) => !update.inProgress && update.skippedCurrentVersion,
+  );
+  const availableUpdates = updates.filter(
+    (update) =>
+      !update.inProgress &&
+      !update.skippedCurrentVersion &&
+      updateCanInstall(update),
+  );
+  const otherUpdates = updates.filter(
+    (update) =>
+      !update.inProgress &&
+      !update.skippedCurrentVersion &&
+      updateCanNotInstall(update),
+  );
+
+  const sections = [
+    inProgressUpdates.length > 0
+      ? makeSection(
+          "Updates in progress",
+          "mdi:progress-download",
+          inProgressUpdates.map(makeUpdateCard),
+          BATTERIES_COLUMN_SPAN,
+        )
+      : undefined,
+    availableUpdates.length > 0
+      ? makeSection(
+          "Available updates",
+          "mdi:package-up",
+          availableUpdates.map(makeUpdateCard),
+          BATTERIES_COLUMN_SPAN,
+        )
+      : undefined,
+    skippedUpdates.length > 0
+      ? makeSection(
+          "Skipped updates",
+          "mdi:skip-next-circle-outline",
+          skippedUpdates.map(makeUpdateCard),
+          BATTERIES_COLUMN_SPAN,
+        )
+      : undefined,
+    otherUpdates.length > 0
+      ? makeSection(
+          "Other update entities",
+          "mdi:package-variant-closed",
+          otherUpdates.map(makeUpdateCard),
+          BATTERIES_COLUMN_SPAN,
+        )
+      : undefined,
+  ].filter(Boolean) as LovelaceSectionConfig[];
+
+  if (sections.length > 0) {
+    return sections;
+  }
+
+  return [
+    makeSection(
+      "Updates",
+      "mdi:package-up",
+      [
+        makeEmptyStateCard(
+          "No updates available",
+          "All update entities are currently up to date.",
+          "mdi:package-up",
+        ),
+      ],
+      BATTERIES_COLUMN_SPAN,
+    ),
+  ];
+};
 
 const makeGridSection = (
   cards: LovelaceCardConfig[],
@@ -152,7 +300,7 @@ const makeAreaCards = (
           : undefined,
       }),
     );
-    cards.push(...areaDevices.map(makeBatteryCard));
+    cards.push(...areaDevices.map((device) => makeBatteryCard(device)));
   }
 
   return cards;
@@ -176,7 +324,7 @@ const makeBatterySections = async (
       makeSection(
         "Battery devices",
         "mdi:battery-heart-variant",
-        batteryDevices.map(makeBatteryCard),
+        batteryDevices.map((device) => makeBatteryCard(device)),
         BATTERIES_COLUMN_SPAN,
       ),
     ];
@@ -242,7 +390,7 @@ const makeBatterySections = async (
 
   const unassignedCards = batteryDevices
     .filter((device) => !device.areaId)
-    .map(makeBatteryCard);
+    .map((device) => makeBatteryCard(device));
 
   if (unassignedCards.length > 0) {
     sections.push(
@@ -261,7 +409,7 @@ const makeBatterySections = async (
       makeSection(
         "Battery devices",
         "mdi:battery-heart-variant",
-        batteryDevices.map(makeBatteryCard),
+        batteryDevices.map((device) => makeBatteryCard(device)),
         BATTERIES_COLUMN_SPAN,
       ),
     ];
@@ -282,46 +430,59 @@ export class MaintenanceViewStrategy extends ReactiveElement {
     const viewTitle = config.title || viewDefaults.title;
     const viewPath = config.path || viewDefaults.path;
     const viewIcon = config.icon || viewDefaults.icon;
-    const batteryDevices = await getMaintenanceBatteryDevices(
-      hass,
-      config.battery_attention_threshold,
-    );
+    let contentSections: LovelaceSectionConfig[];
 
-    const attentionDevices = batteryDevices.filter(
-      (device) => device.needsAttention,
-    );
-    const showAttentionBatteriesInAreas =
-      config.show_attention_batteries_in_areas ?? true;
-    const areaSectionDevices = showAttentionBatteriesInAreas
-      ? batteryDevices
-      : batteryDevices.filter((device) => !device.needsAttention);
+    if (view === "summary") {
+      const [batteryDevices, updates] = await Promise.all([
+        getMaintenanceBatteryDevices(hass, config.battery_attention_threshold),
+        getMaintenanceUpdates(hass),
+      ]);
+      const attentionDevices = batteryDevices.filter(
+        (device) => device.needsAttention,
+      );
 
-    const contentSections: LovelaceSectionConfig[] =
-      view === "summary"
-        ? [
-            makeSection(
-              "Batteries needing attention",
-              "mdi:alert",
-              batteryDevices.length === 0
-                ? [
-                    makeEmptyStateCard(
-                      "No battery devices found",
-                      "Home Assistant could not find any devices with numeric battery sensors.",
-                    ),
-                  ]
-                : attentionDevices.length === 0
-                  ? [
-                      makeEmptyStateCard(
-                        "No batteries need attention",
-                        "All battery devices are at or above the attention threshold.",
-                      ),
-                    ]
-                  : attentionDevices.map(makeBatteryCard),
-              SUMMARY_COLUMN_SPAN,
-              config.heading_navigation_path,
-            ),
-          ]
-        : batteryDevices.length === 0
+      contentSections = [
+        makeSection(
+          "Batteries needing attention",
+          "mdi:alert",
+          batteryDevices.length === 0
+            ? [
+                makeEmptyStateCard(
+                  "No battery devices found",
+                  "Home Assistant could not find any devices with numeric battery sensors.",
+                ),
+              ]
+            : attentionDevices.length === 0
+              ? [
+                  makeEmptyStateCard(
+                    "No batteries need attention",
+                    "All battery devices are at or above the attention threshold.",
+                  ),
+                ]
+              : attentionDevices.map((device) => makeBatteryCard(device)),
+          SUMMARY_COLUMN_SPAN,
+          config.heading_navigation_path,
+        ),
+        makeUpdateSummarySection(updates),
+      ];
+    } else if (view === "updates") {
+      contentSections = makeUpdatesSections(getMaintenanceUpdates(hass));
+    } else {
+      const batteryDevices = await getMaintenanceBatteryDevices(
+        hass,
+        config.battery_attention_threshold,
+      );
+      const attentionDevices = batteryDevices.filter(
+        (device) => device.needsAttention,
+      );
+      const showAttentionBatteriesInAreas =
+        config.show_attention_batteries_in_areas ?? true;
+      const areaSectionDevices = showAttentionBatteriesInAreas
+        ? batteryDevices
+        : batteryDevices.filter((device) => !device.needsAttention);
+
+      contentSections =
+        batteryDevices.length === 0
           ? [
               makeSection(
                 "Battery devices",
@@ -336,18 +497,19 @@ export class MaintenanceViewStrategy extends ReactiveElement {
               ),
             ]
           : [
-            ...(attentionDevices.length > 0
-              ? [
-                  makeSection(
-                    "Needs attention",
-                    "mdi:alert",
-                    attentionDevices.map(makeBatteryCard),
-                    BATTERIES_COLUMN_SPAN,
-                  ),
-                ]
-              : []),
-            ...(await makeBatterySections(hass, areaSectionDevices)),
-          ];
+              ...(attentionDevices.length > 0
+                ? [
+                    makeSection(
+                      "Needs attention",
+                      "mdi:alert",
+                      attentionDevices.map((device) => makeBatteryCard(device)),
+                      BATTERIES_COLUMN_SPAN,
+                    ),
+                  ]
+                : []),
+              ...(await makeBatterySections(hass, areaSectionDevices)),
+            ];
+    }
 
     return {
       type: "sections",

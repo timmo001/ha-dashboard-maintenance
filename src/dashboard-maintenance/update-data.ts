@@ -1,0 +1,108 @@
+import type { HassEntity, HomeAssistant } from "./types";
+
+const UPDATE_FEATURE_INSTALL = 1;
+
+const HOME_ASSISTANT_CORE_TITLE = "Home Assistant Core";
+const HOME_ASSISTANT_OS_TITLE = "Home Assistant Operating System";
+const HOME_ASSISTANT_SUPERVISOR_TITLE = "Home Assistant Supervisor";
+
+interface UpdateAttributes {
+  friendly_name?: string;
+  in_progress?: boolean;
+  latest_version?: string | null;
+  skipped_version?: string | null;
+  supported_features?: number;
+  title?: string | null;
+}
+
+export interface MaintenanceUpdateEntity {
+  entityId: string;
+  inProgress: boolean;
+  isAvailable: boolean;
+  isUnavailable: boolean;
+  skippedCurrentVersion: boolean;
+  supportsInstall: boolean;
+  title: string;
+}
+
+const computeDomain = (entityId: string): string =>
+  entityId.split(".", 1)[0] || "";
+
+const compareText = (left: string, right: string, language?: string): number =>
+  left.localeCompare(right, language, { sensitivity: "base" });
+
+const asUpdateAttributes = (stateObj: HassEntity): UpdateAttributes =>
+  stateObj.attributes as UpdateAttributes;
+
+const updateAvailable = (stateObj: HassEntity, showSkipped = false): boolean => {
+  const attributes = asUpdateAttributes(stateObj);
+
+  return stateObj.state === "on" || (showSkipped && !!attributes.skipped_version);
+};
+
+const supportsInstall = (stateObj: HassEntity): boolean => {
+  const supportedFeatures = Number(asUpdateAttributes(stateObj).supported_features) || 0;
+
+  return (supportedFeatures & UPDATE_FEATURE_INSTALL) !== 0;
+};
+
+export const updateCanInstall = (
+  update: MaintenanceUpdateEntity,
+): boolean => update.isAvailable && update.supportsInstall && !update.isUnavailable;
+
+export const updateCanNotInstall = (
+  update: MaintenanceUpdateEntity,
+): boolean => update.isAvailable && !update.supportsInstall && !update.isUnavailable;
+
+export const getMaintenanceUpdates = (
+  hass: HomeAssistant,
+): MaintenanceUpdateEntity[] =>
+  Object.values(hass.states)
+    .filter((stateObj) => computeDomain(stateObj.entity_id) === "update")
+    .map((stateObj) => {
+      const attributes = asUpdateAttributes(stateObj);
+      const title =
+        attributes.title || attributes.friendly_name || stateObj.entity_id;
+      const skippedCurrentVersion = !!(
+        attributes.latest_version &&
+        attributes.skipped_version === attributes.latest_version
+      );
+
+      return {
+        entityId: stateObj.entity_id,
+        inProgress: !!attributes.in_progress,
+        isAvailable: updateAvailable(stateObj, true),
+        isUnavailable:
+          stateObj.state === "unavailable" || stateObj.state === "unknown",
+        skippedCurrentVersion,
+        supportsInstall: supportsInstall(stateObj),
+        title,
+      };
+    })
+    .sort((left, right) => {
+      if (left.title === HOME_ASSISTANT_CORE_TITLE) {
+        return -3;
+      }
+
+      if (right.title === HOME_ASSISTANT_CORE_TITLE) {
+        return 3;
+      }
+
+      if (left.title === HOME_ASSISTANT_OS_TITLE) {
+        return -2;
+      }
+
+      if (right.title === HOME_ASSISTANT_OS_TITLE) {
+        return 2;
+      }
+
+      if (left.title === HOME_ASSISTANT_SUPERVISOR_TITLE) {
+        return -1;
+      }
+
+      if (right.title === HOME_ASSISTANT_SUPERVISOR_TITLE) {
+        return 1;
+      }
+
+      return compareText(left.title, right.title, hass.locale?.language);
+    });
