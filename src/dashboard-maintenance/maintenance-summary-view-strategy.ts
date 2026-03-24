@@ -5,8 +5,10 @@ import { getMaintenanceAvailabilityEntities } from "./availability-data";
 import { makeAvailabilitySummarySection } from "./maintenance-availability-sections";
 import { getMaintenanceBatteryDevices } from "./maintenance-data";
 import { makeBatteryAttentionSection } from "./maintenance-battery-sections";
+import { makeRepairsSummarySection } from "./maintenance-repairs-sections";
 import { makeUpdateSummarySection } from "./maintenance-update-sections";
 import { makeViewConfig, type LovelaceViewConfig } from "./maintenance-view-helpers";
+import { getMaintenanceRepairIssues } from "./repairs-data";
 import { getMaintenanceUpdates } from "./update-data";
 import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
 
@@ -19,10 +21,11 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
     hass: HomeAssistant,
   ): Promise<LovelaceViewConfig> {
     const localize = setupLocalize(hass);
-    const [batteryDevices, availabilityEntities, updates] = await Promise.all([
+    const [batteryDevices, availabilityEntities, updates, repairIssues] = await Promise.all([
       getMaintenanceBatteryDevices(hass, config.battery_attention_threshold),
       getMaintenanceAvailabilityEntities(hass),
       getMaintenanceUpdates(hass),
+      getMaintenanceRepairIssues(hass),
     ]);
 
     return makeViewConfig(localize, config, "summary", [
@@ -33,6 +36,10 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
       makeUpdateSummarySection(localize, updates, {
         limit: SUMMARY_ITEM_LIMIT,
         showMorePath: "updates",
+      }),
+      makeRepairsSummarySection(localize, repairIssues, {
+        limit: SUMMARY_ITEM_LIMIT,
+        showMorePath: "repairs",
       }),
       makeAvailabilitySummarySection(localize, availabilityEntities, {
         limit: SUMMARY_ITEM_LIMIT,

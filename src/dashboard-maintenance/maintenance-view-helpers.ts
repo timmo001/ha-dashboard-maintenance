@@ -4,6 +4,7 @@ import {
   type MaintenanceAvailabilityEntity,
 } from "./availability-data";
 import type { LocalizeFunc, TranslationKey } from "./localize";
+import { severityIcon, type MaintenanceRepairIssue } from "./repairs-data";
 import type { MaintenanceUpdateEntity } from "./update-data";
 import { updateCanInstall } from "./update-data";
 import type {
@@ -53,6 +54,12 @@ export const VIEW_DEFAULTS: Record<
     titleKey: "view.updates",
     path: "updates",
     icon: "mdi:package-up",
+  },
+  repairs: {
+    columnSpan: MAINTENANCE_COLUMN_SPAN,
+    titleKey: "view.repairs",
+    path: "repairs",
+    icon: "mdi:wrench",
   },
   availability: {
     columnSpan: MAINTENANCE_COLUMN_SPAN,
@@ -139,6 +146,26 @@ export const makeUpdateCard = (
       ]
     : [],
 });
+
+export const makeRepairCard = (
+  localize: LocalizeFunc,
+  issue: MaintenanceRepairIssue,
+): LovelaceCardConfig => {
+  const severityLabel = localize(
+    `repair.severity_${issue.severity}` as Parameters<LocalizeFunc>[0],
+  );
+  const learnMoreLink = issue.learnMoreUrl
+    ? ` [↗](${issue.learnMoreUrl})`
+    : "";
+
+  return {
+    type: "markdown",
+    content: `**${issue.title}**${learnMoreLink}\n\n${issue.integrationName} · ${severityLabel}`,
+    grid_options: {
+      columns: 12,
+    },
+  };
+};
 
 export const makeShowMoreCard = (
   localize: LocalizeFunc,

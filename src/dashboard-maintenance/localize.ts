@@ -5,6 +5,8 @@ const en = {
   "view.all_batteries": "All batteries",
   "view.updates": "Updates",
   "view.all_updates": "All updates",
+  "view.repairs": "Repairs",
+  "view.all_repairs": "All repairs",
   "view.availability": "Availability",
   "view.all_availability": "All availability",
   "view.availability_area": "Availability - {area}",
@@ -33,6 +35,18 @@ const en = {
     "Home Assistant could not find any update entities.",
   "update.empty_up_to_date_content":
     "All update entities are currently up to date.",
+
+  // Repair sections
+  "repair.heading": "Repairs",
+  "repair.heading_critical": "Critical",
+  "repair.heading_error": "Errors",
+  "repair.heading_warning": "Warnings",
+  "repair.empty_no_issues_title": "No repair issues",
+  "repair.empty_no_issues_content":
+    "Home Assistant has no active repair issues.",
+  "repair.severity_critical": "Critical",
+  "repair.severity_error": "Error",
+  "repair.severity_warning": "Warning",
 
   // Availability sections
   "availability.heading": "Availability",

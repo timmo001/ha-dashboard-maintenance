@@ -7,6 +7,7 @@ import { buildAvailabilityAreaShowMorePath } from "./maintenance-availability-se
 import { MaintenanceAvailabilityViewStrategy } from "./maintenance-availability-view-strategy";
 import { buildBatteryAreaShowMorePath } from "./maintenance-battery-sections";
 import { MaintenanceBatteriesViewStrategy } from "./maintenance-batteries-view-strategy";
+import { MaintenanceRepairsViewStrategy } from "./maintenance-repairs-view-strategy";
 import { MaintenanceSummaryViewStrategy } from "./maintenance-summary-view-strategy";
 import { MaintenanceUpdatesViewStrategy } from "./maintenance-updates-view-strategy";
 import type {
@@ -96,6 +97,27 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
             title: localize("view.all_updates"),
             path: "updates-all",
             icon: "mdi:package-up",
+            subview: true,
+          },
+          hass,
+        ),
+        await MaintenanceRepairsViewStrategy.generate(
+          {
+            ...config,
+            view: "repairs",
+            title: localize("view.repairs"),
+            path: "repairs",
+            icon: "mdi:wrench",
+          },
+          hass,
+        ),
+        await MaintenanceRepairsViewStrategy.generate(
+          {
+            ...config,
+            view: "repairs",
+            title: localize("view.all_repairs"),
+            path: "repairs-all",
+            icon: "mdi:wrench",
             subview: true,
           },
           hass,

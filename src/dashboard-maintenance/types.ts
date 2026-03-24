@@ -70,6 +70,7 @@ export type MaintenanceViewMode =
   | "summary"
   | "batteries"
   | "updates"
+  | "repairs"
   | "availability";
 
 export interface MaintenanceViewStrategyConfig extends MaintenanceStrategyConfig {
