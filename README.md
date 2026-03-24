@@ -98,6 +98,8 @@ pnpm run build
 node --check dist/dashboard-maintenance.js
 ```
 
+Git commits also run `pnpm run lint` through a `pre-commit` hook, which rebuilds the bundle and checks the generated JavaScript syntax.
+
 ## Release layout
 
 - HACS release asset: `dashboard-maintenance.js`
