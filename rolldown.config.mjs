@@ -5,7 +5,7 @@ const dev = process.argv.includes("--watch");
 export default defineConfig({
   input: "src/dashboard-maintenance.ts",
   output: {
-    file: "www/dashboard-maintenance.js",
+    file: "dist/dashboard-maintenance.js",
     format: "es",
     minify: !dev,
     sourcemap: dev ? "inline" : false,

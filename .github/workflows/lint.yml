@@ -16,9 +16,6 @@ concurrency:
   group: lint-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
-env:
-  DEFAULT_PYTHON: "3.13"
-
 jobs:
   lint:
     name: 👕 Lint
@@ -26,15 +23,9 @@ jobs:
     steps:
       - name: ⤵️ Check out code from GitHub
         uses: actions/checkout@v6
-      - name: 🏗 Set up Python ${{ env.DEFAULT_PYTHON }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.DEFAULT_PYTHON }}
       - name: Setup pnpm
         uses: ./.github/actions/setup-pnpm
       - name: 🏗 Build frontend assets
         run: pnpm run build
       - name: 🚀 Check frontend syntax
-        run: node --check www/dashboard-maintenance.js
-      - name: 🚀 Check Python syntax
-        run: python -m compileall __init__.py config_flow.py const.py
+        run: node --check dist/dashboard-maintenance.js

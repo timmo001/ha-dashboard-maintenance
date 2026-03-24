@@ -21,7 +21,11 @@ jobs:
     steps:
       - name: "Checkout the repository"
         uses: actions/checkout@v6
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+      - name: Build dashboard bundle
+        run: pnpm run build
       - name: "Run HACS validation"
         uses: hacs/action@main
         with:
-          category: integration
+          category: plugin

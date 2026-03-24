@@ -2,6 +2,6 @@
   "name": "Dashboard Maintenance",
   "content_in_root": true,
   "render_readme": false,
-  "zip_release": true,
-  "filename": "dashboard_maintenance.zip"
+  "filename": "dashboard-maintenance.js",
+  "hide_default_branch": true
 }

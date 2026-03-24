@@ -4,9 +4,43 @@ set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ROOT_DIR}/.env"
+BUNDLE_NAME="dashboard-maintenance.js"
+PUBLISH_PATH="/config/www/community/ha-dashboard-maintenance"
+
+if [[ -t 2 && -z "${NO_COLOR:-}" ]]; then
+  ANSI_RESET=$'\033[0m'
+  ANSI_BOLD=$'\033[1m'
+  ANSI_RED=$'\033[31m'
+  ANSI_GREEN=$'\033[32m'
+  ANSI_YELLOW=$'\033[33m'
+  ANSI_BLUE=$'\033[34m'
+else
+  ANSI_RESET=""
+  ANSI_BOLD=""
+  ANSI_RED=""
+  ANSI_GREEN=""
+  ANSI_YELLOW=""
+  ANSI_BLUE=""
+fi
+
+print_section() {
+  printf '\n%s%s%s\n' "${ANSI_BOLD}${ANSI_BLUE}" "$1" "${ANSI_RESET}" >&2
+}
+
+print_success() {
+  printf '%s%s%s\n' "${ANSI_GREEN}" "$1" "${ANSI_RESET}" >&2
+}
+
+print_warning() {
+  printf '%s%s%s\n' "${ANSI_YELLOW}" "$1" "${ANSI_RESET}" >&2
+}
+
+print_error() {
+  printf '%s%s%s\n' "${ANSI_RED}" "$1" "${ANSI_RESET}" >&2
+}
 
 if [[ ! -f "${ENV_FILE}" ]]; then
-  printf 'Missing %s. Copy .env.example to .env and update it.\n' "${ENV_FILE}" >&2
+  print_error "Missing ${ENV_FILE}. Copy .env.example to .env and update it."
   exit 1
 fi
 
@@ -16,7 +50,6 @@ source "${ENV_FILE}"
 set +a
 
 : "${PUBLISH_TARGET:?Set PUBLISH_TARGET in .env}"
-: "${PUBLISH_PATH:?Set PUBLISH_PATH in .env}"
 
 SSH_ARGS=()
 RSYNC_RSH="ssh"
@@ -45,7 +78,7 @@ sync_to_target() {
 
   if grep -Fq "Permission denied" "${rsync_error_file}"; then
     ssh "${SSH_ARGS[@]}" "${PUBLISH_TARGET}" "stat -c '%A %U %G %n' '${PUBLISH_PATH}' 2>/dev/null || true" >&2 || true
-    printf 'Rsync could not write to %s as %s.\n' "${PUBLISH_PATH}" "${PUBLISH_TARGET}" >&2
+    print_error "Rsync could not write to ${PUBLISH_PATH} as ${PUBLISH_TARGET}."
   fi
 
   rm -f "${rsync_error_file}"
@@ -53,12 +86,34 @@ sync_to_target() {
 }
 
 print_manual_setup_steps() {
-  printf '\nOpen a new interactive SSH session and run these commands there:\n\n' >&2
+  print_section "Manual remote setup"
+  printf 'Open a new interactive SSH session and run these commands there:\n\n' >&2
   printf '  ssh %s\n' "${PUBLISH_TARGET}" >&2
   printf '  mkdir -p %q\n' "${PUBLISH_PATH}" >&2
   printf '  chown -R %q:%q %q\n' "${REMOTE_TRANSFER_USER}" "${REMOTE_TRANSFER_USER}" "${PUBLISH_PATH}" >&2
   printf '  exit\n\n' >&2
-  printf 'Then rerun `pnpm publish-to-local`.\n' >&2
+  print_warning 'Then rerun `pnpm publish-to-local`.'
+}
+
+print_resource_setup() {
+  local resource_url
+
+  if [[ "${PUBLISH_PATH}" == /config/www/* ]]; then
+    resource_url="/local/${PUBLISH_PATH#/config/www/}/${BUNDLE_NAME}"
+    resource_url="${resource_url//\/\//\/}"
+
+    print_section "Lovelace resource"
+    printf 'Add this resource in Home Assistant:\n\n' >&2
+    printf '  URL:  %s%s%s\n' "${ANSI_BOLD}" "${resource_url}" "${ANSI_RESET}" >&2
+    printf '  Type: %smodule%s\n\n' "${ANSI_BOLD}" "${ANSI_RESET}" >&2
+    printf 'Settings -> Dashboards -> three dots menu -> Resources\n\n' >&2
+    printf 'Then reload Lovelace resources or refresh the browser.\n' >&2
+    return 0
+  fi
+
+  print_section "Lovelace resource"
+  print_warning "Published ${BUNDLE_NAME}, but could not derive a /local URL from ${PUBLISH_PATH}."
+  printf 'Make sure the file is reachable from Home Assistant and add it as a Lovelace %smodule%s resource.\n' "${ANSI_BOLD}" "${ANSI_RESET}" >&2
 }
 
 ensure_target_dir() {
@@ -73,8 +128,8 @@ ensure_target_dir() {
 
   if grep -Fq "Permission denied" "${ssh_error_file}"; then
     cat "${ssh_error_file}" >&2
-    printf 'Remote target path %s is not writable by %s.\n' "${PUBLISH_PATH}" "${PUBLISH_TARGET}" >&2
-    printf 'Home Assistant SSH add-on sessions often run as a non-root user, so /config/custom_components may need to be created and owned appropriately ahead of time.\n' >&2
+    print_error "Remote target path ${PUBLISH_PATH} is not writable by ${PUBLISH_TARGET}."
+    print_warning 'Home Assistant SSH add-on sessions often run as a non-root user, so the fixed target under /config/www may need to be created and owned appropriately ahead of time.'
     print_manual_setup_steps
     rm -f "${ssh_error_file}"
     return 1
@@ -99,16 +154,16 @@ ensure_target_writable() {
 
   cat "${ssh_error_file}" >&2
   ssh "${SSH_ARGS[@]}" "${PUBLISH_TARGET}" "stat -c '%A %U %G %n' '${PUBLISH_PATH}' 2>/dev/null || true" >&2 || true
-  printf 'Remote target path %s exists but is not writable by %s.\n' "${PUBLISH_PATH}" "${PUBLISH_TARGET}" >&2
-  printf 'Adjust ownership or permissions on that directory from the Home Assistant side, then rerun this publish command.\n' >&2
+  print_error "Remote target path ${PUBLISH_PATH} exists but is not writable by ${PUBLISH_TARGET}."
+  print_warning 'Adjust ownership or permissions on that directory from the Home Assistant side, then rerun this publish command.'
   print_manual_setup_steps
   rm -f "${ssh_error_file}"
   return 1
 }
 
+print_section "Building bundle"
 pnpm --dir "${ROOT_DIR}" run build
-node --check "${ROOT_DIR}/www/dashboard-maintenance.js"
-python -m compileall "${ROOT_DIR}/__init__.py" "${ROOT_DIR}/config_flow.py" "${ROOT_DIR}/const.py"
+node --check "${ROOT_DIR}/dist/${BUNDLE_NAME}"
 
 STAGING_ROOT="$(mktemp -d)"
 trap 'rm -rf "${STAGING_ROOT}"' EXIT
@@ -116,17 +171,12 @@ trap 'rm -rf "${STAGING_ROOT}"' EXIT
 OUTPUT_DIR="${STAGING_ROOT}/publish"
 
 mkdir -p "${OUTPUT_DIR}"
-cp "${ROOT_DIR}/__init__.py" "${OUTPUT_DIR}/"
-cp "${ROOT_DIR}/config_flow.py" "${OUTPUT_DIR}/"
-cp "${ROOT_DIR}/const.py" "${OUTPUT_DIR}/"
-cp "${ROOT_DIR}/manifest.json" "${OUTPUT_DIR}/"
-cp "${ROOT_DIR}/hacs.json" "${OUTPUT_DIR}/"
-cp "${ROOT_DIR}/strings.json" "${OUTPUT_DIR}/"
-cp -R "${ROOT_DIR}/translations" "${OUTPUT_DIR}/translations"
-cp -R "${ROOT_DIR}/www" "${OUTPUT_DIR}/www"
+cp "${ROOT_DIR}/dist/${BUNDLE_NAME}" "${OUTPUT_DIR}/${BUNDLE_NAME}"
 
 ensure_target_dir
 ensure_target_writable
+print_section "Uploading bundle"
 sync_to_target
 
-printf 'Published build output to %s:%s\n' "${PUBLISH_TARGET}" "${PUBLISH_PATH}"
+print_success "Published build output to ${PUBLISH_TARGET}:${PUBLISH_PATH}"
+print_resource_setup
