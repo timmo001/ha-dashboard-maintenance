@@ -1,3 +1,9 @@
+import {
+  compareText,
+  computeDomain,
+  computeEntityDisplayName,
+  computeStateName,
+} from "./entity-helpers";
 import type {
   AreaRegistryEntry,
   DeviceRegistryEntry,
@@ -45,15 +51,6 @@ let floorRegistryPromise:
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
 
-const computeDomain = (entityId: string): string =>
-  entityId.split(".", 1)[0] || "";
-
-const computeObjectId = (entityId: string): string =>
-  entityId.split(".", 2)[1] || entityId;
-
-const compareText = (left: string, right: string): number =>
-  left.localeCompare(right, undefined, { sensitivity: "base" });
-
 const isNumericBatteryState = (stateObj: HassEntity): boolean => {
   if (computeDomain(stateObj.entity_id) !== "sensor") {
     return false;
@@ -65,43 +62,6 @@ const isNumericBatteryState = (stateObj: HassEntity): boolean => {
 
   const level = Number(stateObj.state);
   return Number.isFinite(level) && level >= 0 && level <= 100;
-};
-
-const computeStateName = (stateObj: HassEntity): string =>
-  stateObj.attributes.friendly_name === undefined
-    ? computeObjectId(stateObj.entity_id).replace(/_/g, " ")
-    : String(stateObj.attributes.friendly_name ?? "");
-
-const computeDeviceName = (device: DeviceRegistryEntry | undefined): string | undefined =>
-  (device?.name_by_user || device?.name)?.trim();
-
-const computeEntityEntryName = (
-  entry: EntityRegistryEntry | undefined,
-): string | undefined => {
-  if (entry?.name != null) {
-    return String(entry.name);
-  }
-
-  if (entry?.original_name != null) {
-    return String(entry.original_name);
-  }
-
-  return undefined;
-};
-
-const computeEntityDisplayName = (
-  entry: EntityRegistryEntry | undefined,
-  device: DeviceRegistryEntry | undefined,
-  stateObj: HassEntity,
-): string => {
-  const deviceName = computeDeviceName(device);
-  const entityName = computeEntityEntryName(entry);
-
-  if (!entityName) {
-    return deviceName || computeStateName(stateObj);
-  }
-
-  return deviceName ? `${deviceName} ${entityName}` : entityName;
 };
 
 export const normalizeBatteryAttentionThreshold = (

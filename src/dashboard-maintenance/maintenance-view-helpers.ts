@@ -1,9 +1,15 @@
+import { groupItemsByArea } from "./entity-helpers";
+import type { LocalizeFunc, TranslationKey } from "./localize";
 import type { MaintenanceBatteryDevice } from "./maintenance-data";
+import {
+  getAreasFloorHierarchy,
+  getMaintenanceAreas,
+  getMaintenanceFloors,
+} from "./maintenance-data";
 import {
   availabilityIssueIcon,
   type MaintenanceAvailabilityEntity,
 } from "./availability-data";
-import type { LocalizeFunc, TranslationKey } from "./localize";
 import { severityIcon, type MaintenanceRepairIssue } from "./repairs-data";
 import {
   staleEntityIcon,
@@ -12,6 +18,9 @@ import {
 import type { MaintenanceUpdateEntity } from "./update-data";
 import { updateCanInstall } from "./update-data";
 import type {
+  AreaRegistryEntry,
+  FloorRegistryEntry,
+  HomeAssistant,
   MaintenanceViewMode,
   MaintenanceViewStrategyConfig,
 } from "./types";
@@ -31,13 +40,7 @@ export const ATTENTION_BATTERY_NAME: EntityNameItem[] = [
   { type: "device" },
 ];
 
-export const ATTENTION_AVAILABILITY_NAME: EntityNameItem[] = [
-  { type: "area" },
-  { type: "device" },
-  { type: "entity" },
-];
-
-export const ATTENTION_STALE_NAME: EntityNameItem[] = [
+export const ATTENTION_ENTITY_NAME: EntityNameItem[] = [
   { type: "area" },
   { type: "device" },
   { type: "entity" },
@@ -85,6 +88,10 @@ export const VIEW_DEFAULTS: Record<
   },
 };
 
+// ---------------------------------------------------------------------------
+// Low-level card builders
+// ---------------------------------------------------------------------------
+
 export const makeHeadingCard = (
   heading: string,
   options?: {
@@ -120,28 +127,65 @@ export const makeEmptyStateCard = (
   content,
 });
 
+export const makeShowMoreCard = (
+  localize: LocalizeFunc,
+  hiddenCount: number,
+  navigationPath: string,
+): LovelaceCardConfig => ({
+  ...makeHeadingCard(localize("common.show_count_more", { count: hiddenCount }), {
+    headingStyle: "subtitle",
+    icon: "mdi:chevron-right",
+    navigationPath,
+  }),
+  grid_options: {
+    rows: "auto",
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Generic tile card builder
+// ---------------------------------------------------------------------------
+
+interface TileCardEntity {
+  entityId: string;
+  deviceId?: string;
+  displayName: string;
+}
+
+const makeTileCard = (
+  entity: TileCardEntity,
+  icon: string | undefined,
+  options?: { name?: string | EntityNameItem[]; features?: unknown[] },
+): LovelaceCardConfig => ({
+  type: "tile",
+  entity: entity.entityId,
+  name: options?.name || entity.displayName,
+  ...(icon ? { icon } : {}),
+  tap_action: entity.deviceId
+    ? {
+        action: "navigate",
+        navigation_path: `/config/devices/device/${entity.deviceId}`,
+      }
+    : { action: "more-info" },
+  ...(options?.features ? { features: options.features } : {}),
+});
+
+// ---------------------------------------------------------------------------
+// Entity-type card builders (thin wrappers around makeTileCard)
+// ---------------------------------------------------------------------------
+
 export const makeBatteryCard = (
   device: MaintenanceBatteryDevice,
   options?: { name?: string | EntityNameItem[] },
-): LovelaceCardConfig => ({
-  type: "tile",
-  entity: device.entityId,
-  name: options?.name || device.deviceName,
-  icon: device.needsAttention ? "mdi:battery-alert-variant-outline" : undefined,
-  tap_action: device.deviceId
-    ? {
-        action: "navigate",
-        navigation_path: `/config/devices/device/${device.deviceId}`,
-      }
-    : { action: "more-info" },
-  features: [
+): LovelaceCardConfig =>
+  makeTileCard(
+    { entityId: device.entityId, deviceId: device.deviceId, displayName: device.deviceName },
+    device.needsAttention ? "mdi:battery-alert-variant-outline" : undefined,
     {
-      type: "bar-gauge",
-      min: 0,
-      max: 100,
+      ...options,
+      features: [{ type: "bar-gauge", min: 0, max: 100 }],
     },
-  ],
-});
+  );
 
 export const makeUpdateCard = (
   update: MaintenanceUpdateEntity,
@@ -183,20 +227,21 @@ export const makeRepairCard = (
   };
 };
 
-export const makeShowMoreCard = (
-  localize: LocalizeFunc,
-  hiddenCount: number,
-  navigationPath: string,
-): LovelaceCardConfig => ({
-  ...makeHeadingCard(localize("common.show_count_more", { count: hiddenCount }), {
-    headingStyle: "subtitle",
-    icon: "mdi:chevron-right",
-    navigationPath,
-  }),
-  grid_options: {
-    rows: "auto",
-  },
-});
+export const makeAvailabilityCard = (
+  entity: MaintenanceAvailabilityEntity,
+  options?: { name?: string | EntityNameItem[] },
+): LovelaceCardConfig =>
+  makeTileCard(entity, availabilityIssueIcon(entity), options);
+
+export const makeStaleCard = (
+  entity: MaintenanceStaleEntity,
+  options?: { name?: string | EntityNameItem[] },
+): LovelaceCardConfig =>
+  makeTileCard(entity, staleEntityIcon(), options);
+
+// ---------------------------------------------------------------------------
+// Item limiting & show-more helpers
+// ---------------------------------------------------------------------------
 
 export const limitItems = <T,>(
   items: T[],
@@ -212,37 +257,26 @@ export const limitItems = <T,>(
   };
 };
 
-export const makeAvailabilityCard = (
-  entity: MaintenanceAvailabilityEntity,
-  options?: { name?: string | EntityNameItem[] },
-): LovelaceCardConfig => ({
-  type: "tile",
-  entity: entity.entityId,
-  name: options?.name || entity.displayName,
-  icon: availabilityIssueIcon(entity),
-  tap_action: entity.deviceId
-    ? {
-        action: "navigate",
-        navigation_path: `/config/devices/device/${entity.deviceId}`,
-      }
-    : { action: "more-info" },
-});
+/** Limit items, map to cards, and append a show-more card when items are truncated. */
+export const limitAndMakeCards = <T,>(
+  localize: LocalizeFunc,
+  items: T[],
+  makeCard: (item: T) => LovelaceCardConfig,
+  options?: { limit?: number; showMorePath?: string },
+): LovelaceCardConfig[] => {
+  const { items: shown, hiddenCount } = limitItems(items, options?.limit);
+  const cards = shown.map(makeCard);
 
-export const makeStaleCard = (
-  entity: MaintenanceStaleEntity,
-  options?: { name?: string | EntityNameItem[] },
-): LovelaceCardConfig => ({
-  type: "tile",
-  entity: entity.entityId,
-  name: options?.name || entity.displayName,
-  icon: staleEntityIcon(),
-  tap_action: entity.deviceId
-    ? {
-        action: "navigate",
-        navigation_path: `/config/devices/device/${entity.deviceId}`,
-      }
-    : { action: "more-info" },
-});
+  if (options?.showMorePath && hiddenCount > 0) {
+    cards.push(makeShowMoreCard(localize, hiddenCount, options.showMorePath));
+  }
+
+  return cards;
+};
+
+// ---------------------------------------------------------------------------
+// Section builders
+// ---------------------------------------------------------------------------
 
 export const makeEmptyStateSection = (
   title: string,
@@ -301,6 +335,220 @@ export const makeShowMoreSection = (
     [makeShowMoreCard(localize, hiddenCount, navigationPath)],
     columnSpan,
   );
+
+// ---------------------------------------------------------------------------
+// Generic area-cards builder (replaces 3 near-identical makeAreaCards functions)
+// ---------------------------------------------------------------------------
+
+export const floorHeadingIcon = (floor: FloorRegistryEntry): string =>
+  floor.icon || "mdi:floor-plan";
+
+export const makeAreaCards = <T extends { areaId?: string | null }>(
+  localize: LocalizeFunc,
+  areaIds: string[],
+  areas: Record<string, AreaRegistryEntry>,
+  hass: HomeAssistant,
+  items: T[],
+  makeCard: (item: T) => LovelaceCardConfig,
+  buildShowMorePath: (areaId: string) => string,
+  options?: { limit?: number },
+): LovelaceCardConfig[] => {
+  const cards: LovelaceCardConfig[] = [];
+
+  for (const areaId of areaIds) {
+    const area = areas[areaId];
+    if (!area) {
+      continue;
+    }
+
+    const areaItems = groupItemsByArea(areaId, items);
+    if (areaItems.length === 0) {
+      continue;
+    }
+
+    const shown = limitItems(areaItems, options?.limit);
+    if (shown.items.length === 0) {
+      continue;
+    }
+
+    cards.push(
+      makeHeadingCard(area.name, {
+        headingStyle: "subtitle",
+        navigationPath: hass.panels?.home
+          ? `/home/areas-${area.area_id}`
+          : undefined,
+      }),
+    );
+
+    cards.push(...shown.items.map(makeCard));
+    if (shown.hiddenCount > 0) {
+      cards.push(
+        makeShowMoreCard(localize, shown.hiddenCount, buildShowMorePath(area.area_id)),
+      );
+    }
+  }
+
+  return cards;
+};
+
+// ---------------------------------------------------------------------------
+// Generic floor/area hierarchy sections builder
+// ---------------------------------------------------------------------------
+
+export interface HierarchySectionsConfig<T> {
+  items: T[];
+  makeCard: (item: T) => LovelaceCardConfig;
+  buildAreaShowMorePath: (areaId: string) => string;
+  heading: string;
+  icon: string;
+  /** Label for items not assigned to an area when area sections exist. */
+  unassignedLabel: TranslationKey;
+  /** Label for items not assigned to an area when no area sections exist. */
+  unassignedFallbackLabel: TranslationKey;
+}
+
+export const makeHierarchySections = async <T extends { areaId?: string | null }>(
+  localize: LocalizeFunc,
+  hass: HomeAssistant,
+  config: HierarchySectionsConfig<T>,
+  options?: { limit?: number; showMorePath?: string },
+): Promise<LovelaceSectionConfig[]> => {
+  if (config.items.length === 0) {
+    return [];
+  }
+
+  const [areas, floors] = await Promise.all([
+    getMaintenanceAreas(hass),
+    getMaintenanceFloors(hass),
+  ]);
+
+  if (Object.keys(areas).length === 0) {
+    return [
+      makeSection(
+        config.heading,
+        config.icon,
+        limitAndMakeCards(localize, config.items, config.makeCard, options),
+        MAINTENANCE_COLUMN_SPAN,
+      ),
+    ];
+  }
+
+  const hierarchy = getAreasFloorHierarchy(areas, floors);
+  const floorCount =
+    hierarchy.floors.length + (hierarchy.areas.length > 0 ? 1 : 0);
+  const sections: LovelaceSectionConfig[] = [];
+
+  for (const floorStructure of hierarchy.floors) {
+    const floor = floors[floorStructure.id];
+    if (!floor) {
+      continue;
+    }
+
+    const areaCards = makeAreaCards(
+      localize,
+      floorStructure.areas,
+      areas,
+      hass,
+      config.items,
+      config.makeCard,
+      config.buildAreaShowMorePath,
+      { limit: options?.limit },
+    );
+    if (areaCards.length === 0) {
+      continue;
+    }
+
+    sections.push(
+      makeGridSection(
+        [
+          makeHeadingCard(
+            floorCount > 1 ? floor.name : localize("common.areas"),
+            { icon: floorHeadingIcon(floor) },
+          ),
+          ...areaCards,
+        ],
+        MAINTENANCE_COLUMN_SPAN,
+      ),
+    );
+  }
+
+  if (hierarchy.areas.length > 0) {
+    const areaCards = makeAreaCards(
+      localize,
+      hierarchy.areas,
+      areas,
+      hass,
+      config.items,
+      config.makeCard,
+      config.buildAreaShowMorePath,
+      { limit: options?.limit },
+    );
+
+    if (areaCards.length > 0) {
+      sections.push(
+        makeGridSection(
+          [
+            makeHeadingCard(
+              floorCount > 1
+                ? localize("common.other_areas")
+                : localize("common.areas"),
+            ),
+            ...areaCards,
+          ],
+          MAINTENANCE_COLUMN_SPAN,
+        ),
+      );
+    }
+  }
+
+  const unassignedItems = config.items.filter((item) => !item.areaId);
+  const unassignedCards = limitItems(unassignedItems, options?.limit);
+
+  if (unassignedCards.items.length > 0) {
+    sections.push(
+      makeGridSection(
+        [
+          makeHeadingCard(
+            sections.length > 0
+              ? localize(config.unassignedLabel)
+              : localize(config.unassignedFallbackLabel),
+          ),
+          ...unassignedCards.items.map(config.makeCard),
+          ...(options?.showMorePath && unassignedCards.hiddenCount > 0
+            ? [makeShowMoreCard(localize, unassignedCards.hiddenCount, options.showMorePath)]
+            : []),
+        ],
+        MAINTENANCE_COLUMN_SPAN,
+      ),
+    );
+  }
+
+  if (sections.length > 0) {
+    return sections;
+  }
+
+  // Fallback: flat list when no items match any area
+  return [
+    makeSection(
+      config.heading,
+      config.icon,
+      limitAndMakeCards(localize, config.items, config.makeCard, options),
+      MAINTENANCE_COLUMN_SPAN,
+    ),
+  ];
+};
+
+// ---------------------------------------------------------------------------
+// View strategy helpers
+// ---------------------------------------------------------------------------
+
+/** Build subview limit options, returning undefined for subviews (which show all items). */
+export const viewLimitOptions = (
+  config: MaintenanceViewStrategyConfig,
+  allPath: string,
+  limit = 24,
+): { limit: number; showMorePath: string } | undefined =>
+  config.subview ? undefined : { limit, showMorePath: allPath };
 
 export const makeViewConfig = (
   localize: LocalizeFunc,

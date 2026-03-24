@@ -4,12 +4,11 @@ import { setupLocalize } from "./localize";
 import { makeRepairsSections } from "./maintenance-repairs-sections";
 import {
   makeViewConfig,
+  viewLimitOptions,
   type LovelaceViewConfig,
 } from "./maintenance-view-helpers";
 import { getMaintenanceRepairIssues } from "./repairs-data";
 import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
-
-const VIEW_ITEM_LIMIT = 24;
 
 @customElement("ll-strategy-view-maintenance-repairs")
 export class MaintenanceRepairsViewStrategy extends ReactiveElement {
@@ -22,12 +21,7 @@ export class MaintenanceRepairsViewStrategy extends ReactiveElement {
     const sections = makeRepairsSections(
       localize,
       issues,
-      config.subview
-        ? undefined
-        : {
-            limit: VIEW_ITEM_LIMIT,
-            showMorePath: "repairs-all",
-          },
+      viewLimitOptions(config, "repairs-all"),
     );
 
     return makeViewConfig(

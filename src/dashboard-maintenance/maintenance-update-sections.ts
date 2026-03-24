@@ -1,9 +1,8 @@
 import type { LocalizeFunc } from "./localize";
 import {
-  limitItems,
+  limitAndMakeCards,
   MAINTENANCE_COLUMN_SPAN,
   makeEmptyStateSection,
-  makeShowMoreCard,
   SUMMARY_COLUMN_SPAN,
   type LovelaceSectionConfig,
   makeSection,
@@ -32,17 +31,10 @@ export const makeUpdateSummarySection = (
     return null;
   }
 
-  const limitedUpdates = limitItems(summaryUpdates, options?.limit);
-
   return makeSection(
     localize("update.heading"),
     "mdi:package-up",
-    [
-      ...limitedUpdates.items.map(makeUpdateCard),
-      ...(options?.showMorePath && limitedUpdates.hiddenCount > 0
-        ? [makeShowMoreCard(localize, limitedUpdates.hiddenCount, options.showMorePath)]
-        : []),
-    ],
+    limitAndMakeCards(localize, summaryUpdates, makeUpdateCard, options),
     SUMMARY_COLUMN_SPAN,
     "updates",
   );
@@ -83,61 +75,36 @@ export const makeUpdatesSections = (
       updateCanNotInstall(update),
   );
 
-  const limitedInProgress = limitItems(inProgressUpdates, options?.limit);
-  const limitedAvailable = limitItems(availableUpdates, options?.limit);
-  const limitedSkipped = limitItems(skippedUpdates, options?.limit);
-  const limitedOther = limitItems(otherUpdates, options?.limit);
-
   const sections = [
-    limitedInProgress.items.length > 0
+    inProgressUpdates.length > 0
       ? makeSection(
           localize("update.heading_in_progress"),
           "mdi:progress-download",
-          [
-            ...limitedInProgress.items.map(makeUpdateCard),
-            ...(options?.showMorePath && limitedInProgress.hiddenCount > 0
-              ? [makeShowMoreCard(localize, limitedInProgress.hiddenCount, options.showMorePath)]
-              : []),
-          ],
+          limitAndMakeCards(localize, inProgressUpdates, makeUpdateCard, options),
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,
-    limitedAvailable.items.length > 0
+    availableUpdates.length > 0
       ? makeSection(
           localize("update.heading_available"),
           "mdi:package-up",
-          [
-            ...limitedAvailable.items.map(makeUpdateCard),
-            ...(options?.showMorePath && limitedAvailable.hiddenCount > 0
-              ? [makeShowMoreCard(localize, limitedAvailable.hiddenCount, options.showMorePath)]
-              : []),
-          ],
+          limitAndMakeCards(localize, availableUpdates, makeUpdateCard, options),
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,
-    limitedSkipped.items.length > 0
+    skippedUpdates.length > 0
       ? makeSection(
           localize("update.heading_skipped"),
           "mdi:skip-next-circle-outline",
-          [
-            ...limitedSkipped.items.map(makeUpdateCard),
-            ...(options?.showMorePath && limitedSkipped.hiddenCount > 0
-              ? [makeShowMoreCard(localize, limitedSkipped.hiddenCount, options.showMorePath)]
-              : []),
-          ],
+          limitAndMakeCards(localize, skippedUpdates, makeUpdateCard, options),
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,
-    limitedOther.items.length > 0
+    otherUpdates.length > 0
       ? makeSection(
           localize("update.heading_other"),
           "mdi:package-variant-closed",
-          [
-            ...limitedOther.items.map(makeUpdateCard),
-            ...(options?.showMorePath && limitedOther.hiddenCount > 0
-              ? [makeShowMoreCard(localize, limitedOther.hiddenCount, options.showMorePath)]
-              : []),
-          ],
+          limitAndMakeCards(localize, otherUpdates, makeUpdateCard, options),
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,

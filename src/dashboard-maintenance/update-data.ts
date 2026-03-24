@@ -1,3 +1,4 @@
+import { compareText, computeDomain } from "./entity-helpers";
 import type { HassEntity, HomeAssistant } from "./types";
 
 const UPDATE_FEATURE_INSTALL = 1;
@@ -24,12 +25,6 @@ export interface MaintenanceUpdateEntity {
   supportsInstall: boolean;
   title: string;
 }
-
-const computeDomain = (entityId: string): string =>
-  entityId.split(".", 1)[0] || "";
-
-const compareText = (left: string, right: string, language?: string): number =>
-  left.localeCompare(right, language, { sensitivity: "base" });
 
 const asUpdateAttributes = (stateObj: HassEntity): UpdateAttributes =>
   stateObj.attributes as UpdateAttributes;

@@ -1,5 +1,6 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import { filterItemsByArea } from "./entity-helpers";
 import { setupLocalize } from "./localize";
 import { getMaintenanceBatteryDevices } from "./maintenance-data";
 import {
@@ -8,13 +9,12 @@ import {
 } from "./maintenance-battery-sections";
 import {
   makeEmptyStateSection,
+  viewLimitOptions,
   type LovelaceSectionConfig,
   type LovelaceViewConfig,
   makeViewConfig,
 } from "./maintenance-view-helpers";
 import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
-
-const VIEW_ITEM_LIMIT = 24;
 
 @customElement("ll-strategy-view-maintenance-batteries")
 export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
@@ -27,15 +27,14 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
       hass,
       config.battery_attention_threshold,
     );
-    const batteryDevices = config.area_id
-      ? allBatteryDevices.filter((device) => device.areaId === config.area_id)
-      : allBatteryDevices;
+    const batteryDevices = filterItemsByArea(allBatteryDevices, config.area_id);
     const attentionDevices = batteryDevices.filter((device) => device.needsAttention);
     const showAttentionBatteriesInAreas =
       config.show_attention_batteries_in_areas ?? true;
     const areaSectionDevices = showAttentionBatteriesInAreas
       ? batteryDevices
       : batteryDevices.filter((device) => !device.needsAttention);
+    const limitOpts = viewLimitOptions(config, "batteries-all");
 
     if (batteryDevices.length === 0) {
       return makeViewConfig(
@@ -60,12 +59,7 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
         localize,
         batteryDevices,
         config,
-        config.subview
-          ? undefined
-          : {
-              limit: VIEW_ITEM_LIMIT,
-              showMorePath: "batteries-all",
-            },
+        limitOpts,
       );
       if (attentionSection) {
         sections.push(attentionSection);
@@ -77,12 +71,7 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
         localize,
         hass,
         areaSectionDevices,
-        config.subview
-          ? undefined
-          : {
-              limit: VIEW_ITEM_LIMIT,
-              showMorePath: "batteries-all",
-            },
+        limitOpts,
       )),
     );
 

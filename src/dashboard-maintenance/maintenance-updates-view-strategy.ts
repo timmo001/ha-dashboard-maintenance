@@ -4,12 +4,11 @@ import { setupLocalize } from "./localize";
 import { makeUpdatesSections } from "./maintenance-update-sections";
 import {
   makeViewConfig,
+  viewLimitOptions,
   type LovelaceViewConfig,
 } from "./maintenance-view-helpers";
 import { getMaintenanceUpdates } from "./update-data";
 import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
-
-const VIEW_ITEM_LIMIT = 24;
 
 @customElement("ll-strategy-view-maintenance-updates")
 export class MaintenanceUpdatesViewStrategy extends ReactiveElement {
@@ -22,12 +21,7 @@ export class MaintenanceUpdatesViewStrategy extends ReactiveElement {
     const sections = makeUpdatesSections(
       localize,
       updates,
-      config.subview
-        ? undefined
-        : {
-            limit: VIEW_ITEM_LIMIT,
-            showMorePath: "updates-all",
-          },
+      viewLimitOptions(config, "updates-all"),
     );
 
     return makeViewConfig(

@@ -1,12 +1,11 @@
 import type { LocalizeFunc } from "./localize";
 import { severityIcon, type MaintenanceRepairIssue } from "./repairs-data";
 import {
-  limitItems,
+  limitAndMakeCards,
   MAINTENANCE_COLUMN_SPAN,
   makeEmptyStateSection,
   makeRepairCard,
   makeSection,
-  makeShowMoreCard,
   SUMMARY_COLUMN_SPAN,
   type LovelaceSectionConfig,
 } from "./maintenance-view-helpers";
@@ -23,23 +22,10 @@ export const makeRepairsSummarySection = (
     return null;
   }
 
-  const limitedIssues = limitItems(issues, options?.limit);
-
   return makeSection(
     localize("repair.heading"),
     "mdi:wrench",
-    [
-      ...limitedIssues.items.map((issue) => makeRepairCard(localize, issue)),
-      ...(options?.showMorePath && limitedIssues.hiddenCount > 0
-        ? [
-            makeShowMoreCard(
-              localize,
-              limitedIssues.hiddenCount,
-              options.showMorePath,
-            ),
-          ]
-        : []),
-    ],
+    limitAndMakeCards(localize, issues, (issue) => makeRepairCard(localize, issue), options),
     SUMMARY_COLUMN_SPAN,
     "repairs",
   );
@@ -63,51 +49,34 @@ export const makeRepairsSections = (
     ];
   }
 
+  const makeCards = (issue: MaintenanceRepairIssue) => makeRepairCard(localize, issue);
+
   const criticalIssues = issues.filter((issue) => issue.severity === "critical");
   const errorIssues = issues.filter((issue) => issue.severity === "error");
   const warningIssues = issues.filter((issue) => issue.severity === "warning");
 
-  const limitedCritical = limitItems(criticalIssues, options?.limit);
-  const limitedError = limitItems(errorIssues, options?.limit);
-  const limitedWarning = limitItems(warningIssues, options?.limit);
-
   const sections = [
-    limitedCritical.items.length > 0
+    criticalIssues.length > 0
       ? makeSection(
           localize("repair.heading_critical"),
           severityIcon("critical"),
-          [
-            ...limitedCritical.items.map((issue) => makeRepairCard(localize, issue)),
-            ...(options?.showMorePath && limitedCritical.hiddenCount > 0
-              ? [makeShowMoreCard(localize, limitedCritical.hiddenCount, options.showMorePath)]
-              : []),
-          ],
+          limitAndMakeCards(localize, criticalIssues, makeCards, options),
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,
-    limitedError.items.length > 0
+    errorIssues.length > 0
       ? makeSection(
           localize("repair.heading_error"),
           severityIcon("error"),
-          [
-            ...limitedError.items.map((issue) => makeRepairCard(localize, issue)),
-            ...(options?.showMorePath && limitedError.hiddenCount > 0
-              ? [makeShowMoreCard(localize, limitedError.hiddenCount, options.showMorePath)]
-              : []),
-          ],
+          limitAndMakeCards(localize, errorIssues, makeCards, options),
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,
-    limitedWarning.items.length > 0
+    warningIssues.length > 0
       ? makeSection(
           localize("repair.heading_warning"),
           severityIcon("warning"),
-          [
-            ...limitedWarning.items.map((issue) => makeRepairCard(localize, issue)),
-            ...(options?.showMorePath && limitedWarning.hiddenCount > 0
-              ? [makeShowMoreCard(localize, limitedWarning.hiddenCount, options.showMorePath)]
-              : []),
-          ],
+          limitAndMakeCards(localize, warningIssues, makeCards, options),
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,

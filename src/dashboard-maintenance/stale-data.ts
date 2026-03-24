@@ -1,10 +1,16 @@
 import {
+  compareText,
+  computeDomain,
+  computeEntityDisplayName,
+  isAvailabilityIssue,
+  isDefined,
+  parseTimestamp,
+} from "./entity-helpers";
+import {
   fetchDeviceRegistry,
   fetchEntityRegistry,
 } from "./maintenance-data";
 import type {
-  DeviceRegistryEntry,
-  EntityRegistryEntry,
   HassEntity,
   HomeAssistant,
 } from "./types";
@@ -44,68 +50,8 @@ const STALE_RELEVANT_DOMAINS = new Set([
   "humidifier",
 ]);
 
-const computeDomain = (entityId: string): string =>
-  entityId.split(".", 1)[0] || "";
-
-const computeObjectId = (entityId: string): string =>
-  entityId.split(".", 2)[1] || entityId;
-
-const compareText = (left: string, right: string): number =>
-  left.localeCompare(right, undefined, { sensitivity: "base" });
-
-const computeStateName = (stateObj: HassEntity): string =>
-  stateObj.attributes.friendly_name === undefined
-    ? computeObjectId(stateObj.entity_id).replace(/_/g, " ")
-    : String(stateObj.attributes.friendly_name ?? "");
-
-const computeDeviceName = (device: DeviceRegistryEntry | undefined): string | undefined =>
-  (device?.name_by_user || device?.name)?.trim();
-
-const computeEntityEntryName = (
-  entry: EntityRegistryEntry | undefined,
-): string | undefined => {
-  if (entry?.name != null) {
-    return String(entry.name);
-  }
-
-  if (entry?.original_name != null) {
-    return String(entry.original_name);
-  }
-
-  return undefined;
-};
-
-const computeEntityDisplayName = (
-  entry: EntityRegistryEntry | undefined,
-  device: DeviceRegistryEntry | undefined,
-  stateObj: HassEntity,
-): string => {
-  const deviceName = computeDeviceName(device);
-  const entityName = computeEntityEntryName(entry);
-
-  if (!entityName) {
-    return deviceName || computeStateName(stateObj);
-  }
-
-  return deviceName ? `${deviceName} ${entityName}` : entityName;
-};
-
-const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
-
-const parseTimestamp = (value?: string): number => {
-  if (!value) {
-    return 0;
-  }
-
-  const timestamp = new Date(value).getTime();
-  return Number.isFinite(timestamp) ? timestamp : 0;
-};
-
 const isStaleRelevantDomain = (entityId: string): boolean =>
   STALE_RELEVANT_DOMAINS.has(computeDomain(entityId));
-
-const isAvailabilityIssue = (stateObj: HassEntity): boolean =>
-  stateObj.state === "unavailable" || stateObj.state === "unknown";
 
 export const normalizeStaleThresholdHours = (
   hours?: number,
@@ -177,12 +123,6 @@ export const getMaintenanceStaleEntities = async (
         compareText(left.displayName, right.displayName),
     );
 };
-
-export const groupStaleEntitiesByArea = (
-  areaId: string,
-  entities: MaintenanceStaleEntity[],
-): MaintenanceStaleEntity[] =>
-  entities.filter((entity) => entity.areaId === areaId);
 
 export const staleEntityIcon = (): string => "mdi:clock-alert-outline";
 
