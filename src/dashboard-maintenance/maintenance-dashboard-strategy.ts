@@ -1,7 +1,9 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import "./editor";
-import { MaintenanceViewStrategy } from "./maintenance-view-strategy";
+import { MaintenanceBatteriesViewStrategy } from "./maintenance-batteries-view-strategy";
+import { MaintenanceSummaryViewStrategy } from "./maintenance-summary-view-strategy";
+import { MaintenanceUpdatesViewStrategy } from "./maintenance-updates-view-strategy";
 import type {
   HomeAssistant,
   MaintenanceDashboardStrategyConfig,
@@ -17,7 +19,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
   ): Promise<LovelaceConfig> {
     return {
       views: [
-        await MaintenanceViewStrategy.generate(
+        await MaintenanceSummaryViewStrategy.generate(
           {
             ...config,
             view: "summary",
@@ -28,7 +30,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           },
           hass,
         ),
-        await MaintenanceViewStrategy.generate(
+        await MaintenanceBatteriesViewStrategy.generate(
           {
             ...config,
             view: "batteries",
@@ -38,7 +40,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           },
           hass,
         ),
-        await MaintenanceViewStrategy.generate(
+        await MaintenanceUpdatesViewStrategy.generate(
           {
             ...config,
             view: "updates",
