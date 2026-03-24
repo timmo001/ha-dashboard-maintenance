@@ -48,7 +48,7 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
         const enabled = this._config![mod.enabledKey] !== false;
         return html`
           <ha-expansion-panel
-            .expanded=${mod.id === "batteries"}
+            expanded
             outlined
           >
             <ha-icon
