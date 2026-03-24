@@ -23,7 +23,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
             view: "summary",
             title: "Summary",
             path: "summary",
-            icon: "mdi:view-dashboard-outline",
+            icon: "mdi:home-heart",
             heading_navigation_path: "batteries",
           },
           hass,

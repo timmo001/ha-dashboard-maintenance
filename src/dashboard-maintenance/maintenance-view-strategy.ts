@@ -30,7 +30,7 @@ const VIEW_DEFAULTS: Record<
     columnSpan: SUMMARY_COLUMN_SPAN,
     title: "Summary",
     path: "summary",
-    icon: "mdi:view-dashboard-outline",
+    icon: "mdi:home-heart",
   },
   batteries: {
     columnSpan: BATTERIES_COLUMN_SPAN,
