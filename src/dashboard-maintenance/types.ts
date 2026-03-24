@@ -14,6 +14,8 @@ export interface EntityRegistryEntry {
   area_id?: string | null;
   disabled_by?: string | null;
   hidden_by?: string | null;
+  name?: string | null;
+  original_name?: string | null;
 }
 
 export interface DeviceRegistryEntry {

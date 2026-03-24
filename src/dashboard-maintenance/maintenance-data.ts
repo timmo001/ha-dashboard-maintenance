@@ -48,6 +48,9 @@ const clamp = (value: number, min: number, max: number): number =>
 const computeDomain = (entityId: string): string =>
   entityId.split(".", 1)[0] || "";
 
+const computeObjectId = (entityId: string): string =>
+  entityId.split(".", 2)[1] || entityId;
+
 const compareText = (left: string, right: string): number =>
   left.localeCompare(right, undefined, { sensitivity: "base" });
 
@@ -64,14 +67,42 @@ const isNumericBatteryState = (stateObj: HassEntity): boolean => {
   return Number.isFinite(level) && level >= 0 && level <= 100;
 };
 
-const computeDeviceName = (
+const computeStateName = (stateObj: HassEntity): string =>
+  stateObj.attributes.friendly_name === undefined
+    ? computeObjectId(stateObj.entity_id).replace(/_/g, " ")
+    : String(stateObj.attributes.friendly_name ?? "");
+
+const computeDeviceName = (device: DeviceRegistryEntry | undefined): string | undefined =>
+  (device?.name_by_user || device?.name)?.trim();
+
+const computeEntityEntryName = (
+  entry: EntityRegistryEntry | undefined,
+): string | undefined => {
+  if (entry?.name != null) {
+    return String(entry.name);
+  }
+
+  if (entry?.original_name != null) {
+    return String(entry.original_name);
+  }
+
+  return undefined;
+};
+
+const computeEntityDisplayName = (
+  entry: EntityRegistryEntry | undefined,
   device: DeviceRegistryEntry | undefined,
   stateObj: HassEntity,
-): string =>
-  device?.name_by_user ||
-  device?.name ||
-  stateObj.attributes.friendly_name ||
-  stateObj.entity_id;
+): string => {
+  const deviceName = computeDeviceName(device);
+  const entityName = computeEntityEntryName(entry);
+
+  if (!entityName) {
+    return deviceName || computeStateName(stateObj);
+  }
+
+  return deviceName ? `${deviceName} ${entityName}` : entityName;
+};
 
 export const normalizeBatteryAttentionThreshold = (
   threshold?: number,
@@ -221,7 +252,7 @@ const fallbackDevicesFromStates = (
       return {
         areaId: undefined,
         entityId: stateObj.entity_id,
-        deviceName: stateObj.attributes.friendly_name || stateObj.entity_id,
+        deviceName: computeStateName(stateObj),
         level,
         needsAttention: level < attentionThreshold,
       };
@@ -276,13 +307,18 @@ export const getMaintenanceBatteryDevices = async (
       )[0];
 
       const level = Number(selectedBatteryState.state);
+      const areaId =
+        devices[deviceId]?.area_id ||
+        entities[selectedBatteryState.entity_id]?.area_id;
 
       return {
         deviceId,
-        areaId:
-          devices[deviceId]?.area_id ||
-          entities[selectedBatteryState.entity_id]?.area_id,
-        deviceName: computeDeviceName(devices[deviceId], selectedBatteryState),
+        areaId,
+        deviceName: computeEntityDisplayName(
+          entities[selectedBatteryState.entity_id],
+          devices[deviceId],
+          selectedBatteryState,
+        ),
         entityId: selectedBatteryState.entity_id,
         level,
         needsAttention: level < normalizedThreshold,
