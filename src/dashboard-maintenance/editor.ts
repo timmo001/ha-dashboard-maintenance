@@ -4,11 +4,27 @@ import { setupLocalize } from "./localize";
 import type {
   HomeAssistant,
   MaintenanceDashboardStrategyConfig,
+  MaintenanceModuleId,
 } from "./types";
 import { DEFAULT_BATTERY_ATTENTION_THRESHOLD } from "./maintenance-data";
 import { DEFAULT_STALE_THRESHOLD_HOURS } from "./stale-data";
 
 const DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS = true;
+
+interface ModuleDescriptor {
+  id: MaintenanceModuleId;
+  icon: string;
+  headerKey: "editor.batteries_header" | "editor.updates_header" | "editor.repairs_header" | "editor.stale_header" | "editor.availability_header";
+  enabledKey: "batteries_enabled" | "updates_enabled" | "repairs_enabled" | "stale_enabled" | "availability_enabled";
+}
+
+const MODULES: ReadonlyArray<ModuleDescriptor> = [
+  { id: "batteries", icon: "mdi:battery-heart-variant", headerKey: "editor.batteries_header", enabledKey: "batteries_enabled" },
+  { id: "updates", icon: "mdi:package-up", headerKey: "editor.updates_header", enabledKey: "updates_enabled" },
+  { id: "repairs", icon: "mdi:wrench", headerKey: "editor.repairs_header", enabledKey: "repairs_enabled" },
+  { id: "stale", icon: "mdi:clock-alert-outline", headerKey: "editor.stale_header", enabledKey: "stale_enabled" },
+  { id: "availability", icon: "mdi:help-circle-outline", headerKey: "editor.availability_header", enabledKey: "availability_enabled" },
+];
 
 @customElement("dashboard-maintenance-strategy-editor")
 export class DashboardMaintenanceStrategyEditor extends LitElement {
@@ -27,175 +43,263 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
 
     const localize = setupLocalize(this.hass);
 
-    const threshold =
-      this._config.battery_attention_threshold ??
-      DEFAULT_BATTERY_ATTENTION_THRESHOLD;
-    const showAttentionBatteriesInAreas =
-      this._config.show_attention_batteries_in_areas ??
-      DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS;
-    const staleThreshold =
-      this._config.stale_threshold_hours ??
-      DEFAULT_STALE_THRESHOLD_HOURS;
-
-    const settingsContent = !customElements.get("ha-form")
-      ? html`
-          <div class="fallback-editor content">
-            <label for="battery-threshold">
-              ${localize("editor.battery_threshold_label")}
-            </label>
-            <input
-              id="battery-threshold"
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              .value=${String(threshold)}
-              @input=${this._nativeValueChanged}
-            />
-            <div class="helper">
-              ${localize("editor.battery_threshold_helper")}
+    return html`
+      ${MODULES.map((mod) => {
+        const enabled = this._config![mod.enabledKey] !== false;
+        return html`
+          <ha-expansion-panel
+            .expanded=${mod.id === "batteries"}
+            outlined
+          >
+            <ha-icon
+              slot="leading-icon"
+              icon=${mod.icon}
+            ></ha-icon>
+            <h3 slot="header">${localize(mod.headerKey)}</h3>
+            <div class="content">
+              ${this._renderEnableToggle(localize, mod, enabled)}
+              ${enabled ? this._renderModuleSettings(localize, mod) : nothing}
             </div>
-            <div class="value">${threshold}%</div>
-            <label for="show-attention-batteries-in-areas">
-              <input
-                id="show-attention-batteries-in-areas"
-                type="checkbox"
-                .checked=${showAttentionBatteriesInAreas}
-                @change=${this._nativeBooleanChanged}
-              />
-              ${localize("editor.show_attention_in_areas_label")}
-            </label>
-            <div class="helper">
-              ${localize("editor.show_attention_in_areas_helper")}
-            </div>
-          </div>
-        `
-      : html`
-          <div class="content">
-            <ha-form
-              .hass=${this.hass}
-              .data=${{
-                battery_attention_threshold: threshold,
-                show_attention_batteries_in_areas:
-                  showAttentionBatteriesInAreas,
-              }}
-              .schema=${[
-                {
-                  name: "battery_attention_threshold",
-                  selector: {
-                    number: {
-                      min: 0,
-                      max: 100,
-                      mode: "slider",
-                      slider_ticks: true,
-                    },
-                  },
-                },
-                {
-                  name: "show_attention_batteries_in_areas",
-                  selector: {
-                    boolean: {},
-                  },
-                },
-              ]}
-              .computeLabel=${this._computeLabel}
-              .computeHelper=${this._computeHelper}
-              @value-changed=${this._valueChanged}
-            ></ha-form>
-          </div>
+          </ha-expansion-panel>
         `;
+      })}
+    `;
+  }
 
-    const staleSettingsContent = !customElements.get("ha-form")
-      ? html`
-          <div class="fallback-editor content">
-            <label for="stale-threshold">
-              ${localize("editor.stale_threshold_label")}
-            </label>
+  private _renderEnableToggle(
+    localize: ReturnType<typeof setupLocalize>,
+    mod: ModuleDescriptor,
+    enabled: boolean,
+  ) {
+    if (!customElements.get("ha-form")) {
+      return html`
+        <div class="fallback-editor">
+          <label>
             <input
-              id="stale-threshold"
-              type="range"
-              min="1"
-              max="168"
-              step="1"
-              .value=${String(staleThreshold)}
-              @input=${this._nativeStaleValueChanged}
+              type="checkbox"
+              .checked=${enabled}
+              data-module=${mod.id}
+              @change=${this._nativeModuleEnabledChanged}
             />
-            <div class="helper">
-              ${localize("editor.stale_threshold_helper")}
-            </div>
-            <div class="value">${staleThreshold}h</div>
+            ${localize("editor.module_enabled_label")}
+          </label>
+          <div class="helper">
+            ${localize("editor.module_enabled_helper")}
           </div>
-        `
-      : html`
-          <div class="content">
-            <ha-form
-              .hass=${this.hass}
-              .data=${{
-                stale_threshold_hours: staleThreshold,
-              }}
-              .schema=${[
-                {
-                  name: "stale_threshold_hours",
-                  selector: {
-                    number: {
-                      min: 1,
-                      max: 168,
-                      mode: "slider",
-                      unit_of_measurement: "h",
-                    },
-                  },
-                },
-              ]}
-              .computeLabel=${this._computeLabel}
-              .computeHelper=${this._computeHelper}
-              @value-changed=${this._staleValueChanged}
-            ></ha-form>
-          </div>
-        `;
+        </div>
+      `;
+    }
 
     return html`
-      <ha-expansion-panel expanded outlined>
-        <ha-icon
-          slot="leading-icon"
-          icon="mdi:battery-heart-variant"
-        ></ha-icon>
-        <h3 slot="header">${localize("editor.batteries_header")}</h3>
-        ${settingsContent}
-      </ha-expansion-panel>
-      <ha-expansion-panel outlined>
-        <ha-icon
-          slot="leading-icon"
-          icon="mdi:clock-alert-outline"
-        ></ha-icon>
-        <h3 slot="header">${localize("editor.stale_header")}</h3>
-        ${staleSettingsContent}
-      </ha-expansion-panel>
+      <ha-form
+        .hass=${this.hass}
+        .data=${{ [`${mod.id}_enabled`]: enabled }}
+        .schema=${[
+          {
+            name: `${mod.id}_enabled`,
+            selector: { boolean: {} },
+          },
+        ]}
+        .computeLabel=${this._computeLabel}
+        .computeHelper=${this._computeHelper}
+        @value-changed=${this._moduleEnabledChanged}
+      ></ha-form>
+    `;
+  }
+
+  private _renderModuleSettings(
+    localize: ReturnType<typeof setupLocalize>,
+    mod: ModuleDescriptor,
+  ) {
+    switch (mod.id) {
+      case "batteries":
+        return this._renderBatterySettings(localize);
+      case "stale":
+        return this._renderStaleSettings(localize);
+      default:
+        return nothing;
+    }
+  }
+
+  private _renderBatterySettings(localize: ReturnType<typeof setupLocalize>) {
+    const threshold =
+      this._config!.battery_attention_threshold ??
+      DEFAULT_BATTERY_ATTENTION_THRESHOLD;
+    const showAttentionBatteriesInAreas =
+      this._config!.show_attention_batteries_in_areas ??
+      DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS;
+
+    if (!customElements.get("ha-form")) {
+      return html`
+        <div class="fallback-editor">
+          <label for="battery-threshold">
+            ${localize("editor.battery_threshold_label")}
+          </label>
+          <input
+            id="battery-threshold"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            .value=${String(threshold)}
+            @input=${this._nativeValueChanged}
+          />
+          <div class="helper">
+            ${localize("editor.battery_threshold_helper")}
+          </div>
+          <div class="value">${threshold}%</div>
+          <label for="show-attention-batteries-in-areas">
+            <input
+              id="show-attention-batteries-in-areas"
+              type="checkbox"
+              .checked=${showAttentionBatteriesInAreas}
+              @change=${this._nativeBooleanChanged}
+            />
+            ${localize("editor.show_attention_in_areas_label")}
+          </label>
+          <div class="helper">
+            ${localize("editor.show_attention_in_areas_helper")}
+          </div>
+        </div>
+      `;
+    }
+
+    return html`
+      <ha-form
+        .hass=${this.hass}
+        .data=${{
+          battery_attention_threshold: threshold,
+          show_attention_batteries_in_areas: showAttentionBatteriesInAreas,
+        }}
+        .schema=${[
+          {
+            name: "battery_attention_threshold",
+            selector: {
+              number: {
+                min: 0,
+                max: 100,
+                mode: "slider",
+                slider_ticks: true,
+              },
+            },
+          },
+          {
+            name: "show_attention_batteries_in_areas",
+            selector: {
+              boolean: {},
+            },
+          },
+        ]}
+        .computeLabel=${this._computeLabel}
+        .computeHelper=${this._computeHelper}
+        @value-changed=${this._valueChanged}
+      ></ha-form>
+    `;
+  }
+
+  private _renderStaleSettings(localize: ReturnType<typeof setupLocalize>) {
+    const staleThreshold =
+      this._config!.stale_threshold_hours ?? DEFAULT_STALE_THRESHOLD_HOURS;
+
+    if (!customElements.get("ha-form")) {
+      return html`
+        <div class="fallback-editor">
+          <label for="stale-threshold">
+            ${localize("editor.stale_threshold_label")}
+          </label>
+          <input
+            id="stale-threshold"
+            type="range"
+            min="1"
+            max="168"
+            step="1"
+            .value=${String(staleThreshold)}
+            @input=${this._nativeStaleValueChanged}
+          />
+          <div class="helper">
+            ${localize("editor.stale_threshold_helper")}
+          </div>
+          <div class="value">${staleThreshold}h</div>
+        </div>
+      `;
+    }
+
+    return html`
+      <ha-form
+        .hass=${this.hass}
+        .data=${{
+          stale_threshold_hours: staleThreshold,
+        }}
+        .schema=${[
+          {
+            name: "stale_threshold_hours",
+            selector: {
+              number: {
+                min: 1,
+                max: 168,
+                mode: "slider",
+                unit_of_measurement: "h",
+              },
+            },
+          },
+        ]}
+        .computeLabel=${this._computeLabel}
+        .computeHelper=${this._computeHelper}
+        @value-changed=${this._staleValueChanged}
+      ></ha-form>
     `;
   }
 
   private _computeLabel = (schema: { name: string }): string => {
     const localize = setupLocalize(this.hass);
+    const labelMap: Record<string, ReturnType<typeof localize>> = {
+      battery_attention_threshold: localize("editor.battery_threshold_label"),
+      show_attention_batteries_in_areas: localize("editor.show_attention_in_areas_label"),
+      stale_threshold_hours: localize("editor.stale_threshold_label"),
+    };
 
-    return schema.name === "battery_attention_threshold"
-      ? localize("editor.battery_threshold_label")
-      : schema.name === "show_attention_batteries_in_areas"
-        ? localize("editor.show_attention_in_areas_label")
-      : schema.name === "stale_threshold_hours"
-        ? localize("editor.stale_threshold_label")
-      : "";
+    if (schema.name.endsWith("_enabled")) {
+      return localize("editor.module_enabled_label");
+    }
+
+    return labelMap[schema.name] ?? "";
   };
 
   private _computeHelper = (schema: { name: string }): string => {
     const localize = setupLocalize(this.hass);
+    const helperMap: Record<string, ReturnType<typeof localize>> = {
+      battery_attention_threshold: localize("editor.battery_threshold_helper"),
+      show_attention_batteries_in_areas: localize("editor.show_attention_in_areas_helper"),
+      stale_threshold_hours: localize("editor.stale_threshold_helper"),
+    };
 
-    return schema.name === "battery_attention_threshold"
-      ? localize("editor.battery_threshold_helper")
-      : schema.name === "show_attention_batteries_in_areas"
-        ? localize("editor.show_attention_in_areas_helper")
-      : schema.name === "stale_threshold_hours"
-        ? localize("editor.stale_threshold_helper")
-      : "";
+    if (schema.name.endsWith("_enabled")) {
+      return localize("editor.module_enabled_helper");
+    }
+
+    return helperMap[schema.name] ?? "";
   };
+
+  /* ---- ha-form value-changed handlers ---- */
+
+  private _moduleEnabledChanged(ev: CustomEvent): void {
+    if (!this._config) {
+      return;
+    }
+    ev.stopPropagation();
+
+    const data = ev.detail.value as Record<string, boolean>;
+    const updates: Partial<MaintenanceDashboardStrategyConfig> = {};
+
+    for (const key of Object.keys(data)) {
+      if (key.endsWith("_enabled")) {
+        (updates as Record<string, boolean | undefined>)[key] =
+          data[key] === true ? undefined : false;
+      }
+    }
+
+    this._emitConfigUpdate(updates);
+  }
 
   private _valueChanged(ev: CustomEvent): void {
     if (!this._config) {
@@ -235,6 +339,17 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     });
   }
 
+  /* ---- Native fallback handlers ---- */
+
+  private _nativeModuleEnabledChanged(ev: Event): void {
+    const input = ev.currentTarget as HTMLInputElement;
+    const moduleId = input.dataset.module as MaintenanceModuleId;
+    const enabled = input.checked;
+    this._emitConfigUpdate({
+      [`${moduleId}_enabled`]: enabled ? undefined : false,
+    } as Partial<MaintenanceDashboardStrategyConfig>);
+  }
+
   private _nativeValueChanged(ev: Event): void {
     const threshold = Number((ev.currentTarget as HTMLInputElement).value);
     this._emitConfigUpdate({
@@ -266,6 +381,8 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
           : staleThreshold,
     });
   }
+
+  /* ---- Config emit ---- */
 
   private _emitConfigUpdate(
     updates: Partial<MaintenanceDashboardStrategyConfig>,

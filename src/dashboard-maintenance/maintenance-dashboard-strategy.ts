@@ -17,6 +17,7 @@ import type {
   HomeAssistant,
   MaintenanceDashboardStrategyConfig,
 } from "./types";
+import { isModuleEnabled } from "./types";
 
 type LovelaceConfig = Record<string, unknown>;
 
@@ -32,19 +33,26 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
     const localize = setupLocalize(hass);
     const areas = Object.values(await getMaintenanceAreas(hass)).sort(compareAreas);
 
-    return {
-      views: [
-        await MaintenanceSummaryViewStrategy.generate(
-          {
-            ...config,
-            view: "summary",
-            title: localize("view.summary"),
-            path: "summary",
-            icon: "mdi:home-heart",
-            heading_navigation_path: "batteries",
-          },
-          hass,
-        ),
+    const views: Record<string, unknown>[] = [];
+
+    /* --- Summary (always present) --- */
+    views.push(
+      await MaintenanceSummaryViewStrategy.generate(
+        {
+          ...config,
+          view: "summary",
+          title: localize("view.summary"),
+          path: "summary",
+          icon: "mdi:home-heart",
+          heading_navigation_path: "batteries",
+        },
+        hass,
+      ),
+    );
+
+    /* --- Batteries --- */
+    if (isModuleEnabled(config, "batteries")) {
+      views.push(
         await MaintenanceBatteriesViewStrategy.generate(
           {
             ...config,
@@ -82,6 +90,12 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
             ),
           ),
         )),
+      );
+    }
+
+    /* --- Updates --- */
+    if (isModuleEnabled(config, "updates")) {
+      views.push(
         await MaintenanceUpdatesViewStrategy.generate(
           {
             ...config,
@@ -103,6 +117,12 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           },
           hass,
         ),
+      );
+    }
+
+    /* --- Repairs --- */
+    if (isModuleEnabled(config, "repairs")) {
+      views.push(
         await MaintenanceRepairsViewStrategy.generate(
           {
             ...config,
@@ -124,6 +144,12 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           },
           hass,
         ),
+      );
+    }
+
+    /* --- Stale --- */
+    if (isModuleEnabled(config, "stale")) {
+      views.push(
         await MaintenanceStaleViewStrategy.generate(
           {
             ...config,
@@ -161,6 +187,12 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
             ),
           ),
         )),
+      );
+    }
+
+    /* --- Availability --- */
+    if (isModuleEnabled(config, "availability")) {
+      views.push(
         await MaintenanceAvailabilityViewStrategy.generate(
           {
             ...config,
@@ -198,8 +230,10 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
             ),
           ),
         )),
-      ],
-    };
+      );
+    }
+
+    return { views };
   }
 
   public static async getConfigElement(): Promise<HTMLElement> {

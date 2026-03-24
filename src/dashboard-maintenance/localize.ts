@@ -85,10 +85,16 @@ const en = {
     "Devices below this battery level are marked as needing attention.",
   "editor.show_attention_in_areas_helper":
     "When enabled, low-battery devices appear in the top attention section and again in their area sections.",
+  "editor.updates_header": "Updates",
+  "editor.repairs_header": "Repairs",
   "editor.stale_header": "Stale entities",
   "editor.stale_threshold_label": "Stale threshold (hours)",
   "editor.stale_threshold_helper":
     "Entities that have not reported within this many hours are shown as stale.",
+  "editor.availability_header": "Availability",
+  "editor.module_enabled_label": "Enabled",
+  "editor.module_enabled_helper":
+    "When disabled, this module is hidden from the dashboard and its data is not loaded.",
 };
 
 export type TranslationKey = keyof typeof en;

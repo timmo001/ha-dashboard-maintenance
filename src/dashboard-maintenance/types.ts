@@ -61,11 +61,23 @@ export interface HomeAssistant {
   states: Record<string, HassEntity>;
 }
 
+export type MaintenanceModuleId =
+  | "batteries"
+  | "updates"
+  | "repairs"
+  | "stale"
+  | "availability";
+
 export interface MaintenanceStrategyConfig {
   type: "custom:maintenance";
+  batteries_enabled?: boolean;
   battery_attention_threshold?: number;
   show_attention_batteries_in_areas?: boolean;
+  updates_enabled?: boolean;
+  repairs_enabled?: boolean;
+  stale_enabled?: boolean;
   stale_threshold_hours?: number;
+  availability_enabled?: boolean;
 }
 
 export type MaintenanceViewMode =
@@ -87,3 +99,9 @@ export interface MaintenanceViewStrategyConfig extends MaintenanceStrategyConfig
 }
 
 export interface MaintenanceDashboardStrategyConfig extends MaintenanceStrategyConfig {}
+
+/** Returns true when a module is enabled (defaults to true when unset). */
+export const isModuleEnabled = (
+  config: MaintenanceStrategyConfig,
+  module: MaintenanceModuleId,
+): boolean => config[`${module}_enabled`] !== false;
