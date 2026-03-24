@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+node_modules/
+.env
+www/dashboard-maintenance.js
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~

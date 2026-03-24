@@ -1,0 +1,19 @@
+{
+  "name": "dashboard-maintenance",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.32.1",
+  "scripts": {
+    "build": "tsc --noEmit && rolldown -c",
+    "publish-to-local": "bash ./scripts/publish-to-local.sh",
+    "start": "rolldown -c --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lit": "^3.3.2"
+  },
+  "devDependencies": {
+    "rolldown": "1.0.0-rc.11",
+    "typescript": "^6.0.2"
+  }
+}

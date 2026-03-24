@@ -1,0 +1,25 @@
+name: "Setup pnpm"
+
+description: "Setup Node.js with pnpm and install dependencies"
+
+inputs:
+  node-version:
+    description: "Node.js version to use"
+    required: false
+    default: "lts/*"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Enable corepack
+      run: corepack enable
+      shell: bash
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+        cache-dependency-path: pnpm-lock.yaml
+    - name: Install
+      run: pnpm install --frozen-lockfile
+      shell: bash

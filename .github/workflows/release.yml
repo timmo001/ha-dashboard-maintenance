@@ -1,0 +1,66 @@
+---
+name: "Release"
+
+on:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: "🚀 Release - Dashboard Maintenance"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "⬇️ Checkout the repository"
+        uses: actions/checkout@v6
+      - name: Setup pnpm
+        uses: ./.github/actions/setup-pnpm
+      - name: "🔢 Adjust version number"
+        shell: bash
+        run: |
+          version="${{ github.event.release.tag_name }}"
+          version="${version,,}"
+          version="${version#v}"
+          VERSION="$version" python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+
+          version = os.environ["VERSION"]
+
+          manifest_path = pathlib.Path("manifest.json")
+          manifest = json.loads(manifest_path.read_text())
+          manifest["version"] = version
+          manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+
+          const_path = pathlib.Path("const.py")
+          const_source = const_path.read_text()
+          const_source = re.sub(
+              r'VERSION: Final = "[^"]+"',
+              f'VERSION: Final = "{version}"',
+              const_source,
+              count=1,
+          )
+          const_path.write_text(const_source)
+          PY
+      - name: "🏗 Build frontend assets"
+        run: pnpm run build
+      - name: "📦 Create zipped release package"
+        shell: bash
+        run: |
+          zip -r dashboard_maintenance.zip \
+            __init__.py \
+            config_flow.py \
+            const.py \
+            manifest.json \
+            strings.json \
+            translations \
+            www
+      - name: "⬆ Upload zip to release"
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dashboard_maintenance.zip
