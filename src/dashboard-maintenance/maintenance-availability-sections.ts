@@ -3,6 +3,7 @@ import {
   getMaintenanceAvailabilityEntities,
   groupAvailabilityEntitiesByArea,
 } from "./availability-data";
+import type { LocalizeFunc } from "./localize";
 import {
   getAreasFloorHierarchy,
   getMaintenanceAreas,
@@ -31,6 +32,7 @@ export const buildAvailabilityAreaShowMorePath = (areaId: string): string =>
   `availability-area-${areaId}`;
 
 const makeAreaCards = (
+  localize: LocalizeFunc,
   areaIds: string[],
   areas: Record<string, AreaRegistryEntry>,
   hass: HomeAssistant,
@@ -70,6 +72,7 @@ const makeAreaCards = (
     if (shownEntities.hiddenCount > 0) {
       cards.push(
         makeShowMoreCard(
+          localize,
           shownEntities.hiddenCount,
           buildAvailabilityAreaShowMorePath(area.area_id),
         ),
@@ -81,6 +84,7 @@ const makeAreaCards = (
 };
 
 export const makeAvailabilitySummarySection = (
+  localize: LocalizeFunc,
   entities: MaintenanceAvailabilityEntity[],
   options?: {
     limit?: number;
@@ -90,7 +94,7 @@ export const makeAvailabilitySummarySection = (
   const limitedEntities = limitItems(entities, options?.limit);
 
   return makeSection(
-    "Unavailable or unknown",
+    localize("availability.heading_unavailable_or_unknown"),
     "mdi:help-circle-outline",
     entities.length > 0
       ? [
@@ -102,6 +106,7 @@ export const makeAvailabilitySummarySection = (
           ...(options?.showMorePath && limitedEntities.hiddenCount > 0
             ? [
                 makeShowMoreCard(
+                  localize,
                   limitedEntities.hiddenCount,
                   options.showMorePath,
                 ),
@@ -110,8 +115,8 @@ export const makeAvailabilitySummarySection = (
         ]
       : [
           makeEmptyStateCard(
-            "No availability issues",
-            "Home Assistant could not find any unavailable or unknown entities.",
+            localize("availability.empty_no_issues_title"),
+            localize("availability.empty_no_issues_content"),
             "mdi:lan-connect",
           ),
         ],
@@ -121,6 +126,7 @@ export const makeAvailabilitySummarySection = (
 };
 
 export const makeAvailabilitySections = async (
+  localize: LocalizeFunc,
   hass: HomeAssistant,
   entities: MaintenanceAvailabilityEntity[],
   options?: {
@@ -131,12 +137,12 @@ export const makeAvailabilitySections = async (
   if (entities.length === 0) {
     return [
       makeSection(
-        "Availability",
+        localize("availability.heading"),
         "mdi:lan-connect",
         [
           makeEmptyStateCard(
-            "No availability issues",
-            "Home Assistant could not find any unavailable or unknown entities.",
+            localize("availability.empty_no_issues_title"),
+            localize("availability.empty_no_issues_content"),
             "mdi:lan-connect",
           ),
         ],
@@ -155,13 +161,14 @@ export const makeAvailabilitySections = async (
 
     return [
       makeSection(
-        "Availability issues",
+        localize("availability.heading_issues"),
         "mdi:help-circle-outline",
         [
           ...limitedEntities.items.map((entity) => makeAvailabilityCard(entity)),
           ...(options?.showMorePath && limitedEntities.hiddenCount > 0
             ? [
                 makeShowMoreCard(
+                  localize,
                   limitedEntities.hiddenCount,
                   options.showMorePath,
                 ),
@@ -184,7 +191,7 @@ export const makeAvailabilitySections = async (
       continue;
     }
 
-    const areaCards = makeAreaCards(floorStructure.areas, areas, hass, entities, {
+    const areaCards = makeAreaCards(localize, floorStructure.areas, areas, hass, entities, {
       limit: options?.limit,
     });
     if (areaCards.length === 0) {
@@ -194,9 +201,10 @@ export const makeAvailabilitySections = async (
     sections.push(
       makeGridSection(
         [
-          makeHeadingCard(floorCount > 1 ? floor.name : "Areas", {
-            icon: floorHeadingIcon(floor),
-          }),
+          makeHeadingCard(
+            floorCount > 1 ? floor.name : localize("common.areas"),
+            { icon: floorHeadingIcon(floor) },
+          ),
           ...areaCards,
         ],
         MAINTENANCE_COLUMN_SPAN,
@@ -205,7 +213,7 @@ export const makeAvailabilitySections = async (
   }
 
   if (hierarchy.areas.length > 0) {
-    const areaCards = makeAreaCards(hierarchy.areas, areas, hass, entities, {
+    const areaCards = makeAreaCards(localize, hierarchy.areas, areas, hass, entities, {
       limit: options?.limit,
     });
 
@@ -213,7 +221,11 @@ export const makeAvailabilitySections = async (
       sections.push(
         makeGridSection(
           [
-            makeHeadingCard(floorCount > 1 ? "Other areas" : "Areas"),
+            makeHeadingCard(
+              floorCount > 1
+                ? localize("common.other_areas")
+                : localize("common.areas"),
+            ),
             ...areaCards,
           ],
           MAINTENANCE_COLUMN_SPAN,
@@ -229,10 +241,14 @@ export const makeAvailabilitySections = async (
     sections.push(
       makeGridSection(
         [
-          makeHeadingCard(sections.length > 0 ? "Other entities" : "Entities"),
+          makeHeadingCard(
+            sections.length > 0
+              ? localize("common.other_entities")
+              : localize("common.entities"),
+          ),
           ...unassignedCards.items.map((entity) => makeAvailabilityCard(entity)),
           ...(options?.showMorePath && unassignedCards.hiddenCount > 0
-            ? [makeShowMoreCard(unassignedCards.hiddenCount, options.showMorePath)]
+            ? [makeShowMoreCard(localize, unassignedCards.hiddenCount, options.showMorePath)]
             : []),
         ],
         MAINTENANCE_COLUMN_SPAN,
@@ -248,12 +264,12 @@ export const makeAvailabilitySections = async (
 
   return [
     makeSection(
-      "Availability issues",
+      localize("availability.heading_issues"),
       "mdi:help-circle-outline",
       [
         ...fallbackEntities.items.map((entity) => makeAvailabilityCard(entity)),
         ...(options?.showMorePath && fallbackEntities.hiddenCount > 0
-          ? [makeShowMoreCard(fallbackEntities.hiddenCount, options.showMorePath)]
+          ? [makeShowMoreCard(localize, fallbackEntities.hiddenCount, options.showMorePath)]
           : []),
       ],
       MAINTENANCE_COLUMN_SPAN,

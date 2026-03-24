@@ -1,3 +1,4 @@
+import type { LocalizeFunc } from "./localize";
 import {
   limitItems,
   MAINTENANCE_COLUMN_SPAN,
@@ -15,6 +16,7 @@ import {
 } from "./update-data";
 
 export const makeUpdateSummarySection = (
+  localize: LocalizeFunc,
   updates: MaintenanceUpdateEntity[],
   options?: {
     limit?: number;
@@ -28,19 +30,19 @@ export const makeUpdateSummarySection = (
   const limitedUpdates = limitItems(summaryUpdates, options?.limit);
 
   return makeSection(
-    "Updates",
+    localize("update.heading"),
     "mdi:package-up",
     summaryUpdates.length > 0
       ? [
           ...limitedUpdates.items.map(makeUpdateCard),
           ...(options?.showMorePath && limitedUpdates.hiddenCount > 0
-            ? [makeShowMoreCard(limitedUpdates.hiddenCount, options.showMorePath)]
+            ? [makeShowMoreCard(localize, limitedUpdates.hiddenCount, options.showMorePath)]
             : []),
         ]
       : [
           makeEmptyStateCard(
-            "No updates available",
-            "Home Assistant could not find any update entities that need attention.",
+            localize("update.empty_no_updates_title"),
+            localize("update.empty_no_updates_content"),
             "mdi:package-up",
           ),
         ],
@@ -50,6 +52,7 @@ export const makeUpdateSummarySection = (
 };
 
 export const makeUpdatesSections = (
+  localize: LocalizeFunc,
   updates: MaintenanceUpdateEntity[],
   options?: {
     limit?: number;
@@ -59,12 +62,12 @@ export const makeUpdatesSections = (
   if (updates.length === 0) {
     return [
       makeSection(
-        "Updates",
+        localize("update.heading"),
         "mdi:package-up",
         [
           makeEmptyStateCard(
-            "No update entities found",
-            "Home Assistant could not find any update entities.",
+            localize("update.empty_no_entities_title"),
+            localize("update.empty_no_entities_content"),
             "mdi:package-up",
           ),
         ],
@@ -98,12 +101,12 @@ export const makeUpdatesSections = (
   const sections = [
     limitedInProgress.items.length > 0
       ? makeSection(
-          "Updates in progress",
+          localize("update.heading_in_progress"),
           "mdi:progress-download",
           [
             ...limitedInProgress.items.map(makeUpdateCard),
             ...(options?.showMorePath && limitedInProgress.hiddenCount > 0
-              ? [makeShowMoreCard(limitedInProgress.hiddenCount, options.showMorePath)]
+              ? [makeShowMoreCard(localize, limitedInProgress.hiddenCount, options.showMorePath)]
               : []),
           ],
           MAINTENANCE_COLUMN_SPAN,
@@ -111,12 +114,12 @@ export const makeUpdatesSections = (
       : undefined,
     limitedAvailable.items.length > 0
       ? makeSection(
-          "Available updates",
+          localize("update.heading_available"),
           "mdi:package-up",
           [
             ...limitedAvailable.items.map(makeUpdateCard),
             ...(options?.showMorePath && limitedAvailable.hiddenCount > 0
-              ? [makeShowMoreCard(limitedAvailable.hiddenCount, options.showMorePath)]
+              ? [makeShowMoreCard(localize, limitedAvailable.hiddenCount, options.showMorePath)]
               : []),
           ],
           MAINTENANCE_COLUMN_SPAN,
@@ -124,12 +127,12 @@ export const makeUpdatesSections = (
       : undefined,
     limitedSkipped.items.length > 0
       ? makeSection(
-          "Skipped updates",
+          localize("update.heading_skipped"),
           "mdi:skip-next-circle-outline",
           [
             ...limitedSkipped.items.map(makeUpdateCard),
             ...(options?.showMorePath && limitedSkipped.hiddenCount > 0
-              ? [makeShowMoreCard(limitedSkipped.hiddenCount, options.showMorePath)]
+              ? [makeShowMoreCard(localize, limitedSkipped.hiddenCount, options.showMorePath)]
               : []),
           ],
           MAINTENANCE_COLUMN_SPAN,
@@ -137,12 +140,12 @@ export const makeUpdatesSections = (
       : undefined,
     limitedOther.items.length > 0
       ? makeSection(
-          "Other update entities",
+          localize("update.heading_other"),
           "mdi:package-variant-closed",
           [
             ...limitedOther.items.map(makeUpdateCard),
             ...(options?.showMorePath && limitedOther.hiddenCount > 0
-              ? [makeShowMoreCard(limitedOther.hiddenCount, options.showMorePath)]
+              ? [makeShowMoreCard(localize, limitedOther.hiddenCount, options.showMorePath)]
               : []),
           ],
           MAINTENANCE_COLUMN_SPAN,
@@ -156,12 +159,12 @@ export const makeUpdatesSections = (
 
   return [
     makeSection(
-      "Updates",
+      localize("update.heading"),
       "mdi:package-up",
       [
         makeEmptyStateCard(
-          "No updates available",
-          "All update entities are currently up to date.",
+          localize("update.empty_no_updates_title"),
+          localize("update.empty_up_to_date_content"),
           "mdi:package-up",
         ),
       ],

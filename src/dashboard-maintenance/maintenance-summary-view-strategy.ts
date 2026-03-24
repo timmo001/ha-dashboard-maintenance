@@ -1,5 +1,6 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import { setupLocalize } from "./localize";
 import { getMaintenanceAvailabilityEntities } from "./availability-data";
 import { makeAvailabilitySummarySection } from "./maintenance-availability-sections";
 import { getMaintenanceBatteryDevices } from "./maintenance-data";
@@ -17,22 +18,23 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,
   ): Promise<LovelaceViewConfig> {
+    const localize = setupLocalize(hass);
     const [batteryDevices, availabilityEntities, updates] = await Promise.all([
       getMaintenanceBatteryDevices(hass, config.battery_attention_threshold),
       getMaintenanceAvailabilityEntities(hass),
       getMaintenanceUpdates(hass),
     ]);
 
-    return makeViewConfig(config, "summary", [
-      makeBatteryAttentionSection(batteryDevices, config, {
+    return makeViewConfig(localize, config, "summary", [
+      makeBatteryAttentionSection(localize, batteryDevices, config, {
         limit: SUMMARY_ITEM_LIMIT,
         showMorePath: "batteries",
       }),
-      makeAvailabilitySummarySection(availabilityEntities, {
+      makeAvailabilitySummarySection(localize, availabilityEntities, {
         limit: SUMMARY_ITEM_LIMIT,
         showMorePath: "availability",
       }),
-      makeUpdateSummarySection(updates, {
+      makeUpdateSummarySection(localize, updates, {
         limit: SUMMARY_ITEM_LIMIT,
         showMorePath: "updates",
       }),

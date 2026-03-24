@@ -1,5 +1,6 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import { setupLocalize } from "./localize";
 import { makeUpdatesSections } from "./maintenance-update-sections";
 import {
   makeViewConfig,
@@ -16,12 +17,15 @@ export class MaintenanceUpdatesViewStrategy extends ReactiveElement {
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,
   ): Promise<LovelaceViewConfig> {
+    const localize = setupLocalize(hass);
     const updates = getMaintenanceUpdates(hass);
 
     return makeViewConfig(
+      localize,
       config,
       "updates",
       makeUpdatesSections(
+        localize,
         updates,
         config.subview
           ? undefined

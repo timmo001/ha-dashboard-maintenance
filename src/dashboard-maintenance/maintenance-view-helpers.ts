@@ -3,6 +3,7 @@ import {
   availabilityIssueIcon,
   type MaintenanceAvailabilityEntity,
 } from "./availability-data";
+import type { LocalizeFunc, TranslationKey } from "./localize";
 import type { MaintenanceUpdateEntity } from "./update-data";
 import { updateCanInstall } from "./update-data";
 import type {
@@ -33,29 +34,29 @@ export const ATTENTION_AVAILABILITY_NAME: EntityNameItem[] = [
 
 export const VIEW_DEFAULTS: Record<
   MaintenanceViewMode,
-  { columnSpan: number; icon: string; path: string; title: string }
+  { columnSpan: number; icon: string; path: string; titleKey: TranslationKey }
 > = {
   summary: {
     columnSpan: SUMMARY_COLUMN_SPAN,
-    title: "Summary",
+    titleKey: "view.summary",
     path: "summary",
     icon: "mdi:home-heart",
   },
   batteries: {
     columnSpan: MAINTENANCE_COLUMN_SPAN,
-    title: "Batteries",
+    titleKey: "view.batteries",
     path: "batteries",
     icon: "mdi:battery-heart-variant",
   },
   updates: {
     columnSpan: MAINTENANCE_COLUMN_SPAN,
-    title: "Updates",
+    titleKey: "view.updates",
     path: "updates",
     icon: "mdi:package-up",
   },
   availability: {
     columnSpan: MAINTENANCE_COLUMN_SPAN,
-    title: "Availability",
+    titleKey: "view.availability",
     path: "availability",
     icon: "mdi:help-circle-outline",
   },
@@ -140,10 +141,11 @@ export const makeUpdateCard = (
 });
 
 export const makeShowMoreCard = (
+  localize: LocalizeFunc,
   hiddenCount: number,
   navigationPath: string,
 ): LovelaceCardConfig => ({
-  ...makeHeadingCard(`Show ${hiddenCount} more`, {
+  ...makeHeadingCard(localize("common.show_count_more", { count: hiddenCount }), {
     headingStyle: "subtitle",
     icon: "mdi:chevron-right",
     navigationPath,
@@ -212,13 +214,18 @@ export const makeSection = (
 });
 
 export const makeShowMoreSection = (
+  localize: LocalizeFunc,
   hiddenCount: number,
   navigationPath: string,
   columnSpan: number,
 ): LovelaceSectionConfig =>
-  makeGridSection([makeShowMoreCard(hiddenCount, navigationPath)], columnSpan);
+  makeGridSection(
+    [makeShowMoreCard(localize, hiddenCount, navigationPath)],
+    columnSpan,
+  );
 
 export const makeViewConfig = (
+  localize: LocalizeFunc,
   config: MaintenanceViewStrategyConfig,
   view: MaintenanceViewMode,
   sections: LovelaceSectionConfig[],
@@ -227,7 +234,7 @@ export const makeViewConfig = (
 
   return {
     type: "sections",
-    title: config.title || defaults.title,
+    title: config.title || localize(defaults.titleKey),
     path: config.path || defaults.path,
     icon: config.icon || defaults.icon,
     ...(config.subview ? { subview: true } : {}),

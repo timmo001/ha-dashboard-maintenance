@@ -1,5 +1,6 @@
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
+import { setupLocalize } from "./localize";
 import type {
   HomeAssistant,
   MaintenanceDashboardStrategyConfig,
@@ -23,6 +24,8 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
       return nothing;
     }
 
+    const localize = setupLocalize(this.hass);
+
     const threshold =
       this._config.battery_attention_threshold ??
       DEFAULT_BATTERY_ATTENTION_THRESHOLD;
@@ -33,7 +36,9 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     const settingsContent = !customElements.get("ha-form")
       ? html`
           <div class="fallback-editor content">
-            <label for="battery-threshold">Battery attention threshold</label>
+            <label for="battery-threshold">
+              ${localize("editor.battery_threshold_label")}
+            </label>
             <input
               id="battery-threshold"
               type="range"
@@ -44,7 +49,7 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
               @input=${this._nativeValueChanged}
             />
             <div class="helper">
-              Devices below this battery level are marked as needing attention.
+              ${localize("editor.battery_threshold_helper")}
             </div>
             <div class="value">${threshold}%</div>
             <label for="show-attention-batteries-in-areas">
@@ -54,10 +59,10 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
                 .checked=${showAttentionBatteriesInAreas}
                 @change=${this._nativeBooleanChanged}
               />
-              Show batteries needing attention in their area sections
+              ${localize("editor.show_attention_in_areas_label")}
             </label>
             <div class="helper">
-              When enabled, low-battery devices appear in the top attention section and again in their area sections.
+              ${localize("editor.show_attention_in_areas_helper")}
             </div>
           </div>
         `
@@ -102,25 +107,31 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
           slot="leading-icon"
           icon="mdi:battery-heart-variant"
         ></ha-icon>
-        <h3 slot="header">Batteries</h3>
+        <h3 slot="header">${localize("editor.batteries_header")}</h3>
         ${settingsContent}
       </ha-expansion-panel>
     `;
   }
 
-  private _computeLabel = (schema: { name: string }): string =>
-    schema.name === "battery_attention_threshold"
-      ? "Battery attention threshold"
-      : schema.name === "show_attention_batteries_in_areas"
-        ? "Show batteries needing attention in their area sections"
-      : "";
+  private _computeLabel = (schema: { name: string }): string => {
+    const localize = setupLocalize(this.hass);
 
-  private _computeHelper = (schema: { name: string }): string =>
-    schema.name === "battery_attention_threshold"
-      ? "Devices below this battery level are marked as needing attention."
+    return schema.name === "battery_attention_threshold"
+      ? localize("editor.battery_threshold_label")
       : schema.name === "show_attention_batteries_in_areas"
-        ? "When enabled, low-battery devices appear in the top attention section and again in their area sections."
+        ? localize("editor.show_attention_in_areas_label")
       : "";
+  };
+
+  private _computeHelper = (schema: { name: string }): string => {
+    const localize = setupLocalize(this.hass);
+
+    return schema.name === "battery_attention_threshold"
+      ? localize("editor.battery_threshold_helper")
+      : schema.name === "show_attention_batteries_in_areas"
+        ? localize("editor.show_attention_in_areas_helper")
+      : "";
+  };
 
   private _valueChanged(ev: CustomEvent): void {
     if (!this._config) {

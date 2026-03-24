@@ -1,6 +1,7 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import "./editor";
+import { setupLocalize } from "./localize";
 import { getMaintenanceAreas } from "./maintenance-data";
 import { buildAvailabilityAreaShowMorePath } from "./maintenance-availability-sections";
 import { MaintenanceAvailabilityViewStrategy } from "./maintenance-availability-view-strategy";
@@ -25,6 +26,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
     config: MaintenanceDashboardStrategyConfig,
     hass: HomeAssistant,
   ): Promise<LovelaceConfig> {
+    const localize = setupLocalize(hass);
     const areas = Object.values(await getMaintenanceAreas(hass)).sort(compareAreas);
 
     return {
@@ -33,7 +35,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           {
             ...config,
             view: "summary",
-            title: "Summary",
+            title: localize("view.summary"),
             path: "summary",
             icon: "mdi:home-heart",
             heading_navigation_path: "batteries",
@@ -44,7 +46,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           {
             ...config,
             view: "batteries",
-            title: "Batteries",
+            title: localize("view.batteries"),
             path: "batteries",
             icon: "mdi:battery-heart-variant",
           },
@@ -54,7 +56,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           {
             ...config,
             view: "batteries",
-            title: "All batteries",
+            title: localize("view.all_batteries"),
             path: "batteries-all",
             icon: "mdi:battery-heart-variant",
             subview: true,
@@ -81,7 +83,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           {
             ...config,
             view: "updates",
-            title: "Updates",
+            title: localize("view.updates"),
             path: "updates",
             icon: "mdi:package-up",
           },
@@ -91,7 +93,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           {
             ...config,
             view: "updates",
-            title: "All updates",
+            title: localize("view.all_updates"),
             path: "updates-all",
             icon: "mdi:package-up",
             subview: true,
@@ -102,7 +104,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           {
             ...config,
             view: "availability",
-            title: "Availability",
+            title: localize("view.availability"),
             path: "availability",
             icon: "mdi:help-circle-outline",
           },
@@ -112,7 +114,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           {
             ...config,
             view: "availability",
-            title: "All availability",
+            title: localize("view.all_availability"),
             path: "availability-all",
             icon: "mdi:help-circle-outline",
             subview: true,
@@ -126,7 +128,7 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
                 ...config,
                 area_id: area.area_id,
                 view: "availability",
-                title: `Availability - ${area.name}`,
+                title: localize("view.availability_area", { area: area.name }),
                 path: buildAvailabilityAreaShowMorePath(area.area_id),
                 icon: "mdi:help-circle-outline",
                 subview: true,

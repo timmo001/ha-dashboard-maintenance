@@ -1,3 +1,4 @@
+import type { LocalizeFunc } from "./localize";
 import {
   getAreasFloorHierarchy,
   getMaintenanceAreas,
@@ -32,6 +33,7 @@ export const buildBatteryAreaShowMorePath = (areaId: string): string =>
   `batteries-area-${areaId}`;
 
 const makeAreaCards = (
+  localize: LocalizeFunc,
   areaIds: string[],
   areas: Record<string, AreaRegistryEntry>,
   hass: HomeAssistant,
@@ -72,6 +74,7 @@ const makeAreaCards = (
     if (shownDevices.hiddenCount > 0) {
       cards.push(
         makeShowMoreCard(
+          localize,
           shownDevices.hiddenCount,
           buildBatteryAreaShowMorePath(area.area_id),
         ),
@@ -83,6 +86,7 @@ const makeAreaCards = (
 };
 
 export const makeBatteryAttentionSection = (
+  localize: LocalizeFunc,
   batteryDevices: MaintenanceBatteryDevice[],
   config: MaintenanceViewStrategyConfig,
   options?: {
@@ -96,15 +100,15 @@ export const makeBatteryAttentionSection = (
     batteryDevices.length === 0
       ? [
           makeEmptyStateCard(
-            "No battery devices found",
-            "Home Assistant could not find any devices with numeric battery sensors.",
+            localize("battery.empty_no_devices_title"),
+            localize("battery.empty_no_devices_content"),
           ),
         ]
       : attentionDevices.length === 0
         ? [
             makeEmptyStateCard(
-              "No batteries need attention",
-              "All battery devices are at or above the attention threshold.",
+              localize("battery.empty_no_attention_title"),
+              localize("battery.empty_no_attention_content"),
             ),
           ]
         : [
@@ -116,6 +120,7 @@ export const makeBatteryAttentionSection = (
             ...(options?.showMorePath && limitedAttentionDevices.hiddenCount > 0
               ? [
                   makeShowMoreCard(
+                    localize,
                     limitedAttentionDevices.hiddenCount,
                     options.showMorePath,
                   ),
@@ -124,7 +129,7 @@ export const makeBatteryAttentionSection = (
           ];
 
   return makeSection(
-    "Batteries needing attention",
+    localize("battery.heading_needing_attention"),
     "mdi:alert",
     cards,
     SUMMARY_COLUMN_SPAN,
@@ -133,6 +138,7 @@ export const makeBatteryAttentionSection = (
 };
 
 export const makeBatterySections = async (
+  localize: LocalizeFunc,
   hass: HomeAssistant,
   batteryDevices: MaintenanceBatteryDevice[],
   options?: {
@@ -154,13 +160,14 @@ export const makeBatterySections = async (
 
     return [
       makeSection(
-        "Battery devices",
+        localize("battery.heading_devices"),
         "mdi:battery-heart-variant",
         [
           ...limitedDevices.items.map((device) => makeBatteryCard(device)),
           ...(options?.showMorePath && limitedDevices.hiddenCount > 0
             ? [
                 makeShowMoreCard(
+                  localize,
                   limitedDevices.hiddenCount,
                   options.showMorePath,
                 ),
@@ -184,6 +191,7 @@ export const makeBatterySections = async (
     }
 
     const areaCards = makeAreaCards(
+      localize,
       floorStructure.areas,
       areas,
       hass,
@@ -197,9 +205,10 @@ export const makeBatterySections = async (
     sections.push(
       makeGridSection(
         [
-          makeHeadingCard(floorCount > 1 ? floor.name : "Areas", {
-            icon: floorHeadingIcon(floor),
-          }),
+          makeHeadingCard(
+            floorCount > 1 ? floor.name : localize("common.areas"),
+            { icon: floorHeadingIcon(floor) },
+          ),
           ...areaCards,
         ],
         MAINTENANCE_COLUMN_SPAN,
@@ -208,15 +217,24 @@ export const makeBatterySections = async (
   }
 
   if (hierarchy.areas.length > 0) {
-    const areaCards = makeAreaCards(hierarchy.areas, areas, hass, batteryDevices, {
-      limit: options?.limit,
-    });
+    const areaCards = makeAreaCards(
+      localize,
+      hierarchy.areas,
+      areas,
+      hass,
+      batteryDevices,
+      { limit: options?.limit },
+    );
 
     if (areaCards.length > 0) {
       sections.push(
         makeGridSection(
           [
-            makeHeadingCard(floorCount > 1 ? "Other areas" : "Areas"),
+            makeHeadingCard(
+              floorCount > 1
+                ? localize("common.other_areas")
+                : localize("common.areas"),
+            ),
             ...areaCards,
           ],
           MAINTENANCE_COLUMN_SPAN,
@@ -232,10 +250,14 @@ export const makeBatterySections = async (
     sections.push(
       makeGridSection(
         [
-          makeHeadingCard(sections.length > 0 ? "Other devices" : "Devices"),
+          makeHeadingCard(
+            sections.length > 0
+              ? localize("common.other_devices")
+              : localize("common.devices"),
+          ),
           ...unassignedCards.items.map((device) => makeBatteryCard(device)),
           ...(options?.showMorePath && unassignedCards.hiddenCount > 0
-            ? [makeShowMoreCard(unassignedCards.hiddenCount, options.showMorePath)]
+            ? [makeShowMoreCard(localize, unassignedCards.hiddenCount, options.showMorePath)]
             : []),
         ],
         MAINTENANCE_COLUMN_SPAN,
@@ -251,12 +273,12 @@ export const makeBatterySections = async (
 
   return [
     makeSection(
-      "Battery devices",
+      localize("battery.heading_devices"),
       "mdi:battery-heart-variant",
       [
         ...fallbackDevices.items.map((device) => makeBatteryCard(device)),
         ...(options?.showMorePath && fallbackDevices.hiddenCount > 0
-          ? [makeShowMoreCard(fallbackDevices.hiddenCount, options.showMorePath)]
+          ? [makeShowMoreCard(localize, fallbackDevices.hiddenCount, options.showMorePath)]
           : []),
       ],
       MAINTENANCE_COLUMN_SPAN,

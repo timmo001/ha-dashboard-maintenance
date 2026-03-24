@@ -1,5 +1,6 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import { setupLocalize } from "./localize";
 import { getMaintenanceAvailabilityEntities } from "./availability-data";
 import { makeAvailabilitySections } from "./maintenance-availability-sections";
 import {
@@ -16,15 +17,18 @@ export class MaintenanceAvailabilityViewStrategy extends ReactiveElement {
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,
   ): Promise<LovelaceViewConfig> {
+    const localize = setupLocalize(hass);
     const allEntities = await getMaintenanceAvailabilityEntities(hass);
     const entities = config.area_id
       ? allEntities.filter((entity) => entity.areaId === config.area_id)
       : allEntities;
 
     return makeViewConfig(
+      localize,
       config,
       "availability",
       await makeAvailabilitySections(
+        localize,
         hass,
         entities,
         config.subview

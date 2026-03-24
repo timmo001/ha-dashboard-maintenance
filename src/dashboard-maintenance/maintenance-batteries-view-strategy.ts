@@ -1,5 +1,6 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
+import { setupLocalize } from "./localize";
 import { getMaintenanceBatteryDevices } from "./maintenance-data";
 import {
   makeBatteryAttentionSection,
@@ -23,6 +24,7 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,
   ): Promise<LovelaceViewConfig> {
+    const localize = setupLocalize(hass);
     const allBatteryDevices = await getMaintenanceBatteryDevices(
       hass,
       config.battery_attention_threshold,
@@ -41,12 +43,12 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
     if (batteryDevices.length === 0) {
       sections.push(
         makeSection(
-          "Battery devices",
+          localize("battery.heading_devices"),
           "mdi:battery-heart-variant",
           [
             makeEmptyStateCard(
-              "No battery devices found",
-              "Home Assistant could not find any devices with numeric battery sensors.",
+              localize("battery.empty_no_devices_title"),
+              localize("battery.empty_no_devices_content"),
             ),
           ],
           MAINTENANCE_COLUMN_SPAN,
@@ -56,6 +58,7 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
       if (!config.area_id && attentionDevices.length > 0) {
         sections.push(
           makeBatteryAttentionSection(
+            localize,
             batteryDevices,
             config,
             config.subview
@@ -70,6 +73,7 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
 
       sections.push(
         ...(await makeBatterySections(
+          localize,
           hass,
           areaSectionDevices,
           config.subview
@@ -84,12 +88,12 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
       if (sections.length === 0) {
         sections.push(
           makeSection(
-            "Battery devices",
+            localize("battery.heading_devices"),
             "mdi:battery-heart-variant",
             [
               makeEmptyStateCard(
-                "No battery devices found",
-                "Home Assistant could not find any devices with numeric battery sensors.",
+                localize("battery.empty_no_devices_title"),
+                localize("battery.empty_no_devices_content"),
               ),
             ],
             MAINTENANCE_COLUMN_SPAN,
@@ -98,7 +102,7 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
       }
     }
 
-    return makeViewConfig(config, "batteries", sections);
+    return makeViewConfig(localize, config, "batteries", sections);
   }
 }
 

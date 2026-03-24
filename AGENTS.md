@@ -18,6 +18,7 @@ It is distributed as a HACS `Dashboard` repository, not as a custom integration.
 
 - `src/dashboard-maintenance.ts` registers the custom Lovelace dashboard and view strategies
 - `src/dashboard-maintenance/editor.ts` registers the strategy editor UI
+- `src/dashboard-maintenance/localize.ts` contains all user-facing strings and the translation helper
 - `src/dashboard-maintenance/maintenance-dashboard-strategy.ts` generates full dashboards
 - `src/dashboard-maintenance/maintenance-view-strategy.ts` generates single Lovelace views
 - `src/dashboard-maintenance/maintenance-data.ts` builds the battery-focused maintenance dataset
@@ -93,6 +94,14 @@ If you add tests later, prefer this structure:
 - Use built-in Home Assistant components like `ha-form` when available
 - Avoid coupling the bundle to private frontend internals more than necessary
 
+### Translations
+
+- All user-facing strings must go through `localize()` from `src/dashboard-maintenance/localize.ts`
+- Never hardcode user-visible English strings directly in strategy or editor code
+- Add new translation keys to the `en` table in `localize.ts` before using them
+- Thread `language?: string` (from `hass.locale?.language`) through functions that produce translated text
+- When adding a new language, create a partial translation record in `localize.ts` — missing keys fall back to English
+
 ### Error handling
 
 - Frontend registration should fail gracefully if Home Assistant has not finished booting
@@ -112,6 +121,7 @@ If you add tests later, prefer this structure:
 - If you change the fixed local publish destination, update both:
   - `README.md`
   - `scripts/publish-to-local.sh`
+- If you add new user-facing strings, add them to `src/dashboard-maintenance/localize.ts`
 
 ## Agent dos and don'ts
 
@@ -123,6 +133,7 @@ If you add tests later, prefer this structure:
 - Do remove dead code when it is clearly unused
 - Do not add unrelated tooling unless it directly supports this repo
 - Do not commit generated build output unless the workflow explicitly requires it
+- Do not hardcode user-facing strings — always use `localize()` from `localize.ts`
 
 ## Good final verification checklist
 
