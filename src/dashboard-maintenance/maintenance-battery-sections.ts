@@ -33,8 +33,13 @@ const makeAreaCards = (
   areas: Record<string, AreaRegistryEntry>,
   hass: HomeAssistant,
   devices: MaintenanceBatteryDevice[],
-): LovelaceCardConfig[] => {
+  options?: {
+    limit?: number;
+  },
+): { cards: LovelaceCardConfig[]; hiddenCount: number } => {
   const cards: LovelaceCardConfig[] = [];
+  let hiddenCount = 0;
+  let remaining = options?.limit;
 
   for (const areaId of areaIds) {
     const area = areas[areaId];
@@ -47,6 +52,20 @@ const makeAreaCards = (
       continue;
     }
 
+    if (remaining !== undefined && remaining <= 0) {
+      hiddenCount += areaDevices.length;
+      continue;
+    }
+
+    const shownDevices =
+      remaining === undefined ? areaDevices : areaDevices.slice(0, remaining);
+
+    hiddenCount += areaDevices.length - shownDevices.length;
+
+    if (shownDevices.length === 0) {
+      continue;
+    }
+
     cards.push(
       makeHeadingCard(area.name, {
         headingStyle: "subtitle",
@@ -55,10 +74,15 @@ const makeAreaCards = (
           : undefined,
       }),
     );
-    cards.push(...areaDevices.map((device) => makeBatteryCard(device)));
+
+    cards.push(...shownDevices.map((device) => makeBatteryCard(device)));
+
+    if (remaining !== undefined) {
+      remaining -= shownDevices.length;
+    }
   }
 
-  return cards;
+  return { cards, hiddenCount };
 };
 
 export const makeBatteryAttentionSection = (
@@ -114,6 +138,10 @@ export const makeBatteryAttentionSection = (
 export const makeBatterySections = async (
   hass: HomeAssistant,
   batteryDevices: MaintenanceBatteryDevice[],
+  options?: {
+    limit?: number;
+    showMorePath?: string;
+  },
 ): Promise<LovelaceSectionConfig[]> => {
   if (batteryDevices.length === 0) {
     return [];
@@ -125,11 +153,23 @@ export const makeBatterySections = async (
   ]);
 
   if (Object.keys(areas).length === 0) {
+    const limitedDevices = limitItems(batteryDevices, options?.limit);
+
     return [
       makeSection(
         "Battery devices",
         "mdi:battery-heart-variant",
-        batteryDevices.map((device) => makeBatteryCard(device)),
+        [
+          ...limitedDevices.items.map((device) => makeBatteryCard(device)),
+          ...(options?.showMorePath && limitedDevices.hiddenCount > 0
+            ? [
+                makeShowMoreCard(
+                  limitedDevices.hiddenCount,
+                  options.showMorePath,
+                ),
+              ]
+            : []),
+        ],
         MAINTENANCE_COLUMN_SPAN,
       ),
     ];
@@ -151,8 +191,9 @@ export const makeBatterySections = async (
       areas,
       hass,
       batteryDevices,
+      { limit: options?.limit },
     );
-    if (areaCards.length === 0) {
+    if (areaCards.cards.length === 0) {
       continue;
     }
 
@@ -162,7 +203,10 @@ export const makeBatterySections = async (
           makeHeadingCard(floorCount > 1 ? floor.name : "Areas", {
             icon: floorHeadingIcon(floor),
           }),
-          ...areaCards,
+          ...areaCards.cards,
+          ...(options?.showMorePath && areaCards.hiddenCount > 0
+            ? [makeShowMoreCard(areaCards.hiddenCount, options.showMorePath)]
+            : []),
         ],
         MAINTENANCE_COLUMN_SPAN,
       ),
@@ -170,14 +214,19 @@ export const makeBatterySections = async (
   }
 
   if (hierarchy.areas.length > 0) {
-    const areaCards = makeAreaCards(hierarchy.areas, areas, hass, batteryDevices);
+    const areaCards = makeAreaCards(hierarchy.areas, areas, hass, batteryDevices, {
+      limit: options?.limit,
+    });
 
-    if (areaCards.length > 0) {
+    if (areaCards.cards.length > 0) {
       sections.push(
         makeGridSection(
           [
             makeHeadingCard(floorCount > 1 ? "Other areas" : "Areas"),
-            ...areaCards,
+            ...areaCards.cards,
+            ...(options?.showMorePath && areaCards.hiddenCount > 0
+              ? [makeShowMoreCard(areaCards.hiddenCount, options.showMorePath)]
+              : []),
           ],
           MAINTENANCE_COLUMN_SPAN,
         ),
@@ -185,16 +234,18 @@ export const makeBatterySections = async (
     }
   }
 
-  const unassignedCards = batteryDevices
-    .filter((device) => !device.areaId)
-    .map((device) => makeBatteryCard(device));
+  const unassignedDevices = batteryDevices.filter((device) => !device.areaId);
+  const unassignedCards = limitItems(unassignedDevices, options?.limit);
 
-  if (unassignedCards.length > 0) {
+  if (unassignedCards.items.length > 0) {
     sections.push(
       makeGridSection(
         [
           makeHeadingCard(sections.length > 0 ? "Other devices" : "Devices"),
-          ...unassignedCards,
+          ...unassignedCards.items.map((device) => makeBatteryCard(device)),
+          ...(options?.showMorePath && unassignedCards.hiddenCount > 0
+            ? [makeShowMoreCard(unassignedCards.hiddenCount, options.showMorePath)]
+            : []),
         ],
         MAINTENANCE_COLUMN_SPAN,
       ),
@@ -205,11 +256,18 @@ export const makeBatterySections = async (
     return sections;
   }
 
+  const fallbackDevices = limitItems(batteryDevices, options?.limit);
+
   return [
     makeSection(
       "Battery devices",
       "mdi:battery-heart-variant",
-      batteryDevices.map((device) => makeBatteryCard(device)),
+      [
+        ...fallbackDevices.items.map((device) => makeBatteryCard(device)),
+        ...(options?.showMorePath && fallbackDevices.hiddenCount > 0
+          ? [makeShowMoreCard(fallbackDevices.hiddenCount, options.showMorePath)]
+          : []),
+      ],
       MAINTENANCE_COLUMN_SPAN,
     ),
   ];

@@ -51,6 +51,10 @@ export const makeUpdateSummarySection = (
 
 export const makeUpdatesSections = (
   updates: MaintenanceUpdateEntity[],
+  options?: {
+    limit?: number;
+    showMorePath?: string;
+  },
 ): LovelaceSectionConfig[] => {
   if (updates.length === 0) {
     return [
@@ -86,36 +90,61 @@ export const makeUpdatesSections = (
       updateCanNotInstall(update),
   );
 
+  const limitedInProgress = limitItems(inProgressUpdates, options?.limit);
+  const limitedAvailable = limitItems(availableUpdates, options?.limit);
+  const limitedSkipped = limitItems(skippedUpdates, options?.limit);
+  const limitedOther = limitItems(otherUpdates, options?.limit);
+
   const sections = [
-    inProgressUpdates.length > 0
+    limitedInProgress.items.length > 0
       ? makeSection(
           "Updates in progress",
           "mdi:progress-download",
-          inProgressUpdates.map(makeUpdateCard),
+          [
+            ...limitedInProgress.items.map(makeUpdateCard),
+            ...(options?.showMorePath && limitedInProgress.hiddenCount > 0
+              ? [makeShowMoreCard(limitedInProgress.hiddenCount, options.showMorePath)]
+              : []),
+          ],
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,
-    availableUpdates.length > 0
+    limitedAvailable.items.length > 0
       ? makeSection(
           "Available updates",
           "mdi:package-up",
-          availableUpdates.map(makeUpdateCard),
+          [
+            ...limitedAvailable.items.map(makeUpdateCard),
+            ...(options?.showMorePath && limitedAvailable.hiddenCount > 0
+              ? [makeShowMoreCard(limitedAvailable.hiddenCount, options.showMorePath)]
+              : []),
+          ],
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,
-    skippedUpdates.length > 0
+    limitedSkipped.items.length > 0
       ? makeSection(
           "Skipped updates",
           "mdi:skip-next-circle-outline",
-          skippedUpdates.map(makeUpdateCard),
+          [
+            ...limitedSkipped.items.map(makeUpdateCard),
+            ...(options?.showMorePath && limitedSkipped.hiddenCount > 0
+              ? [makeShowMoreCard(limitedSkipped.hiddenCount, options.showMorePath)]
+              : []),
+          ],
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,
-    otherUpdates.length > 0
+    limitedOther.items.length > 0
       ? makeSection(
           "Other update entities",
           "mdi:package-variant-closed",
-          otherUpdates.map(makeUpdateCard),
+          [
+            ...limitedOther.items.map(makeUpdateCard),
+            ...(options?.showMorePath && limitedOther.hiddenCount > 0
+              ? [makeShowMoreCard(limitedOther.hiddenCount, options.showMorePath)]
+              : []),
+          ],
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,

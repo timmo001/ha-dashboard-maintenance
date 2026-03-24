@@ -3,9 +3,6 @@ import { customElement } from "lit/decorators.js";
 import { getMaintenanceAvailabilityEntities } from "./availability-data";
 import { makeAvailabilitySections } from "./maintenance-availability-sections";
 import {
-  limitItems,
-  MAINTENANCE_COLUMN_SPAN,
-  makeShowMoreSection,
   makeViewConfig,
   type LovelaceViewConfig,
 } from "./maintenance-view-helpers";
@@ -19,26 +16,21 @@ export class MaintenanceAvailabilityViewStrategy extends ReactiveElement {
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,
   ): Promise<LovelaceViewConfig> {
-    const allEntities = await getMaintenanceAvailabilityEntities(hass);
-    const limitedEntities = config.subview
-      ? { hiddenCount: 0, items: allEntities }
-      : limitItems(allEntities, VIEW_ITEM_LIMIT);
+    const entities = await getMaintenanceAvailabilityEntities(hass);
 
     return makeViewConfig(
       config,
       "availability",
-      [
-        ...(await makeAvailabilitySections(hass, limitedEntities.items)),
-        ...(!config.subview && limitedEntities.hiddenCount > 0
-          ? [
-              makeShowMoreSection(
-                limitedEntities.hiddenCount,
-                "availability-all",
-                MAINTENANCE_COLUMN_SPAN,
-              ),
-            ]
-          : []),
-      ],
+      await makeAvailabilitySections(
+        hass,
+        entities,
+        config.subview
+          ? undefined
+          : {
+              limit: VIEW_ITEM_LIMIT,
+              showMorePath: "availability-all",
+            },
+      ),
     );
   }
 }

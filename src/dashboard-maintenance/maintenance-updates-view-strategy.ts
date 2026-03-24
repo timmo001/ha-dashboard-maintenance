@@ -2,9 +2,6 @@ import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { makeUpdatesSections } from "./maintenance-update-sections";
 import {
-  limitItems,
-  MAINTENANCE_COLUMN_SPAN,
-  makeShowMoreSection,
   makeViewConfig,
   type LovelaceViewConfig,
 } from "./maintenance-view-helpers";
@@ -19,23 +16,21 @@ export class MaintenanceUpdatesViewStrategy extends ReactiveElement {
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,
   ): Promise<LovelaceViewConfig> {
-    const allUpdates = getMaintenanceUpdates(hass);
-    const limitedUpdates = config.subview
-      ? { hiddenCount: 0, items: allUpdates }
-      : limitItems(allUpdates, VIEW_ITEM_LIMIT);
+    const updates = getMaintenanceUpdates(hass);
 
-    return makeViewConfig(config, "updates", [
-      ...makeUpdatesSections(limitedUpdates.items),
-      ...(!config.subview && limitedUpdates.hiddenCount > 0
-        ? [
-            makeShowMoreSection(
-              limitedUpdates.hiddenCount,
-              "updates-all",
-              MAINTENANCE_COLUMN_SPAN,
-            ),
-          ]
-        : []),
-    ]);
+    return makeViewConfig(
+      config,
+      "updates",
+      makeUpdatesSections(
+        updates,
+        config.subview
+          ? undefined
+          : {
+              limit: VIEW_ITEM_LIMIT,
+              showMorePath: "updates-all",
+            },
+      ),
+    );
   }
 }
 

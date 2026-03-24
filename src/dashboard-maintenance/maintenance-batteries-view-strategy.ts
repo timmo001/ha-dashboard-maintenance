@@ -1,17 +1,16 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { getMaintenanceBatteryDevices } from "./maintenance-data";
-import { makeBatterySections } from "./maintenance-battery-sections";
+import {
+  makeBatteryAttentionSection,
+  makeBatterySections,
+} from "./maintenance-battery-sections";
 import {
   MAINTENANCE_COLUMN_SPAN,
-  ATTENTION_BATTERY_NAME,
-  limitItems,
   type LovelaceSectionConfig,
   type LovelaceViewConfig,
-  makeBatteryCard,
   makeEmptyStateCard,
   makeSection,
-  makeShowMoreSection,
   makeViewConfig,
 } from "./maintenance-view-helpers";
 import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
@@ -24,14 +23,10 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,
   ): Promise<LovelaceViewConfig> {
-    const allBatteryDevices = await getMaintenanceBatteryDevices(
+    const batteryDevices = await getMaintenanceBatteryDevices(
       hass,
       config.battery_attention_threshold,
     );
-    const limitedBatteryDevices = config.subview
-      ? { hiddenCount: 0, items: allBatteryDevices }
-      : limitItems(allBatteryDevices, VIEW_ITEM_LIMIT);
-    const batteryDevices = limitedBatteryDevices.items;
     const attentionDevices = batteryDevices.filter((device) => device.needsAttention);
     const showAttentionBatteriesInAreas =
       config.show_attention_batteries_in_areas ?? true;
@@ -57,30 +52,28 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
         : [
             ...(attentionDevices.length > 0
               ? [
-                  makeSection(
-                    "Needs attention",
-                    "mdi:alert",
-                    attentionDevices.map((device) =>
-                      makeBatteryCard(device, {
-                        name: device.deviceId
-                          ? ATTENTION_BATTERY_NAME
-                          : device.deviceName,
-                      }),
-                    ),
-                    MAINTENANCE_COLUMN_SPAN,
+                  makeBatteryAttentionSection(
+                    batteryDevices,
+                    config,
+                    config.subview
+                      ? undefined
+                      : {
+                          limit: VIEW_ITEM_LIMIT,
+                          showMorePath: "batteries-all",
+                        },
                   ),
                 ]
               : []),
-            ...(await makeBatterySections(hass, areaSectionDevices)),
-            ...(!config.subview && limitedBatteryDevices.hiddenCount > 0
-              ? [
-                  makeShowMoreSection(
-                    limitedBatteryDevices.hiddenCount,
-                    "batteries-all",
-                    MAINTENANCE_COLUMN_SPAN,
-                  ),
-                ]
-              : []),
+            ...(await makeBatterySections(
+              hass,
+              areaSectionDevices,
+              config.subview
+                ? undefined
+                : {
+                    limit: VIEW_ITEM_LIMIT,
+                    showMorePath: "batteries-all",
+                  },
+            )),
           ];
 
     return makeViewConfig(config, "batteries", sections);

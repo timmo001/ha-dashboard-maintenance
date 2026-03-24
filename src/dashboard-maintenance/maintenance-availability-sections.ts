@@ -32,8 +32,13 @@ const makeAreaCards = (
   areas: Record<string, AreaRegistryEntry>,
   hass: HomeAssistant,
   entities: MaintenanceAvailabilityEntity[],
-): LovelaceCardConfig[] => {
+  options?: {
+    limit?: number;
+  },
+): { cards: LovelaceCardConfig[]; hiddenCount: number } => {
   const cards: LovelaceCardConfig[] = [];
+  let hiddenCount = 0;
+  let remaining = options?.limit;
 
   for (const areaId of areaIds) {
     const area = areas[areaId];
@@ -46,6 +51,20 @@ const makeAreaCards = (
       continue;
     }
 
+    if (remaining !== undefined && remaining <= 0) {
+      hiddenCount += areaEntities.length;
+      continue;
+    }
+
+    const shownEntities =
+      remaining === undefined ? areaEntities : areaEntities.slice(0, remaining);
+
+    hiddenCount += areaEntities.length - shownEntities.length;
+
+    if (shownEntities.length === 0) {
+      continue;
+    }
+
     cards.push(
       makeHeadingCard(area.name, {
         headingStyle: "subtitle",
@@ -54,10 +73,15 @@ const makeAreaCards = (
           : undefined,
       }),
     );
-    cards.push(...areaEntities.map((entity) => makeAvailabilityCard(entity)));
+
+    cards.push(...shownEntities.map((entity) => makeAvailabilityCard(entity)));
+
+    if (remaining !== undefined) {
+      remaining -= shownEntities.length;
+    }
   }
 
-  return cards;
+  return { cards, hiddenCount };
 };
 
 export const makeAvailabilitySummarySection = (
@@ -103,6 +127,10 @@ export const makeAvailabilitySummarySection = (
 export const makeAvailabilitySections = async (
   hass: HomeAssistant,
   entities: MaintenanceAvailabilityEntity[],
+  options?: {
+    limit?: number;
+    showMorePath?: string;
+  },
 ): Promise<LovelaceSectionConfig[]> => {
   if (entities.length === 0) {
     return [
@@ -127,11 +155,23 @@ export const makeAvailabilitySections = async (
   ]);
 
   if (Object.keys(areas).length === 0) {
+    const limitedEntities = limitItems(entities, options?.limit);
+
     return [
       makeSection(
         "Availability issues",
         "mdi:help-circle-outline",
-        entities.map((entity) => makeAvailabilityCard(entity)),
+        [
+          ...limitedEntities.items.map((entity) => makeAvailabilityCard(entity)),
+          ...(options?.showMorePath && limitedEntities.hiddenCount > 0
+            ? [
+                makeShowMoreCard(
+                  limitedEntities.hiddenCount,
+                  options.showMorePath,
+                ),
+              ]
+            : []),
+        ],
         MAINTENANCE_COLUMN_SPAN,
       ),
     ];
@@ -148,8 +188,10 @@ export const makeAvailabilitySections = async (
       continue;
     }
 
-    const areaCards = makeAreaCards(floorStructure.areas, areas, hass, entities);
-    if (areaCards.length === 0) {
+    const areaCards = makeAreaCards(floorStructure.areas, areas, hass, entities, {
+      limit: options?.limit,
+    });
+    if (areaCards.cards.length === 0) {
       continue;
     }
 
@@ -159,7 +201,10 @@ export const makeAvailabilitySections = async (
           makeHeadingCard(floorCount > 1 ? floor.name : "Areas", {
             icon: floorHeadingIcon(floor),
           }),
-          ...areaCards,
+          ...areaCards.cards,
+          ...(options?.showMorePath && areaCards.hiddenCount > 0
+            ? [makeShowMoreCard(areaCards.hiddenCount, options.showMorePath)]
+            : []),
         ],
         MAINTENANCE_COLUMN_SPAN,
       ),
@@ -167,14 +212,19 @@ export const makeAvailabilitySections = async (
   }
 
   if (hierarchy.areas.length > 0) {
-    const areaCards = makeAreaCards(hierarchy.areas, areas, hass, entities);
+    const areaCards = makeAreaCards(hierarchy.areas, areas, hass, entities, {
+      limit: options?.limit,
+    });
 
-    if (areaCards.length > 0) {
+    if (areaCards.cards.length > 0) {
       sections.push(
         makeGridSection(
           [
             makeHeadingCard(floorCount > 1 ? "Other areas" : "Areas"),
-            ...areaCards,
+            ...areaCards.cards,
+            ...(options?.showMorePath && areaCards.hiddenCount > 0
+              ? [makeShowMoreCard(areaCards.hiddenCount, options.showMorePath)]
+              : []),
           ],
           MAINTENANCE_COLUMN_SPAN,
         ),
@@ -182,16 +232,18 @@ export const makeAvailabilitySections = async (
     }
   }
 
-  const unassignedCards = entities
-    .filter((entity) => !entity.areaId)
-    .map((entity) => makeAvailabilityCard(entity));
+  const unassignedEntities = entities.filter((entity) => !entity.areaId);
+  const unassignedCards = limitItems(unassignedEntities, options?.limit);
 
-  if (unassignedCards.length > 0) {
+  if (unassignedCards.items.length > 0) {
     sections.push(
       makeGridSection(
         [
           makeHeadingCard(sections.length > 0 ? "Other entities" : "Entities"),
-          ...unassignedCards,
+          ...unassignedCards.items.map((entity) => makeAvailabilityCard(entity)),
+          ...(options?.showMorePath && unassignedCards.hiddenCount > 0
+            ? [makeShowMoreCard(unassignedCards.hiddenCount, options.showMorePath)]
+            : []),
         ],
         MAINTENANCE_COLUMN_SPAN,
       ),
@@ -202,11 +254,18 @@ export const makeAvailabilitySections = async (
     return sections;
   }
 
+  const fallbackEntities = limitItems(entities, options?.limit);
+
   return [
     makeSection(
       "Availability issues",
       "mdi:help-circle-outline",
-      entities.map((entity) => makeAvailabilityCard(entity)),
+      [
+        ...fallbackEntities.items.map((entity) => makeAvailabilityCard(entity)),
+        ...(options?.showMorePath && fallbackEntities.hiddenCount > 0
+          ? [makeShowMoreCard(fallbackEntities.hiddenCount, options.showMorePath)]
+          : []),
+      ],
       MAINTENANCE_COLUMN_SPAN,
     ),
   ];
