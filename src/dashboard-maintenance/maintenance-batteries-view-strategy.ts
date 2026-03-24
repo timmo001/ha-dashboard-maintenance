@@ -7,7 +7,6 @@ import {
   makeBatterySections,
 } from "./maintenance-battery-sections";
 import {
-  MAINTENANCE_COLUMN_SPAN,
   makeEmptyStateSection,
   type LovelaceSectionConfig,
   type LovelaceViewConfig,
@@ -37,59 +36,70 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
     const areaSectionDevices = showAttentionBatteriesInAreas
       ? batteryDevices
       : batteryDevices.filter((device) => !device.needsAttention);
-    const sections: LovelaceSectionConfig[] = [];
 
     if (batteryDevices.length === 0) {
-      sections.push(
-        makeEmptyStateSection(
-          localize("battery.empty_no_devices_title"),
-          localize("battery.empty_no_devices_content"),
-          "mdi:battery-outline",
-          MAINTENANCE_COLUMN_SPAN,
-        ),
-      );
-    } else {
-      if (!config.area_id && attentionDevices.length > 0) {
-        const attentionSection = makeBatteryAttentionSection(
-          localize,
-          batteryDevices,
-          config,
-          config.subview
-            ? undefined
-            : {
-                limit: VIEW_ITEM_LIMIT,
-                showMorePath: "batteries-all",
-              },
-        );
-        if (attentionSection) {
-          sections.push(attentionSection);
-        }
-      }
-
-      sections.push(
-        ...(await makeBatterySections(
-          localize,
-          hass,
-          areaSectionDevices,
-          config.subview
-            ? undefined
-            : {
-                limit: VIEW_ITEM_LIMIT,
-                showMorePath: "batteries-all",
-              },
-        )),
-      );
-
-      if (sections.length === 0) {
-        sections.push(
+      return makeViewConfig(
+        localize,
+        config,
+        "batteries",
+        [
           makeEmptyStateSection(
             localize("battery.empty_no_devices_title"),
             localize("battery.empty_no_devices_content"),
             "mdi:battery-outline",
-            MAINTENANCE_COLUMN_SPAN,
           ),
-        );
+        ],
+        { maxColumns: 1 },
+      );
+    }
+
+    const sections: LovelaceSectionConfig[] = [];
+
+    if (!config.area_id && attentionDevices.length > 0) {
+      const attentionSection = makeBatteryAttentionSection(
+        localize,
+        batteryDevices,
+        config,
+        config.subview
+          ? undefined
+          : {
+              limit: VIEW_ITEM_LIMIT,
+              showMorePath: "batteries-all",
+            },
+      );
+      if (attentionSection) {
+        sections.push(attentionSection);
       }
+    }
+
+    sections.push(
+      ...(await makeBatterySections(
+        localize,
+        hass,
+        areaSectionDevices,
+        config.subview
+          ? undefined
+          : {
+              limit: VIEW_ITEM_LIMIT,
+              showMorePath: "batteries-all",
+            },
+      )),
+    );
+
+    if (sections.length === 0) {
+      return makeViewConfig(
+        localize,
+        config,
+        "batteries",
+        [
+          makeEmptyStateSection(
+            localize("battery.empty_no_devices_title"),
+            localize("battery.empty_no_devices_content"),
+            "mdi:battery-outline",
+          ),
+        ],
+        { maxColumns: 1 },
+      );
     }
 
     return makeViewConfig(localize, config, "batteries", sections);

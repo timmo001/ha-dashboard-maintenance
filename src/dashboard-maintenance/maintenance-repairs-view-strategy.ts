@@ -19,21 +19,23 @@ export class MaintenanceRepairsViewStrategy extends ReactiveElement {
   ): Promise<LovelaceViewConfig> {
     const localize = setupLocalize(hass);
     const issues = await getMaintenanceRepairIssues(hass);
+    const sections = makeRepairsSections(
+      localize,
+      issues,
+      config.subview
+        ? undefined
+        : {
+            limit: VIEW_ITEM_LIMIT,
+            showMorePath: "repairs-all",
+          },
+    );
 
     return makeViewConfig(
       localize,
       config,
       "repairs",
-      makeRepairsSections(
-        localize,
-        issues,
-        config.subview
-          ? undefined
-          : {
-              limit: VIEW_ITEM_LIMIT,
-              showMorePath: "repairs-all",
-            },
-      ),
+      sections,
+      issues.length === 0 ? { maxColumns: 1 } : undefined,
     );
   }
 }

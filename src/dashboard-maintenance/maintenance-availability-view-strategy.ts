@@ -23,21 +23,24 @@ export class MaintenanceAvailabilityViewStrategy extends ReactiveElement {
       ? allEntities.filter((entity) => entity.areaId === config.area_id)
       : allEntities;
 
+    const sections = await makeAvailabilitySections(
+      localize,
+      hass,
+      entities,
+      config.subview
+        ? undefined
+        : {
+            limit: VIEW_ITEM_LIMIT,
+            showMorePath: "availability-all",
+          },
+    );
+
     return makeViewConfig(
       localize,
       config,
       "availability",
-      await makeAvailabilitySections(
-        localize,
-        hass,
-        entities,
-        config.subview
-          ? undefined
-          : {
-              limit: VIEW_ITEM_LIMIT,
-              showMorePath: "availability-all",
-            },
-      ),
+      sections,
+      entities.length === 0 ? { maxColumns: 1 } : undefined,
     );
   }
 }

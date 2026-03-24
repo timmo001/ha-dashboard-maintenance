@@ -136,7 +136,6 @@ export const makeStaleSections = async (
         localize("stale.empty_no_issues_title"),
         localize("stale.empty_no_issues_content"),
         "mdi:clock-check-outline",
-        MAINTENANCE_COLUMN_SPAN,
       ),
     ];
   }

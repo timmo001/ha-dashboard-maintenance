@@ -100,9 +100,12 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
           localize("summary.empty_title"),
           localize("summary.empty_content"),
           "mdi:home-heart",
-          SUMMARY_COLUMN_SPAN,
         ),
       );
+
+      return makeViewConfig(localize, config, "summary", sections, {
+        maxColumns: 1,
+      });
     }
 
     return makeViewConfig(localize, config, "summary", sections);

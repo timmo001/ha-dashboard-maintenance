@@ -62,7 +62,6 @@ export const makeUpdatesSections = (
         localize("update.empty_no_entities_title"),
         localize("update.empty_no_entities_content"),
         "mdi:package-up",
-        MAINTENANCE_COLUMN_SPAN,
       ),
     ];
   }
@@ -153,7 +152,6 @@ export const makeUpdatesSections = (
       localize("update.empty_no_updates_title"),
       localize("update.empty_up_to_date_content"),
       "mdi:package-up",
-      MAINTENANCE_COLUMN_SPAN,
     ),
   ];
 };

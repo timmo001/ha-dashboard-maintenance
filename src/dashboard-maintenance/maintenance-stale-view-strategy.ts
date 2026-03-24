@@ -25,22 +25,24 @@ export class MaintenanceStaleViewStrategy extends ReactiveElement {
     const entities = config.area_id
       ? allEntities.filter((entity) => entity.areaId === config.area_id)
       : allEntities;
+    const sections = await makeStaleSections(
+      localize,
+      hass,
+      entities,
+      config.subview
+        ? undefined
+        : {
+            limit: VIEW_ITEM_LIMIT,
+            showMorePath: "stale-all",
+          },
+    );
 
     return makeViewConfig(
       localize,
       config,
       "stale",
-      await makeStaleSections(
-        localize,
-        hass,
-        entities,
-        config.subview
-          ? undefined
-          : {
-              limit: VIEW_ITEM_LIMIT,
-              showMorePath: "stale-all",
-            },
-      ),
+      sections,
+      entities.length === 0 ? { maxColumns: 1 } : undefined,
     );
   }
 }

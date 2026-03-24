@@ -136,7 +136,6 @@ export const makeAvailabilitySections = async (
         localize("availability.empty_no_issues_title"),
         localize("availability.empty_no_issues_content"),
         "mdi:lan-connect",
-        MAINTENANCE_COLUMN_SPAN,
       ),
     ];
   }

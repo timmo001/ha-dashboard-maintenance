@@ -248,9 +248,20 @@ export const makeEmptyStateSection = (
   title: string,
   content: string,
   icon: string,
-  columnSpan: number,
 ): LovelaceSectionConfig =>
-  makeGridSection([makeEmptyStateCard(title, content, icon)], columnSpan);
+  makeGridSection(
+    [
+      {
+        type: "empty-state",
+        icon,
+        content_only: true,
+        title,
+        content,
+        grid_options: { columns: 12 },
+      },
+    ],
+    1,
+  );
 
 export const makeGridSection = (
   cards: LovelaceCardConfig[],
@@ -296,6 +307,7 @@ export const makeViewConfig = (
   config: MaintenanceViewStrategyConfig,
   view: MaintenanceViewMode,
   sections: LovelaceSectionConfig[],
+  options?: { maxColumns?: number },
 ): LovelaceViewConfig => {
   const defaults = VIEW_DEFAULTS[view];
 
@@ -306,7 +318,7 @@ export const makeViewConfig = (
     icon: config.icon || defaults.icon,
     ...(config.subview ? { subview: true } : {}),
     show_icon_and_title: true,
-    max_columns: defaults.columnSpan,
+    max_columns: options?.maxColumns ?? defaults.columnSpan,
     sections,
   };
 };

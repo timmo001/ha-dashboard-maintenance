@@ -59,7 +59,6 @@ export const makeRepairsSections = (
         localize("repair.empty_no_issues_title"),
         localize("repair.empty_no_issues_content"),
         "mdi:wrench",
-        MAINTENANCE_COLUMN_SPAN,
       ),
     ];
   }
@@ -123,7 +122,6 @@ export const makeRepairsSections = (
       localize("repair.empty_no_issues_title"),
       localize("repair.empty_no_issues_content"),
       "mdi:wrench",
-      MAINTENANCE_COLUMN_SPAN,
     ),
   ];
 };
