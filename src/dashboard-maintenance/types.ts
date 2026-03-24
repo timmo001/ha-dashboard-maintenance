@@ -60,6 +60,7 @@ export interface HomeAssistant {
 export interface MaintenanceStrategyConfig {
   type: "custom:maintenance";
   battery_attention_threshold?: number;
+  show_attention_batteries_in_areas?: boolean;
 }
 
 export type MaintenanceViewMode = "summary" | "batteries";

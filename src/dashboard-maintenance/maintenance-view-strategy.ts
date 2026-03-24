@@ -163,19 +163,7 @@ const makeBatterySections = async (
   batteryDevices: MaintenanceBatteryDevice[],
 ): Promise<LovelaceSectionConfig[]> => {
   if (batteryDevices.length === 0) {
-    return [
-      makeSection(
-        "Battery devices",
-        "mdi:battery-heart-variant",
-        [
-          makeEmptyStateCard(
-            "No battery devices found",
-            "Home Assistant could not find any devices with numeric battery sensors.",
-          ),
-        ],
-        BATTERIES_COLUMN_SPAN,
-      ),
-    ];
+    return [];
   }
 
   const [areas, floors] = await Promise.all([
@@ -230,7 +218,12 @@ const makeBatterySections = async (
   }
 
   if (hierarchy.areas.length > 0) {
-    const areaCards = makeAreaCards(hierarchy.areas, areas, hass, batteryDevices);
+    const areaCards = makeAreaCards(
+      hierarchy.areas,
+      areas,
+      hass,
+      batteryDevices,
+    );
 
     if (areaCards.length > 0) {
       sections.push(
@@ -297,6 +290,11 @@ export class MaintenanceViewStrategy extends ReactiveElement {
     const attentionDevices = batteryDevices.filter(
       (device) => device.needsAttention,
     );
+    const showAttentionBatteriesInAreas =
+      config.show_attention_batteries_in_areas ?? true;
+    const areaSectionDevices = showAttentionBatteriesInAreas
+      ? batteryDevices
+      : batteryDevices.filter((device) => !device.needsAttention);
 
     const contentSections: LovelaceSectionConfig[] =
       view === "summary"
@@ -323,7 +321,21 @@ export class MaintenanceViewStrategy extends ReactiveElement {
               config.heading_navigation_path,
             ),
           ]
-        : [
+        : batteryDevices.length === 0
+          ? [
+              makeSection(
+                "Battery devices",
+                "mdi:battery-heart-variant",
+                [
+                  makeEmptyStateCard(
+                    "No battery devices found",
+                    "Home Assistant could not find any devices with numeric battery sensors.",
+                  ),
+                ],
+                BATTERIES_COLUMN_SPAN,
+              ),
+            ]
+          : [
             ...(attentionDevices.length > 0
               ? [
                   makeSection(
@@ -334,7 +346,7 @@ export class MaintenanceViewStrategy extends ReactiveElement {
                   ),
                 ]
               : []),
-            ...(await makeBatterySections(hass, batteryDevices)),
+            ...(await makeBatterySections(hass, areaSectionDevices)),
           ];
 
     return {
