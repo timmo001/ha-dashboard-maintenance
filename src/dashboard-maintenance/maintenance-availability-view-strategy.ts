@@ -16,7 +16,10 @@ export class MaintenanceAvailabilityViewStrategy extends ReactiveElement {
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,
   ): Promise<LovelaceViewConfig> {
-    const entities = await getMaintenanceAvailabilityEntities(hass);
+    const allEntities = await getMaintenanceAvailabilityEntities(hass);
+    const entities = config.area_id
+      ? allEntities.filter((entity) => entity.areaId === config.area_id)
+      : allEntities;
 
     return makeViewConfig(
       config,

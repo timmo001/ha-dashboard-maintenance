@@ -28,6 +28,9 @@ import type {
 const floorHeadingIcon = (floor: FloorRegistryEntry): string =>
   floor.icon || "mdi:floor-plan";
 
+export const buildBatteryAreaShowMorePath = (areaId: string): string =>
+  `batteries-area-${areaId}`;
+
 const makeAreaCards = (
   areaIds: string[],
   areas: Record<string, AreaRegistryEntry>,
@@ -36,10 +39,8 @@ const makeAreaCards = (
   options?: {
     limit?: number;
   },
-): { cards: LovelaceCardConfig[]; hiddenCount: number } => {
+): LovelaceCardConfig[] => {
   const cards: LovelaceCardConfig[] = [];
-  let hiddenCount = 0;
-  let remaining = options?.limit;
 
   for (const areaId of areaIds) {
     const area = areas[areaId];
@@ -52,17 +53,9 @@ const makeAreaCards = (
       continue;
     }
 
-    if (remaining !== undefined && remaining <= 0) {
-      hiddenCount += areaDevices.length;
-      continue;
-    }
+    const shownDevices = limitItems(areaDevices, options?.limit);
 
-    const shownDevices =
-      remaining === undefined ? areaDevices : areaDevices.slice(0, remaining);
-
-    hiddenCount += areaDevices.length - shownDevices.length;
-
-    if (shownDevices.length === 0) {
+    if (shownDevices.items.length === 0) {
       continue;
     }
 
@@ -75,14 +68,18 @@ const makeAreaCards = (
       }),
     );
 
-    cards.push(...shownDevices.map((device) => makeBatteryCard(device)));
-
-    if (remaining !== undefined) {
-      remaining -= shownDevices.length;
+    cards.push(...shownDevices.items.map((device) => makeBatteryCard(device)));
+    if (shownDevices.hiddenCount > 0) {
+      cards.push(
+        makeShowMoreCard(
+          shownDevices.hiddenCount,
+          buildBatteryAreaShowMorePath(area.area_id),
+        ),
+      );
     }
   }
 
-  return { cards, hiddenCount };
+  return cards;
 };
 
 export const makeBatteryAttentionSection = (
@@ -193,7 +190,7 @@ export const makeBatterySections = async (
       batteryDevices,
       { limit: options?.limit },
     );
-    if (areaCards.cards.length === 0) {
+    if (areaCards.length === 0) {
       continue;
     }
 
@@ -203,10 +200,7 @@ export const makeBatterySections = async (
           makeHeadingCard(floorCount > 1 ? floor.name : "Areas", {
             icon: floorHeadingIcon(floor),
           }),
-          ...areaCards.cards,
-          ...(options?.showMorePath && areaCards.hiddenCount > 0
-            ? [makeShowMoreCard(areaCards.hiddenCount, options.showMorePath)]
-            : []),
+          ...areaCards,
         ],
         MAINTENANCE_COLUMN_SPAN,
       ),
@@ -218,15 +212,12 @@ export const makeBatterySections = async (
       limit: options?.limit,
     });
 
-    if (areaCards.cards.length > 0) {
+    if (areaCards.length > 0) {
       sections.push(
         makeGridSection(
           [
             makeHeadingCard(floorCount > 1 ? "Other areas" : "Areas"),
-            ...areaCards.cards,
-            ...(options?.showMorePath && areaCards.hiddenCount > 0
-              ? [makeShowMoreCard(areaCards.hiddenCount, options.showMorePath)]
-              : []),
+            ...areaCards,
           ],
           MAINTENANCE_COLUMN_SPAN,
         ),

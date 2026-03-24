@@ -27,6 +27,9 @@ import type { AreaRegistryEntry, FloorRegistryEntry, HomeAssistant } from "./typ
 const floorHeadingIcon = (floor: FloorRegistryEntry): string =>
   floor.icon || "mdi:floor-plan";
 
+export const buildAvailabilityAreaShowMorePath = (areaId: string): string =>
+  `availability-area-${areaId}`;
+
 const makeAreaCards = (
   areaIds: string[],
   areas: Record<string, AreaRegistryEntry>,
@@ -35,10 +38,8 @@ const makeAreaCards = (
   options?: {
     limit?: number;
   },
-): { cards: LovelaceCardConfig[]; hiddenCount: number } => {
+): LovelaceCardConfig[] => {
   const cards: LovelaceCardConfig[] = [];
-  let hiddenCount = 0;
-  let remaining = options?.limit;
 
   for (const areaId of areaIds) {
     const area = areas[areaId];
@@ -51,17 +52,8 @@ const makeAreaCards = (
       continue;
     }
 
-    if (remaining !== undefined && remaining <= 0) {
-      hiddenCount += areaEntities.length;
-      continue;
-    }
-
-    const shownEntities =
-      remaining === undefined ? areaEntities : areaEntities.slice(0, remaining);
-
-    hiddenCount += areaEntities.length - shownEntities.length;
-
-    if (shownEntities.length === 0) {
+    const shownEntities = limitItems(areaEntities, options?.limit);
+    if (shownEntities.items.length === 0) {
       continue;
     }
 
@@ -74,14 +66,18 @@ const makeAreaCards = (
       }),
     );
 
-    cards.push(...shownEntities.map((entity) => makeAvailabilityCard(entity)));
-
-    if (remaining !== undefined) {
-      remaining -= shownEntities.length;
+    cards.push(...shownEntities.items.map((entity) => makeAvailabilityCard(entity)));
+    if (shownEntities.hiddenCount > 0) {
+      cards.push(
+        makeShowMoreCard(
+          shownEntities.hiddenCount,
+          buildAvailabilityAreaShowMorePath(area.area_id),
+        ),
+      );
     }
   }
 
-  return { cards, hiddenCount };
+  return cards;
 };
 
 export const makeAvailabilitySummarySection = (
@@ -191,7 +187,7 @@ export const makeAvailabilitySections = async (
     const areaCards = makeAreaCards(floorStructure.areas, areas, hass, entities, {
       limit: options?.limit,
     });
-    if (areaCards.cards.length === 0) {
+    if (areaCards.length === 0) {
       continue;
     }
 
@@ -201,10 +197,7 @@ export const makeAvailabilitySections = async (
           makeHeadingCard(floorCount > 1 ? floor.name : "Areas", {
             icon: floorHeadingIcon(floor),
           }),
-          ...areaCards.cards,
-          ...(options?.showMorePath && areaCards.hiddenCount > 0
-            ? [makeShowMoreCard(areaCards.hiddenCount, options.showMorePath)]
-            : []),
+          ...areaCards,
         ],
         MAINTENANCE_COLUMN_SPAN,
       ),
@@ -216,15 +209,12 @@ export const makeAvailabilitySections = async (
       limit: options?.limit,
     });
 
-    if (areaCards.cards.length > 0) {
+    if (areaCards.length > 0) {
       sections.push(
         makeGridSection(
           [
             makeHeadingCard(floorCount > 1 ? "Other areas" : "Areas"),
-            ...areaCards.cards,
-            ...(options?.showMorePath && areaCards.hiddenCount > 0
-              ? [makeShowMoreCard(areaCards.hiddenCount, options.showMorePath)]
-              : []),
+            ...areaCards,
           ],
           MAINTENANCE_COLUMN_SPAN,
         ),

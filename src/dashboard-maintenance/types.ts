@@ -73,6 +73,7 @@ export type MaintenanceViewMode =
   | "availability";
 
 export interface MaintenanceViewStrategyConfig extends MaintenanceStrategyConfig {
+  area_id?: string;
   icon?: string;
   path?: string;
   title?: string;

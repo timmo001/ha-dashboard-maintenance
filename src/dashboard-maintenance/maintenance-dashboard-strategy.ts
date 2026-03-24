@@ -1,16 +1,23 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import "./editor";
+import { getMaintenanceAreas } from "./maintenance-data";
+import { buildAvailabilityAreaShowMorePath } from "./maintenance-availability-sections";
 import { MaintenanceAvailabilityViewStrategy } from "./maintenance-availability-view-strategy";
+import { buildBatteryAreaShowMorePath } from "./maintenance-battery-sections";
 import { MaintenanceBatteriesViewStrategy } from "./maintenance-batteries-view-strategy";
 import { MaintenanceSummaryViewStrategy } from "./maintenance-summary-view-strategy";
 import { MaintenanceUpdatesViewStrategy } from "./maintenance-updates-view-strategy";
 import type {
+  AreaRegistryEntry,
   HomeAssistant,
   MaintenanceDashboardStrategyConfig,
 } from "./types";
 
 type LovelaceConfig = Record<string, unknown>;
+
+const compareAreas = (left: AreaRegistryEntry, right: AreaRegistryEntry): number =>
+  left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
 
 @customElement("ll-strategy-dashboard-maintenance")
 export class MaintenanceDashboardStrategy extends ReactiveElement {
@@ -18,6 +25,8 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
     config: MaintenanceDashboardStrategyConfig,
     hass: HomeAssistant,
   ): Promise<LovelaceConfig> {
+    const areas = Object.values(await getMaintenanceAreas(hass)).sort(compareAreas);
+
     return {
       views: [
         await MaintenanceSummaryViewStrategy.generate(
@@ -52,6 +61,22 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           },
           hass,
         ),
+        ...(await Promise.all(
+          areas.map((area) =>
+            MaintenanceBatteriesViewStrategy.generate(
+              {
+                ...config,
+                area_id: area.area_id,
+                view: "batteries",
+                title: area.name,
+                path: buildBatteryAreaShowMorePath(area.area_id),
+                icon: "mdi:battery-heart-variant",
+                subview: true,
+              },
+              hass,
+            ),
+          ),
+        )),
         await MaintenanceUpdatesViewStrategy.generate(
           {
             ...config,
@@ -94,6 +119,22 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
           },
           hass,
         ),
+        ...(await Promise.all(
+          areas.map((area) =>
+            MaintenanceAvailabilityViewStrategy.generate(
+              {
+                ...config,
+                area_id: area.area_id,
+                view: "availability",
+                title: `Availability - ${area.name}`,
+                path: buildAvailabilityAreaShowMorePath(area.area_id),
+                icon: "mdi:help-circle-outline",
+                subview: true,
+              },
+              hass,
+            ),
+          ),
+        )),
       ],
     };
   }
