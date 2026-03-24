@@ -25,23 +25,22 @@ The generated dashboard focuses on battery-powered devices with numeric battery 
 
 The local publish flow copies the built bundle into `/config/www/community/ha-dashboard-maintenance/` over SSH with `rsync`, so your development machine needs `ssh` and `rsync`, and your Home Assistant instance needs SSH access set up first.
 
-If you run Home Assistant OS or Supervised, the recommended app is `core_ssh` (`Terminal & SSH`). Home Assistant's docs note that SSH client access requires configuring a password or authorized keys in the app before you can connect.
+If you run Home Assistant OS or Supervised, you can use the SSH app:
 
 [![Open your Home Assistant instance and show the dashboard of an add-on.](https://my.home-assistant.io/badges/supervisor_addon.svg)](https://my.home-assistant.io/redirect/supervisor_addon/?addon=core_ssh)
 
-1. In Home Assistant, enable Advanced Mode in your user profile if needed.
-2. Install the `Terminal & SSH` app and configure either a password or authorized keys for SSH access.
-3. Copy `.env.example` to `.env`.
-4. Set `PUBLISH_TARGET` to your Home Assistant SSH target, for example `root@homeassistant.local` or another SSH user/host that can write to `/config/www`.
-5. Optionally set `PUBLISH_PORT` if your SSH service is not on port `22`.
-6. Run `pnpm publish-to-local`.
-7. Open `Settings -> Dashboards -> three dots menu -> Resources`.
-8. Add this Lovelace resource:
+1. Install the SSH app, refer to its setup instructions, and make sure you can log in over SSH before running this script.
+2. Copy `.env.example` to `.env`.
+3. Set `PUBLISH_TARGET` to your Home Assistant SSH target, for example `root@homeassistant.local` or another SSH user/host that can write to `/config/www`.
+4. Optionally set `PUBLISH_PORT` if your SSH service is not on port `22`.
+5. Run `pnpm publish-to-local`.
+6. Open `Settings -> Dashboards -> three dots menu -> Resources`.
+7. Add this Lovelace resource:
 
    - URL: `/local/community/ha-dashboard-maintenance/dashboard-maintenance.js`
    - Type: `module`
 
-9. Reload Lovelace resources or refresh Home Assistant.
+8. Reload Lovelace resources or refresh Home Assistant.
 
 ## Strategy usage checklist
 
