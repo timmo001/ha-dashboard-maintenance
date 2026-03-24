@@ -13,12 +13,12 @@ import {
   ATTENTION_STALE_NAME,
   limitItems,
   MAINTENANCE_COLUMN_SPAN,
+  makeEmptyStateSection,
   makeShowMoreCard,
   SUMMARY_COLUMN_SPAN,
   type LovelaceCardConfig,
   type LovelaceSectionConfig,
   makeStaleCard,
-  makeEmptyStateCard,
   makeGridSection,
   makeHeadingCard,
   makeSection,
@@ -90,36 +90,32 @@ export const makeStaleSummarySection = (
     limit?: number;
     showMorePath?: string;
   },
-): LovelaceSectionConfig => {
+): LovelaceSectionConfig | null => {
+  if (entities.length === 0) {
+    return null;
+  }
+
   const limitedEntities = limitItems(entities, options?.limit);
 
   return makeSection(
     localize("stale.heading_not_reporting"),
     staleEntityIcon(),
-    entities.length > 0
-      ? [
-          ...limitedEntities.items.map((entity) =>
-            makeStaleCard(entity, {
-              name: entity.deviceId ? ATTENTION_STALE_NAME : entity.displayName,
-            }),
-          ),
-          ...(options?.showMorePath && limitedEntities.hiddenCount > 0
-            ? [
-                makeShowMoreCard(
-                  localize,
-                  limitedEntities.hiddenCount,
-                  options.showMorePath,
-                ),
-              ]
-            : []),
-        ]
-      : [
-          makeEmptyStateCard(
-            localize("stale.empty_no_issues_title"),
-            localize("stale.empty_no_issues_content"),
-            "mdi:clock-check-outline",
-          ),
-        ],
+    [
+      ...limitedEntities.items.map((entity) =>
+        makeStaleCard(entity, {
+          name: entity.deviceId ? ATTENTION_STALE_NAME : entity.displayName,
+        }),
+      ),
+      ...(options?.showMorePath && limitedEntities.hiddenCount > 0
+        ? [
+            makeShowMoreCard(
+              localize,
+              limitedEntities.hiddenCount,
+              options.showMorePath,
+            ),
+          ]
+        : []),
+    ],
     SUMMARY_COLUMN_SPAN,
     "stale",
   );
@@ -136,16 +132,10 @@ export const makeStaleSections = async (
 ): Promise<LovelaceSectionConfig[]> => {
   if (entities.length === 0) {
     return [
-      makeSection(
-        localize("stale.heading"),
+      makeEmptyStateSection(
+        localize("stale.empty_no_issues_title"),
+        localize("stale.empty_no_issues_content"),
         "mdi:clock-check-outline",
-        [
-          makeEmptyStateCard(
-            localize("stale.empty_no_issues_title"),
-            localize("stale.empty_no_issues_content"),
-            "mdi:clock-check-outline",
-          ),
-        ],
         MAINTENANCE_COLUMN_SPAN,
       ),
     ];

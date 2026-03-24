@@ -11,7 +11,13 @@ import { makeAvailabilitySummarySection } from "./maintenance-availability-secti
 import { getMaintenanceAvailabilityEntities } from "./availability-data";
 import { makeStaleSummarySection } from "./maintenance-stale-sections";
 import { getMaintenanceStaleEntities } from "./stale-data";
-import { makeViewConfig, type LovelaceViewConfig } from "./maintenance-view-helpers";
+import {
+  makeEmptyStateSection,
+  makeViewConfig,
+  SUMMARY_COLUMN_SPAN,
+  type LovelaceSectionConfig,
+  type LovelaceViewConfig,
+} from "./maintenance-view-helpers";
 import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
 import { isModuleEnabled } from "./types";
 
@@ -25,14 +31,14 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
   ): Promise<LovelaceViewConfig> {
     const localize = setupLocalize(hass);
 
-    const sections: ReturnType<typeof makeBatteryAttentionSection>[] = [];
+    const rawSections: (LovelaceSectionConfig | null)[] = [];
 
     if (isModuleEnabled(config, "batteries")) {
       const batteryDevices = await getMaintenanceBatteryDevices(
         hass,
         config.battery_attention_threshold,
       );
-      sections.push(
+      rawSections.push(
         makeBatteryAttentionSection(localize, batteryDevices, config, {
           limit: SUMMARY_ITEM_LIMIT,
           showMorePath: "batteries",
@@ -42,7 +48,7 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
 
     if (isModuleEnabled(config, "repairs")) {
       const repairIssues = await getMaintenanceRepairIssues(hass);
-      sections.push(
+      rawSections.push(
         makeRepairsSummarySection(localize, repairIssues, {
           limit: SUMMARY_ITEM_LIMIT,
           showMorePath: "repairs",
@@ -52,7 +58,7 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
 
     if (isModuleEnabled(config, "updates")) {
       const updates = await getMaintenanceUpdates(hass);
-      sections.push(
+      rawSections.push(
         makeUpdateSummarySection(localize, updates, {
           limit: SUMMARY_ITEM_LIMIT,
           showMorePath: "updates",
@@ -63,7 +69,7 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
     if (isModuleEnabled(config, "availability")) {
       const availabilityEntities =
         await getMaintenanceAvailabilityEntities(hass);
-      sections.push(
+      rawSections.push(
         makeAvailabilitySummarySection(localize, availabilityEntities, {
           limit: SUMMARY_ITEM_LIMIT,
           showMorePath: "availability",
@@ -76,11 +82,26 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
         hass,
         config.stale_threshold_hours,
       );
-      sections.push(
+      rawSections.push(
         makeStaleSummarySection(localize, staleEntities, {
           limit: SUMMARY_ITEM_LIMIT,
           showMorePath: "stale",
         }),
+      );
+    }
+
+    const sections = rawSections.filter(
+      (s): s is LovelaceSectionConfig => s !== null,
+    );
+
+    if (sections.length === 0) {
+      sections.push(
+        makeEmptyStateSection(
+          localize("summary.empty_title"),
+          localize("summary.empty_content"),
+          "mdi:home-heart",
+          SUMMARY_COLUMN_SPAN,
+        ),
       );
     }
 

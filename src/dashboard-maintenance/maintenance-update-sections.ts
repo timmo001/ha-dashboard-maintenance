@@ -2,10 +2,10 @@ import type { LocalizeFunc } from "./localize";
 import {
   limitItems,
   MAINTENANCE_COLUMN_SPAN,
+  makeEmptyStateSection,
   makeShowMoreCard,
   SUMMARY_COLUMN_SPAN,
   type LovelaceSectionConfig,
-  makeEmptyStateCard,
   makeSection,
   makeUpdateCard,
 } from "./maintenance-view-helpers";
@@ -22,30 +22,27 @@ export const makeUpdateSummarySection = (
     limit?: number;
     showMorePath?: string;
   },
-): LovelaceSectionConfig => {
+): LovelaceSectionConfig | null => {
   const summaryUpdates = updates.filter(
     (update) =>
       update.inProgress || update.skippedCurrentVersion || updateCanInstall(update),
   );
+
+  if (summaryUpdates.length === 0) {
+    return null;
+  }
+
   const limitedUpdates = limitItems(summaryUpdates, options?.limit);
 
   return makeSection(
     localize("update.heading"),
     "mdi:package-up",
-    summaryUpdates.length > 0
-      ? [
-          ...limitedUpdates.items.map(makeUpdateCard),
-          ...(options?.showMorePath && limitedUpdates.hiddenCount > 0
-            ? [makeShowMoreCard(localize, limitedUpdates.hiddenCount, options.showMorePath)]
-            : []),
-        ]
-      : [
-          makeEmptyStateCard(
-            localize("update.empty_no_updates_title"),
-            localize("update.empty_no_updates_content"),
-            "mdi:package-up",
-          ),
-        ],
+    [
+      ...limitedUpdates.items.map(makeUpdateCard),
+      ...(options?.showMorePath && limitedUpdates.hiddenCount > 0
+        ? [makeShowMoreCard(localize, limitedUpdates.hiddenCount, options.showMorePath)]
+        : []),
+    ],
     SUMMARY_COLUMN_SPAN,
     "updates",
   );
@@ -61,16 +58,10 @@ export const makeUpdatesSections = (
 ): LovelaceSectionConfig[] => {
   if (updates.length === 0) {
     return [
-      makeSection(
-        localize("update.heading"),
+      makeEmptyStateSection(
+        localize("update.empty_no_entities_title"),
+        localize("update.empty_no_entities_content"),
         "mdi:package-up",
-        [
-          makeEmptyStateCard(
-            localize("update.empty_no_entities_title"),
-            localize("update.empty_no_entities_content"),
-            "mdi:package-up",
-          ),
-        ],
         MAINTENANCE_COLUMN_SPAN,
       ),
     ];
@@ -158,16 +149,10 @@ export const makeUpdatesSections = (
   }
 
   return [
-    makeSection(
-      localize("update.heading"),
+    makeEmptyStateSection(
+      localize("update.empty_no_updates_title"),
+      localize("update.empty_up_to_date_content"),
       "mdi:package-up",
-      [
-        makeEmptyStateCard(
-          localize("update.empty_no_updates_title"),
-          localize("update.empty_up_to_date_content"),
-          "mdi:package-up",
-        ),
-      ],
       MAINTENANCE_COLUMN_SPAN,
     ),
   ];

@@ -14,7 +14,6 @@ import {
   type LovelaceCardConfig,
   type LovelaceSectionConfig,
   makeBatteryCard,
-  makeEmptyStateCard,
   makeGridSection,
   makeHeadingCard,
   makeSection,
@@ -93,45 +92,34 @@ export const makeBatteryAttentionSection = (
     limit?: number;
     showMorePath?: string;
   },
-): LovelaceSectionConfig => {
+): LovelaceSectionConfig | null => {
   const attentionDevices = batteryDevices.filter((device) => device.needsAttention);
+
+  if (batteryDevices.length === 0 || attentionDevices.length === 0) {
+    return null;
+  }
+
   const limitedAttentionDevices = limitItems(attentionDevices, options?.limit);
-  const cards =
-    batteryDevices.length === 0
-      ? [
-          makeEmptyStateCard(
-            localize("battery.empty_no_devices_title"),
-            localize("battery.empty_no_devices_content"),
-          ),
-        ]
-      : attentionDevices.length === 0
-        ? [
-            makeEmptyStateCard(
-              localize("battery.empty_no_attention_title"),
-              localize("battery.empty_no_attention_content"),
-            ),
-          ]
-        : [
-            ...limitedAttentionDevices.items.map((device) =>
-              makeBatteryCard(device, {
-                name: device.deviceId ? ATTENTION_BATTERY_NAME : device.deviceName,
-              }),
-            ),
-            ...(options?.showMorePath && limitedAttentionDevices.hiddenCount > 0
-              ? [
-                  makeShowMoreCard(
-                    localize,
-                    limitedAttentionDevices.hiddenCount,
-                    options.showMorePath,
-                  ),
-                ]
-              : []),
-          ];
 
   return makeSection(
     localize("battery.heading_needing_attention"),
     "mdi:alert",
-    cards,
+    [
+      ...limitedAttentionDevices.items.map((device) =>
+        makeBatteryCard(device, {
+          name: device.deviceId ? ATTENTION_BATTERY_NAME : device.deviceName,
+        }),
+      ),
+      ...(options?.showMorePath && limitedAttentionDevices.hiddenCount > 0
+        ? [
+            makeShowMoreCard(
+              localize,
+              limitedAttentionDevices.hiddenCount,
+              options.showMorePath,
+            ),
+          ]
+        : []),
+    ],
     SUMMARY_COLUMN_SPAN,
     config.heading_navigation_path,
   );

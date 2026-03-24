@@ -67,6 +67,11 @@ const en = {
   "stale.empty_no_issues_content":
     "All entities have reported within the configured threshold.",
 
+  // Summary
+  "summary.empty_title": "No maintenance issues",
+  "summary.empty_content":
+    "All enabled modules are clear — nothing needs your attention.",
+
   // Common / shared
   "common.areas": "Areas",
   "common.other_areas": "Other areas",

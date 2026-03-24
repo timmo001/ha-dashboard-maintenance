@@ -3,7 +3,7 @@ import { severityIcon, type MaintenanceRepairIssue } from "./repairs-data";
 import {
   limitItems,
   MAINTENANCE_COLUMN_SPAN,
-  makeEmptyStateCard,
+  makeEmptyStateSection,
   makeRepairCard,
   makeSection,
   makeShowMoreCard,
@@ -18,32 +18,28 @@ export const makeRepairsSummarySection = (
     limit?: number;
     showMorePath?: string;
   },
-): LovelaceSectionConfig => {
+): LovelaceSectionConfig | null => {
+  if (issues.length === 0) {
+    return null;
+  }
+
   const limitedIssues = limitItems(issues, options?.limit);
 
   return makeSection(
     localize("repair.heading"),
     "mdi:wrench",
-    issues.length > 0
-      ? [
-          ...limitedIssues.items.map((issue) => makeRepairCard(localize, issue)),
-          ...(options?.showMorePath && limitedIssues.hiddenCount > 0
-            ? [
-                makeShowMoreCard(
-                  localize,
-                  limitedIssues.hiddenCount,
-                  options.showMorePath,
-                ),
-              ]
-            : []),
-        ]
-      : [
-          makeEmptyStateCard(
-            localize("repair.empty_no_issues_title"),
-            localize("repair.empty_no_issues_content"),
-            "mdi:wrench",
-          ),
-        ],
+    [
+      ...limitedIssues.items.map((issue) => makeRepairCard(localize, issue)),
+      ...(options?.showMorePath && limitedIssues.hiddenCount > 0
+        ? [
+            makeShowMoreCard(
+              localize,
+              limitedIssues.hiddenCount,
+              options.showMorePath,
+            ),
+          ]
+        : []),
+    ],
     SUMMARY_COLUMN_SPAN,
     "repairs",
   );
@@ -59,16 +55,10 @@ export const makeRepairsSections = (
 ): LovelaceSectionConfig[] => {
   if (issues.length === 0) {
     return [
-      makeSection(
-        localize("repair.heading"),
+      makeEmptyStateSection(
+        localize("repair.empty_no_issues_title"),
+        localize("repair.empty_no_issues_content"),
         "mdi:wrench",
-        [
-          makeEmptyStateCard(
-            localize("repair.empty_no_issues_title"),
-            localize("repair.empty_no_issues_content"),
-            "mdi:wrench",
-          ),
-        ],
         MAINTENANCE_COLUMN_SPAN,
       ),
     ];
@@ -129,16 +119,10 @@ export const makeRepairsSections = (
   }
 
   return [
-    makeSection(
-      localize("repair.heading"),
+    makeEmptyStateSection(
+      localize("repair.empty_no_issues_title"),
+      localize("repair.empty_no_issues_content"),
       "mdi:wrench",
-      [
-        makeEmptyStateCard(
-          localize("repair.empty_no_issues_title"),
-          localize("repair.empty_no_issues_content"),
-          "mdi:wrench",
-        ),
-      ],
       MAINTENANCE_COLUMN_SPAN,
     ),
   ];

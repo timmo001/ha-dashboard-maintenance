@@ -13,12 +13,12 @@ import {
   ATTENTION_AVAILABILITY_NAME,
   limitItems,
   MAINTENANCE_COLUMN_SPAN,
+  makeEmptyStateSection,
   makeShowMoreCard,
   SUMMARY_COLUMN_SPAN,
   type LovelaceCardConfig,
   type LovelaceSectionConfig,
   makeAvailabilityCard,
-  makeEmptyStateCard,
   makeGridSection,
   makeHeadingCard,
   makeSection,
@@ -90,36 +90,32 @@ export const makeAvailabilitySummarySection = (
     limit?: number;
     showMorePath?: string;
   },
-): LovelaceSectionConfig => {
+): LovelaceSectionConfig | null => {
+  if (entities.length === 0) {
+    return null;
+  }
+
   const limitedEntities = limitItems(entities, options?.limit);
 
   return makeSection(
     localize("availability.heading_unavailable_or_unknown"),
     "mdi:help-circle-outline",
-    entities.length > 0
-      ? [
-          ...limitedEntities.items.map((entity) =>
-            makeAvailabilityCard(entity, {
-              name: entity.deviceId ? ATTENTION_AVAILABILITY_NAME : entity.displayName,
-            }),
-          ),
-          ...(options?.showMorePath && limitedEntities.hiddenCount > 0
-            ? [
-                makeShowMoreCard(
-                  localize,
-                  limitedEntities.hiddenCount,
-                  options.showMorePath,
-                ),
-              ]
-            : []),
-        ]
-      : [
-          makeEmptyStateCard(
-            localize("availability.empty_no_issues_title"),
-            localize("availability.empty_no_issues_content"),
-            "mdi:lan-connect",
-          ),
-        ],
+    [
+      ...limitedEntities.items.map((entity) =>
+        makeAvailabilityCard(entity, {
+          name: entity.deviceId ? ATTENTION_AVAILABILITY_NAME : entity.displayName,
+        }),
+      ),
+      ...(options?.showMorePath && limitedEntities.hiddenCount > 0
+        ? [
+            makeShowMoreCard(
+              localize,
+              limitedEntities.hiddenCount,
+              options.showMorePath,
+            ),
+          ]
+        : []),
+    ],
     SUMMARY_COLUMN_SPAN,
     "availability",
   );
@@ -136,16 +132,10 @@ export const makeAvailabilitySections = async (
 ): Promise<LovelaceSectionConfig[]> => {
   if (entities.length === 0) {
     return [
-      makeSection(
-        localize("availability.heading"),
+      makeEmptyStateSection(
+        localize("availability.empty_no_issues_title"),
+        localize("availability.empty_no_issues_content"),
         "mdi:lan-connect",
-        [
-          makeEmptyStateCard(
-            localize("availability.empty_no_issues_title"),
-            localize("availability.empty_no_issues_content"),
-            "mdi:lan-connect",
-          ),
-        ],
         MAINTENANCE_COLUMN_SPAN,
       ),
     ];

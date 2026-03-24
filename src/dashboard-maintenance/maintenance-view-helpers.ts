@@ -244,6 +244,14 @@ export const makeStaleCard = (
     : { action: "more-info" },
 });
 
+export const makeEmptyStateSection = (
+  title: string,
+  content: string,
+  icon: string,
+  columnSpan: number,
+): LovelaceSectionConfig =>
+  makeGridSection([makeEmptyStateCard(title, content, icon)], columnSpan);
+
 export const makeGridSection = (
   cards: LovelaceCardConfig[],
   columnSpan: number,

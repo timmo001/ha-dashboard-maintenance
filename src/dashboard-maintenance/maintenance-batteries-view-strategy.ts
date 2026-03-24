@@ -8,10 +8,9 @@ import {
 } from "./maintenance-battery-sections";
 import {
   MAINTENANCE_COLUMN_SPAN,
+  makeEmptyStateSection,
   type LovelaceSectionConfig,
   type LovelaceViewConfig,
-  makeEmptyStateCard,
-  makeSection,
   makeViewConfig,
 } from "./maintenance-view-helpers";
 import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
@@ -42,33 +41,29 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
 
     if (batteryDevices.length === 0) {
       sections.push(
-        makeSection(
-          localize("battery.heading_devices"),
-          "mdi:battery-heart-variant",
-          [
-            makeEmptyStateCard(
-              localize("battery.empty_no_devices_title"),
-              localize("battery.empty_no_devices_content"),
-            ),
-          ],
+        makeEmptyStateSection(
+          localize("battery.empty_no_devices_title"),
+          localize("battery.empty_no_devices_content"),
+          "mdi:battery-outline",
           MAINTENANCE_COLUMN_SPAN,
         ),
       );
     } else {
       if (!config.area_id && attentionDevices.length > 0) {
-        sections.push(
-          makeBatteryAttentionSection(
-            localize,
-            batteryDevices,
-            config,
-            config.subview
-              ? undefined
-              : {
-                  limit: VIEW_ITEM_LIMIT,
-                  showMorePath: "batteries-all",
-                },
-          ),
+        const attentionSection = makeBatteryAttentionSection(
+          localize,
+          batteryDevices,
+          config,
+          config.subview
+            ? undefined
+            : {
+                limit: VIEW_ITEM_LIMIT,
+                showMorePath: "batteries-all",
+              },
         );
+        if (attentionSection) {
+          sections.push(attentionSection);
+        }
       }
 
       sections.push(
@@ -87,15 +82,10 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
 
       if (sections.length === 0) {
         sections.push(
-          makeSection(
-            localize("battery.heading_devices"),
-            "mdi:battery-heart-variant",
-            [
-              makeEmptyStateCard(
-                localize("battery.empty_no_devices_title"),
-                localize("battery.empty_no_devices_content"),
-              ),
-            ],
+          makeEmptyStateSection(
+            localize("battery.empty_no_devices_title"),
+            localize("battery.empty_no_devices_content"),
+            "mdi:battery-outline",
             MAINTENANCE_COLUMN_SPAN,
           ),
         );
