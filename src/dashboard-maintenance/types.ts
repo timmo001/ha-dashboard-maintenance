@@ -44,10 +44,14 @@ export interface MaintenanceStrategyConfig {
   battery_attention_threshold?: number;
 }
 
+export type MaintenanceViewMode = "summary" | "batteries";
+
 export interface MaintenanceViewStrategyConfig extends MaintenanceStrategyConfig {
   icon?: string;
   path?: string;
   title?: string;
+  heading_navigation_path?: string;
+  view?: MaintenanceViewMode;
 }
 
 export interface MaintenanceDashboardStrategyConfig extends MaintenanceStrategyConfig {}

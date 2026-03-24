@@ -20,8 +20,20 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
         await MaintenanceViewStrategy.generate(
           {
             ...config,
-            title: "Maintenance",
-            path: "maintenance",
+            view: "summary",
+            title: "Summary",
+            path: "summary",
+            icon: "mdi:view-dashboard-outline",
+            heading_navigation_path: "batteries",
+          },
+          hass,
+        ),
+        await MaintenanceViewStrategy.generate(
+          {
+            ...config,
+            view: "batteries",
+            title: "Batteries",
+            path: "batteries",
             icon: "mdi:battery-heart-variant",
           },
           hass,
