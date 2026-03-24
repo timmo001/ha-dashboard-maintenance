@@ -78,7 +78,7 @@ const makeBatteryCard = (device: MaintenanceBatteryDevice): LovelaceCardConfig =
   type: "tile",
   entity: device.entityId,
   name: device.deviceName,
-  color: device.needsAttention ? "warning" : undefined,
+  icon: device.needsAttention ? "mdi:battery-alert-variant-outline" : undefined,
   tap_action: device.deviceId
     ? {
         action: "navigate",
