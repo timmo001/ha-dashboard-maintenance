@@ -9,7 +9,7 @@ import type {
   HomeAssistant,
 } from "./types";
 
-export const DEFAULT_STALE_THRESHOLD_HOURS = 24;
+export const DEFAULT_STALE_THRESHOLD_HOURS = 6;
 
 export interface MaintenanceStaleEntity {
   areaId?: string | null;
