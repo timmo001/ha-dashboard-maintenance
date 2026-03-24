@@ -79,6 +79,7 @@ sync_to_target() {
   if grep -Fq "Permission denied" "${rsync_error_file}"; then
     ssh "${SSH_ARGS[@]}" "${PUBLISH_TARGET}" "stat -c '%A %U %G %n' '${PUBLISH_PATH}' 2>/dev/null || true" >&2 || true
     print_error "Rsync could not write to ${PUBLISH_PATH} as ${PUBLISH_TARGET}."
+    print_warning 'The destination path is correct; this SSH endpoint is denying non-interactive writes under /config/www.'
   fi
 
   rm -f "${rsync_error_file}"
@@ -87,12 +88,15 @@ sync_to_target() {
 
 print_manual_setup_steps() {
   print_section "Manual remote setup"
-  printf 'Open a new interactive SSH session and run these commands there:\n\n' >&2
+  printf 'This script always publishes to this fixed Home Assistant path:\n\n' >&2
+  printf '  %s%s%s\n\n' "${ANSI_BOLD}" "${PUBLISH_PATH}" "${ANSI_RESET}" >&2
+  printf 'If non-interactive SSH cannot write there, open an interactive Home Assistant shell and run:\n\n' >&2
   printf '  ssh %s\n' "${PUBLISH_TARGET}" >&2
   printf '  mkdir -p %q\n' "${PUBLISH_PATH}" >&2
-  printf '  chown -R %q:%q %q\n' "${REMOTE_TRANSFER_USER}" "${REMOTE_TRANSFER_USER}" "${PUBLISH_PATH}" >&2
+  printf '  ls -ld /config/www /config/www/community %q\n' "${PUBLISH_PATH}" >&2
   printf '  exit\n\n' >&2
-  print_warning 'Then rerun `pnpm publish-to-local`.'
+  print_warning 'If that shell works but `pnpm publish-to-local` still fails, this SSH endpoint likely does not allow non-interactive mkdir/rsync under /config/www.'
+  print_warning 'Use a different SSH target with normal shell access, or copy the built file into /config/www manually.'
 }
 
 print_resource_setup() {
@@ -129,7 +133,7 @@ ensure_target_dir() {
   if grep -Fq "Permission denied" "${ssh_error_file}"; then
     cat "${ssh_error_file}" >&2
     print_error "Remote target path ${PUBLISH_PATH} is not writable by ${PUBLISH_TARGET}."
-    print_warning 'Home Assistant SSH add-on sessions often run as a non-root user, so the fixed target under /config/www may need to be created and owned appropriately ahead of time.'
+    print_warning 'The script must publish under /config/www, but this SSH endpoint cannot create or write there non-interactively.'
     print_manual_setup_steps
     rm -f "${ssh_error_file}"
     return 1
@@ -155,7 +159,7 @@ ensure_target_writable() {
   cat "${ssh_error_file}" >&2
   ssh "${SSH_ARGS[@]}" "${PUBLISH_TARGET}" "stat -c '%A %U %G %n' '${PUBLISH_PATH}' 2>/dev/null || true" >&2 || true
   print_error "Remote target path ${PUBLISH_PATH} exists but is not writable by ${PUBLISH_TARGET}."
-  print_warning 'Adjust ownership or permissions on that directory from the Home Assistant side, then rerun this publish command.'
+  print_warning 'The script must publish under /config/www, but this SSH endpoint cannot write to that directory non-interactively.'
   print_manual_setup_steps
   rm -f "${ssh_error_file}"
   return 1
