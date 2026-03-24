@@ -1,5 +1,8 @@
 # Dashboard Maintenance
 
+> [!NOTE]
+> This dashboard is mostlty a personal test. It is not supported in any way and may become archived at some point
+
 Custom Lovelace dashboard and view strategy for Home Assistant maintenance dashboards.
 
 ## What it adds
