@@ -70,9 +70,10 @@ export const getMaintenanceAvailabilityEntities = async (
   const safeListDeviceIdSet = new Set(
     normalizeAvailabilitySafeListDeviceIds(safeListDeviceIds),
   );
-  const [entities, devices, mostUsedEntities] = await Promise.all([
+  const [entities, devices, configEntries, mostUsedEntities] = await Promise.all([
     fetchEntityRegistry(hass),
     fetchDeviceRegistry(hass),
+    fetchConfigEntries(hass),
     getCommonControlUsagePrediction(hass),
   ]);
   const mostUsedEntityOrder = new Map(
@@ -83,12 +84,27 @@ export const getMaintenanceAvailabilityEntities = async (
     .filter(isRelevantAvailabilityIssue)
     .map<MaintenanceAvailabilityEntity | undefined>((stateObj) => {
       const entry = entities[stateObj.entity_id];
+      const deviceId = entry?.device_id || undefined;
+      const device = deviceId ? devices[deviceId] : undefined;
+      const relatedConfigEntryIds = new Set<string>(
+        [
+          entry?.config_entry_id,
+          device?.primary_config_entry,
+          ...(device?.config_entries ?? []),
+        ].filter((configEntryId): configEntryId is string => Boolean(configEntryId)),
+      );
+      const hasDisabledConfigEntry = [...relatedConfigEntryIds].some(
+        (configEntryId) => configEntries[configEntryId]?.disabled_by,
+      );
 
-      if (entry?.disabled_by || entry?.hidden_by) {
+      if (
+        entry?.disabled_by ||
+        entry?.hidden_by ||
+        device?.disabled_by ||
+        hasDisabledConfigEntry
+      ) {
         return undefined;
       }
-
-      const deviceId = entry?.device_id || undefined;
 
       if (
         stateObj.state === "unavailable" &&
@@ -97,8 +113,6 @@ export const getMaintenanceAvailabilityEntities = async (
       ) {
         return undefined;
       }
-
-      const device = deviceId ? devices[deviceId] : undefined;
 
       return {
         areaId: device?.area_id || entry?.area_id,

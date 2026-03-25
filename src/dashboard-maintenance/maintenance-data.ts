@@ -87,12 +87,8 @@ const sortDevices = (
 export const fetchEntityRegistry = async (
   hass: HomeAssistant,
 ): Promise<Record<string, EntityRegistryEntry>> => {
-  if (hass.entities) {
-    return hass.entities;
-  }
-
   if (!hass.connection) {
-    return {};
+    return hass.entities ?? {};
   }
 
   entityRegistryPromise ??= hass.connection
@@ -102,7 +98,7 @@ export const fetchEntityRegistry = async (
     .then((entries) =>
       Object.fromEntries(entries.map((entry) => [entry.entity_id, entry])),
     )
-    .catch(() => ({}));
+    .catch(() => hass.entities ?? {});
 
   return entityRegistryPromise;
 };
@@ -110,12 +106,8 @@ export const fetchEntityRegistry = async (
 export const fetchDeviceRegistry = async (
   hass: HomeAssistant,
 ): Promise<Record<string, DeviceRegistryEntry>> => {
-  if (hass.devices) {
-    return hass.devices;
-  }
-
   if (!hass.connection) {
-    return {};
+    return hass.devices ?? {};
   }
 
   deviceRegistryPromise ??= hass.connection
@@ -125,7 +117,7 @@ export const fetchDeviceRegistry = async (
     .then((entries) =>
       Object.fromEntries(entries.map((entry) => [entry.id, entry])),
     )
-    .catch(() => ({}));
+    .catch(() => hass.devices ?? {});
 
   return deviceRegistryPromise;
 };
@@ -208,14 +200,10 @@ export const getMaintenanceFloors = async (
 export const fetchConfigEntries = async (
   hass: HomeAssistant,
 ): Promise<Record<string, ConfigEntry>> => {
-  if (hass.configEntries?.entries?.length) {
-    return Object.fromEntries(
-      hass.configEntries.entries.map((entry) => [entry.entry_id, entry]),
-    );
-  }
-
   if (!hass.connection) {
-    return {};
+    return Object.fromEntries(
+      (hass.configEntries?.entries ?? []).map((entry) => [entry.entry_id, entry]),
+    );
   }
 
   configEntriesPromise ??= hass.connection
@@ -225,7 +213,11 @@ export const fetchConfigEntries = async (
     .then((entries) =>
       Object.fromEntries(entries.map((entry) => [entry.entry_id, entry])),
     )
-    .catch(() => ({}));
+    .catch(() =>
+      Object.fromEntries(
+        (hass.configEntries?.entries ?? []).map((entry) => [entry.entry_id, entry]),
+      ),
+    );
 
   return configEntriesPromise;
 };

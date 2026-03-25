@@ -12,6 +12,7 @@ export interface HassEntity {
 
 export interface EntityRegistryEntry {
   entity_id: string;
+  config_entry_id?: string | null;
   device_id: string | null;
   area_id?: string | null;
   disabled_by?: string | null;
@@ -23,6 +24,7 @@ export interface EntityRegistryEntry {
 export interface DeviceRegistryEntry {
   id: string;
   area_id?: string | null;
+  disabled_by?: string | null;
   name_by_user?: string | null;
   name?: string | null;
   picture?: string | null;
@@ -45,6 +47,7 @@ export interface FloorRegistryEntry {
 
 export interface ConfigEntry {
   entry_id: string;
+  disabled_by?: string | null;
   domain: string;
   title: string;
   state?: string;
