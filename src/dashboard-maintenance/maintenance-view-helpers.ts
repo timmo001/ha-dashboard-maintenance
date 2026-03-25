@@ -588,6 +588,9 @@ export const makeAvailabilityDeviceCard = (
   device: MaintenanceAvailabilityDevice,
   subtitle: string,
   brandsToken?: string | null,
+  options?: {
+    enableSafeToggle?: boolean;
+  },
 ): LovelaceCardConfig => {
   const domain = device.integrationDomain || device.entities[0].entityId.split(".")[0];
   const picture = brandsToken
@@ -596,10 +599,12 @@ export const makeAvailabilityDeviceCard = (
 
   return {
     type: "custom:dm-availability-device-card",
+    device_id: device.deviceId,
     device_name: device.deviceName,
     subtitle,
     picture,
     icon: computeDomainIcon(device.entities[0].entityId),
+    enable_safe_toggle: options?.enableSafeToggle === true,
     navigation_path: `/config/devices/device/${device.deviceId}`,
   };
 };

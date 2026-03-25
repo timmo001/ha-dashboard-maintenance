@@ -1,6 +1,7 @@
 import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { setupLocalize } from "./localize";
+import { normalizeAvailabilitySafeListDeviceIds } from "./availability-data";
 import type {
   HomeAssistant,
   MaintenanceDashboardStrategyConfig,
@@ -116,9 +117,57 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
         return this._renderBatterySettings(localize);
       case "stale":
         return this._renderStaleSettings(localize);
+      case "availability":
+        return this._renderAvailabilitySettings(localize);
       default:
         return nothing;
     }
+  }
+
+  private _renderAvailabilitySettings(localize: ReturnType<typeof setupLocalize>) {
+    const safeListDeviceIds =
+      this._config!.availability_safe_list_device_ids ?? [];
+
+    if (!customElements.get("ha-form")) {
+      return html`
+        <div class="fallback-editor">
+          <label for="availability-safe-list">
+            ${localize("editor.availability_safe_list_label")}
+          </label>
+          <textarea
+            id="availability-safe-list"
+            rows="4"
+            .value=${safeListDeviceIds.join("\n")}
+            @input=${this._nativeAvailabilitySafeListChanged}
+          ></textarea>
+          <div class="helper">
+            ${localize("editor.availability_safe_list_helper")}
+          </div>
+        </div>
+      `;
+    }
+
+    return html`
+      <ha-form
+        .hass=${this.hass}
+        .data=${{
+          availability_safe_list_device_ids: safeListDeviceIds,
+        }}
+        .schema=${[
+          {
+            name: "availability_safe_list_device_ids",
+            selector: {
+              device: {
+                multiple: true,
+              },
+            },
+          },
+        ]}
+        .computeLabel=${this._computeLabel}
+        .computeHelper=${this._computeHelper}
+        @value-changed=${this._availabilityValueChanged}
+      ></ha-form>
+    `;
   }
 
   private _renderBatterySettings(localize: ReturnType<typeof setupLocalize>) {
@@ -255,6 +304,7 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     const labelMap: Record<string, ReturnType<typeof localize>> = {
       battery_attention_threshold: localize("editor.battery_threshold_label"),
       show_attention_batteries_in_areas: localize("editor.show_attention_in_areas_label"),
+      availability_safe_list_device_ids: localize("editor.availability_safe_list_label"),
       stale_threshold_hours: localize("editor.stale_threshold_label"),
     };
 
@@ -270,6 +320,7 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     const helperMap: Record<string, ReturnType<typeof localize>> = {
       battery_attention_threshold: localize("editor.battery_threshold_helper"),
       show_attention_batteries_in_areas: localize("editor.show_attention_in_areas_helper"),
+      availability_safe_list_device_ids: localize("editor.availability_safe_list_helper"),
       stale_threshold_hours: localize("editor.stale_threshold_helper"),
     };
 
@@ -339,6 +390,22 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     });
   }
 
+  private _availabilityValueChanged(ev: CustomEvent): void {
+    if (!this._config) {
+      return;
+    }
+
+    ev.stopPropagation();
+
+    const safeListDeviceIds = normalizeAvailabilitySafeListDeviceIds(
+      ev.detail.value.availability_safe_list_device_ids as string[] | undefined,
+    );
+    this._emitConfigUpdate({
+      availability_safe_list_device_ids:
+        safeListDeviceIds.length > 0 ? safeListDeviceIds : undefined,
+    });
+  }
+
   /* ---- Native fallback handlers ---- */
 
   private _nativeModuleEnabledChanged(ev: Event): void {
@@ -379,6 +446,18 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
         staleThreshold === DEFAULT_STALE_THRESHOLD_HOURS
           ? undefined
           : staleThreshold,
+    });
+  }
+
+  private _nativeAvailabilitySafeListChanged(ev: Event): void {
+    const safeListDeviceIds = normalizeAvailabilitySafeListDeviceIds(
+      (ev.currentTarget as HTMLTextAreaElement).value
+        .split(/[\n,]/)
+        .map((value) => value.trim()),
+    );
+    this._emitConfigUpdate({
+      availability_safe_list_device_ids:
+        safeListDeviceIds.length > 0 ? safeListDeviceIds : undefined,
     });
   }
 
@@ -436,6 +515,13 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
 
       label {
         font-weight: 500;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 96px;
+        box-sizing: border-box;
+        font: inherit;
       }
 
       .helper,

@@ -89,6 +89,7 @@ export interface MaintenanceStrategyConfig {
   repairs_enabled?: boolean;
   updates_enabled?: boolean;
   availability_enabled?: boolean;
+  availability_safe_list_device_ids?: string[];
   stale_enabled?: boolean;
   stale_threshold_hours?: number;
 }

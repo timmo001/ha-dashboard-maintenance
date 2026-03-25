@@ -62,6 +62,7 @@ const en = {
   "availability.device_unknown_one": "{count} unknown entity",
   "availability.device_unknown_other": "{count} unknown entities",
   "availability.ungrouped_entities": "Other entities",
+  "availability.safe_list_hold_hint": "Click and hold to hide this offline device from availability.",
   "availability.empty_no_issues_title": "No availability issues",
   "availability.empty_no_issues_content":
     "Home Assistant could not find any unavailable or unknown entities.",
@@ -100,6 +101,9 @@ const en = {
   "editor.repairs_header": "Repairs",
   "editor.updates_header": "Updates",
   "editor.availability_header": "Availability",
+  "editor.availability_safe_list_label": "Known safe offline devices",
+  "editor.availability_safe_list_helper":
+    "Unavailable devices in this list are hidden from the availability results. You can also click and hold a device icon to add it.",
   "editor.stale_header": "Stale entities",
   "editor.stale_threshold_label": "Stale threshold (hours)",
   "editor.stale_threshold_helper":

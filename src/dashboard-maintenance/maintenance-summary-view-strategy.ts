@@ -67,8 +67,10 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
     }
 
     if (isModuleEnabled(config, "availability")) {
-      const availabilityEntities =
-        await getMaintenanceAvailabilityEntities(hass);
+      const availabilityEntities = await getMaintenanceAvailabilityEntities(
+        hass,
+        config.availability_safe_list_device_ids,
+      );
       rawSections.push(
         await makeAvailabilitySummarySection(localize, hass, availabilityEntities, {
           limit: SUMMARY_ITEM_LIMIT,

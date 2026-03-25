@@ -17,6 +17,16 @@ import type {
   HomeAssistant,
 } from "./types";
 
+export const normalizeAvailabilitySafeListDeviceIds = (
+  deviceIds?: string[],
+): string[] => {
+  if (!deviceIds?.length) {
+    return [];
+  }
+
+  return [...new Set(deviceIds.map((deviceId) => deviceId.trim()).filter(Boolean))];
+};
+
 export interface MaintenanceAvailabilityEntity {
   areaId?: string | null;
   deviceId?: string;
@@ -55,7 +65,11 @@ const getCommonControlUsagePrediction = async (
 
 export const getMaintenanceAvailabilityEntities = async (
   hass: HomeAssistant,
+  safeListDeviceIds?: string[],
 ): Promise<MaintenanceAvailabilityEntity[]> => {
+  const safeListDeviceIdSet = new Set(
+    normalizeAvailabilitySafeListDeviceIds(safeListDeviceIds),
+  );
   const [entities, devices, mostUsedEntities] = await Promise.all([
     fetchEntityRegistry(hass),
     fetchDeviceRegistry(hass),
@@ -75,6 +89,15 @@ export const getMaintenanceAvailabilityEntities = async (
       }
 
       const deviceId = entry?.device_id || undefined;
+
+      if (
+        stateObj.state === "unavailable" &&
+        deviceId &&
+        safeListDeviceIdSet.has(deviceId)
+      ) {
+        return undefined;
+      }
+
       const device = deviceId ? devices[deviceId] : undefined;
 
       return {

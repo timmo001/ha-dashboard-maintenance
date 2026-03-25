@@ -1,3 +1,7 @@
+import { normalizeAvailabilitySafeListDeviceIds } from "./availability-data";
+import { setupLocalize } from "./localize";
+import type { HomeAssistant } from "./types";
+
 /**
  * A lightweight custom Lovelace card that displays a device with
  * availability issues. Renders a tile-like layout with:
@@ -19,10 +23,12 @@
 
 interface DmAvailabilityDeviceCardConfig {
   type: string;
+   device_id?: string;
   device_name: string;
   subtitle: string;
   picture: string | null;
   icon: string;
+  enable_safe_toggle?: boolean;
   navigation_path: string;
 }
 
@@ -47,12 +53,27 @@ const CARD_STYLES = `
   .card:hover {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   }
+  .media {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .media.safe-toggle {
+    cursor: pointer;
+  }
+  .media.saving {
+    opacity: 0.6;
+  }
   .picture {
     width: 40px;
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
-    flex-shrink: 0;
     background: var(--divider-color, #e0e0e0);
   }
   .icon {
@@ -87,10 +108,16 @@ const CARD_STYLES = `
 
 class DmAvailabilityDeviceCard extends HTMLElement {
   private _config?: DmAvailabilityDeviceCardConfig;
+  private _hass?: HomeAssistant;
   private _root: ShadowRoot;
   private _built = false;
+  private _holdTimer?: number;
+  private _savingSafeList = false;
+  private _suppressNextClick = false;
 
   // Element references
+  private _cardEl?: HTMLDivElement;
+  private _mediaEl?: HTMLDivElement;
   private _pictureEl?: HTMLImageElement;
   private _iconEl?: HTMLElement;
   private _nameEl?: HTMLElement;
@@ -109,8 +136,9 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     this._render();
   }
 
-  set hass(_hass: unknown) {
-    // No reactive state needed — this card is fully config-driven.
+  set hass(hass: HomeAssistant) {
+    this._hass = hass;
+    this._update();
   }
 
   getCardSize(): number {
@@ -139,7 +167,14 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     card.className = "card";
     card.setAttribute("role", "button");
     card.setAttribute("tabindex", "0");
-    card.addEventListener("click", () => {
+    card.addEventListener("click", (ev) => {
+      if (this._suppressNextClick) {
+        ev.preventDefault();
+        ev.stopPropagation();
+        this._suppressNextClick = false;
+        return;
+      }
+
       this._navigate();
     });
     card.addEventListener("keydown", (ev: KeyboardEvent) => {
@@ -148,6 +183,14 @@ class DmAvailabilityDeviceCard extends HTMLElement {
         this._navigate();
       }
     });
+
+    const media = document.createElement("div");
+    media.className = "media";
+    media.addEventListener("pointerdown", this._handleHoldStart);
+    media.addEventListener("pointerup", this._handleHoldEnd);
+    media.addEventListener("pointerleave", this._handleHoldEnd);
+    media.addEventListener("pointercancel", this._handleHoldEnd);
+    media.addEventListener("contextmenu", this._handleContextMenu);
 
     // Use picture if available, otherwise fall back to icon
     const picture = document.createElement("img");
@@ -173,15 +216,18 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     // Show picture if available, otherwise icon
     if (config.picture) {
       picture.setAttribute("src", config.picture);
-      card.appendChild(picture);
+      media.appendChild(picture);
     } else {
-      card.appendChild(icon);
+      media.appendChild(icon);
     }
+    card.appendChild(media);
     card.appendChild(info);
 
     this._root.appendChild(style);
     this._root.appendChild(card);
 
+    this._cardEl = card;
+    this._mediaEl = media;
     this._pictureEl = picture;
     this._iconEl = icon;
     this._nameEl = name;
@@ -202,6 +248,17 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     }
     if (this._iconEl) {
       this._iconEl.setAttribute("icon", config.icon || "mdi:exclamation-thick");
+    }
+    if (this._mediaEl) {
+      const localize = setupLocalize(this._hass);
+      const canToggleSafeList = Boolean(
+        config.enable_safe_toggle && config.device_id,
+      );
+      this._mediaEl.classList.toggle("safe-toggle", canToggleSafeList);
+      this._mediaEl.classList.toggle("saving", this._savingSafeList);
+      this._mediaEl.title = canToggleSafeList
+        ? localize("availability.safe_list_hold_hint")
+        : "";
     }
     if (this._nameEl) {
       this._nameEl.textContent = config.device_name;
@@ -224,6 +281,111 @@ class DmAvailabilityDeviceCard extends HTMLElement {
 
     history.pushState(null, "", this._config.navigation_path);
     window.dispatchEvent(event);
+  }
+
+  private _handleHoldStart = (_ev: PointerEvent): void => {
+    if (
+      !this._config?.enable_safe_toggle ||
+      !this._config.device_id ||
+      this._savingSafeList
+    ) {
+      return;
+    }
+
+    this._clearHoldTimer();
+    this._holdTimer = window.setTimeout(() => {
+      this._holdTimer = undefined;
+      void this._toggleSafeList();
+    }, 700);
+  };
+
+  private _handleHoldEnd = (): void => {
+    this._clearHoldTimer();
+  };
+
+  private _handleContextMenu = (ev: Event): void => {
+    if (this._config?.enable_safe_toggle) {
+      ev.preventDefault();
+    }
+  };
+
+  private _clearHoldTimer(): void {
+    if (this._holdTimer !== undefined) {
+      window.clearTimeout(this._holdTimer);
+      this._holdTimer = undefined;
+    }
+  }
+
+  private async _toggleSafeList(): Promise<void> {
+    if (!this._hass?.connection || !this._config?.device_id) {
+      return;
+    }
+
+    this._savingSafeList = true;
+    this._suppressNextClick = true;
+    this._update();
+
+    try {
+      const urlPath = this._currentDashboardUrlPath();
+      const rawConfig = await this._hass.connection.sendMessagePromise<Record<string, unknown>>({
+        type: "lovelace/config",
+        url_path: urlPath,
+        force: false,
+      });
+
+      const strategy = rawConfig.strategy;
+      if (!this._isMaintenanceDashboardStrategy(strategy)) {
+        return;
+      }
+
+      const existingSafeList = normalizeAvailabilitySafeListDeviceIds(
+        strategy.availability_safe_list_device_ids,
+      );
+      const hasDevice = existingSafeList.includes(this._config.device_id);
+      const nextSafeList = hasDevice
+        ? existingSafeList.filter((deviceId) => deviceId !== this._config!.device_id)
+        : [...existingSafeList, this._config.device_id];
+
+      await this._hass.connection.sendMessagePromise({
+        type: "lovelace/config/save",
+        url_path: urlPath,
+        config: {
+          ...rawConfig,
+          strategy: {
+            ...strategy,
+            availability_safe_list_device_ids:
+              nextSafeList.length > 0 ? nextSafeList : undefined,
+          },
+        },
+      });
+    } finally {
+      this._savingSafeList = false;
+      this._update();
+    }
+  }
+
+  private _currentDashboardUrlPath(): string | null {
+    const [, dashboardSegment] = window.location.pathname.split("/");
+
+    if (!dashboardSegment || dashboardSegment === "lovelace") {
+      return null;
+    }
+
+    return decodeURIComponent(dashboardSegment);
+  }
+
+  private _isMaintenanceDashboardStrategy(
+    strategy: unknown,
+  ): strategy is {
+    type: string;
+    availability_safe_list_device_ids?: string[];
+  } {
+    return (
+      typeof strategy === "object" &&
+      strategy !== null &&
+      "type" in strategy &&
+      (strategy as { type?: unknown }).type === "custom:maintenance"
+    );
   }
 }
 

@@ -71,6 +71,7 @@ const makeAvailabilitySummarySectionContent = async (
           "availability.device_unavailable_other",
         ),
         brandsToken,
+        { enableSafeToggle: true },
       ),
     ),
     ...unknownGrouped.devices.map((device) =>
@@ -132,6 +133,9 @@ const buildDeviceCards = (
   subtitleOneKey: TranslationKey,
   subtitleOtherKey: TranslationKey,
   brandsToken?: string | null,
+  options?: {
+    enableSafeToggle?: boolean;
+  },
 ): LovelaceCardConfig[] => {
   if (devices.length === 0) {
     return [];
@@ -143,7 +147,7 @@ const buildDeviceCards = (
 
   for (const device of devices) {
     const subtitle = deviceSubtitle(localize, device, subtitleOneKey, subtitleOtherKey);
-    cards.push(makeAvailabilityDeviceCard(device, subtitle, brandsToken));
+    cards.push(makeAvailabilityDeviceCard(device, subtitle, brandsToken, options));
   }
 
   return cards;
@@ -188,6 +192,7 @@ export const makeAvailabilitySections = async (
       "availability.device_unavailable_one",
       "availability.device_unavailable_other",
       brandsToken,
+      { enableSafeToggle: true },
     ),
   );
 
