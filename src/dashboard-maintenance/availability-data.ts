@@ -33,12 +33,12 @@ export interface MaintenanceAvailabilityEntity {
   displayName: string;
   entityId: string;
   lastChanged?: string;
-  state: "unavailable" | "unknown";
+  state: "unavailable";
 }
 
 const isRelevantAvailabilityIssue = (
   stateObj: HassEntity,
-): stateObj is HassEntity & { state: "unavailable" | "unknown" } =>
+): stateObj is HassEntity & { state: "unavailable" } =>
   isAvailabilityIssue(stateObj) && isAvailabilityDomainRelevant(stateObj.entity_id);
 
 interface CommonControlResult {

@@ -101,8 +101,8 @@ export const parseTimestamp = (value?: string): number => {
 
 export const isAvailabilityIssue = (
   stateObj: HassEntity,
-): stateObj is HassEntity & { state: "unavailable" | "unknown" } =>
-  stateObj.state === "unavailable" || stateObj.state === "unknown";
+): stateObj is HassEntity & { state: "unavailable" } =>
+  stateObj.state === "unavailable";
 
 /** Filter items by area ID. Works with any entity/device that has an areaId field. */
 export const filterItemsByArea = <T extends { areaId?: string | null }>(

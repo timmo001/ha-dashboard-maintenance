@@ -52,11 +52,9 @@ const makeAvailabilitySummarySectionContent = async (
   },
 ): Promise<LovelaceSectionConfig> => {
   const unavailableEntities = entities.filter((entity) => entity.state === "unavailable");
-  const unknownEntities = entities.filter((entity) => entity.state === "unknown");
 
-  const [unavailableGrouped, unknownGrouped, brandsToken] = await Promise.all([
+  const [unavailableGrouped, brandsToken] = await Promise.all([
     groupAvailabilityByDevice(hass, unavailableEntities),
-    groupAvailabilityByDevice(hass, unknownEntities),
     fetchBrandsAccessToken(hass),
   ]);
 
@@ -74,24 +72,7 @@ const makeAvailabilitySummarySectionContent = async (
         { enableSafeToggle: true },
       ),
     ),
-    ...unknownGrouped.devices.map((device) =>
-      makeAvailabilityDeviceCard(
-        device,
-        deviceSubtitle(
-          localize,
-          device,
-          "availability.device_unknown_one",
-          "availability.device_unknown_other",
-        ),
-        brandsToken,
-      ),
-    ),
     ...unavailableGrouped.ungrouped.map((entity) =>
-      makeAvailabilityCard(entity, {
-        name: entity.deviceId ? ATTENTION_ENTITY_NAME : entity.displayName,
-      }),
-    ),
-    ...unknownGrouped.ungrouped.map((entity) =>
       makeAvailabilityCard(entity, {
         name: entity.deviceId ? ATTENTION_ENTITY_NAME : entity.displayName,
       }),
@@ -106,8 +87,8 @@ const makeAvailabilitySummarySectionContent = async (
   }
 
   return makeSection(
-    localize("availability.heading_unavailable_or_unknown"),
-    "mdi:help-circle-outline",
+    localize("availability.heading_unavailable"),
+    "mdi:lan-disconnect",
     cards,
     SUMMARY_COLUMN_SPAN,
     "availability",
@@ -173,11 +154,9 @@ export const makeAvailabilitySections = async (
   }
 
   const unavailableEntities = entities.filter((e) => e.state === "unavailable");
-  const unknownEntities = entities.filter((e) => e.state === "unknown");
 
-  const [unavailableGrouped, unknownGrouped, brandsToken] = await Promise.all([
+  const [unavailableGrouped, brandsToken] = await Promise.all([
     groupAvailabilityByDevice(hass, unavailableEntities),
-    groupAvailabilityByDevice(hass, unknownEntities),
     fetchBrandsAccessToken(hass),
   ]);
 
@@ -196,21 +175,8 @@ export const makeAvailabilitySections = async (
     ),
   );
 
-  cards.push(
-    ...buildDeviceCards(
-      localize,
-      localize("availability.heading_unknown"),
-      "mdi:help-rhombus-outline",
-      unknownGrouped.devices,
-      "availability.device_unknown_one",
-      "availability.device_unknown_other",
-      brandsToken,
-    ),
-  );
-
   const allUngrouped = [
     ...unavailableGrouped.ungrouped,
-    ...unknownGrouped.ungrouped,
   ];
 
   if (allUngrouped.length > 0) {
