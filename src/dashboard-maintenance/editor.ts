@@ -48,10 +48,7 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
       ${MODULES.map((mod) => {
         const enabled = this._config![mod.enabledKey] !== false;
         return html`
-          <ha-expansion-panel
-            expanded
-            outlined
-          >
+          <ha-expansion-panel outlined>
             <ha-icon
               slot="leading-icon"
               icon=${mod.icon}
