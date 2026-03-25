@@ -29,7 +29,7 @@ interface LovelaceController {
 
 interface DmAvailabilityDeviceCardConfig {
   type: string;
-   device_id?: string;
+  device_id?: string;
   device_name: string;
   subtitle: string;
   picture: string | null;
@@ -128,6 +128,8 @@ class DmAvailabilityDeviceCard extends HTMLElement {
   private _iconEl?: HTMLElement;
   private _nameEl?: HTMLElement;
   private _subtitleEl?: HTMLElement;
+  private _activePictureSrc: string | null = null;
+  private _failedPictureSrc: string | null = null;
 
   constructor() {
     super();
@@ -202,6 +204,8 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     const picture = document.createElement("img");
     picture.className = "picture";
     picture.setAttribute("loading", "lazy");
+    picture.addEventListener("load", this._handlePictureLoad);
+    picture.addEventListener("error", this._handlePictureError);
 
     const icon = document.createElement("ha-icon");
     icon.className = "icon";
@@ -219,13 +223,8 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     info.appendChild(name);
     info.appendChild(subtitle);
 
-    // Show picture if available, otherwise icon
-    if (config.picture) {
-      picture.setAttribute("src", config.picture);
-      media.appendChild(picture);
-    } else {
-      media.appendChild(icon);
-    }
+    media.appendChild(picture);
+    media.appendChild(icon);
     card.appendChild(media);
     card.appendChild(info);
 
@@ -243,17 +242,27 @@ class DmAvailabilityDeviceCard extends HTMLElement {
 
   private _update(): void {
     const config = this._config!;
+    const picture = config.picture;
+    const shouldShowPicture = Boolean(picture) && picture !== this._failedPictureSrc;
 
     if (this._pictureEl) {
-      if (config.picture) {
-        this._pictureEl.setAttribute("src", config.picture);
+      if (shouldShowPicture && picture) {
+        if (this._activePictureSrc !== picture) {
+          this._activePictureSrc = picture;
+          this._pictureEl.src = picture;
+        }
         this._pictureEl.style.display = "block";
-      } else if (this._iconEl) {
+      } else {
+        if (this._activePictureSrc !== null) {
+          this._activePictureSrc = null;
+          this._pictureEl.removeAttribute("src");
+        }
         this._pictureEl.style.display = "none";
       }
     }
     if (this._iconEl) {
       this._iconEl.setAttribute("icon", config.icon || "mdi:exclamation-thick");
+      this._iconEl.style.display = shouldShowPicture ? "none" : "block";
     }
     if (this._mediaEl) {
       const localize = setupLocalize(this._hass);
@@ -273,6 +282,19 @@ class DmAvailabilityDeviceCard extends HTMLElement {
       this._subtitleEl.textContent = config.subtitle || "";
     }
   }
+
+  private _handlePictureLoad = (): void => {
+    if (this._config?.picture && this._config.picture === this._activePictureSrc) {
+      this._failedPictureSrc = null;
+    }
+  };
+
+  private _handlePictureError = (): void => {
+    if (this._activePictureSrc) {
+      this._failedPictureSrc = this._activePictureSrc;
+    }
+    this._update();
+  };
 
   private _navigate(): void {
     if (!this._config?.navigation_path) {
