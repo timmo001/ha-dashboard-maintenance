@@ -8,13 +8,14 @@ import type { LocalizeFunc, TranslationKey } from "./localize";
 import {
   ATTENTION_ENTITY_NAME,
   fetchBrandsAccessToken,
-  limitAndMakeCards,
+  limitItems,
   makeAvailabilityCard,
   makeAvailabilityDeviceCard,
   makeEmptyStateSection,
   makeGridSection,
   makeHeadingCard,
   makeSection,
+  makeShowMoreCard,
   MAINTENANCE_COLUMN_SPAN,
   SUMMARY_COLUMN_SPAN,
   type LovelaceCardConfig,
@@ -27,28 +28,86 @@ export const buildAvailabilityAreaShowMorePath = (areaId: string): string =>
 
 export const makeAvailabilitySummarySection = (
   localize: LocalizeFunc,
+  hass: HomeAssistant,
   entities: MaintenanceAvailabilityEntity[],
   options?: {
     limit?: number;
     showMorePath?: string;
   },
-): LovelaceSectionConfig | null => {
+): Promise<LovelaceSectionConfig | null> => {
   if (entities.length === 0) {
-    return null;
+    return Promise.resolve(null);
+  }
+
+  return makeAvailabilitySummarySectionContent(localize, hass, entities, options);
+};
+
+const makeAvailabilitySummarySectionContent = async (
+  localize: LocalizeFunc,
+  hass: HomeAssistant,
+  entities: MaintenanceAvailabilityEntity[],
+  options?: {
+    limit?: number;
+    showMorePath?: string;
+  },
+): Promise<LovelaceSectionConfig> => {
+  const unavailableEntities = entities.filter((entity) => entity.state === "unavailable");
+  const unknownEntities = entities.filter((entity) => entity.state === "unknown");
+
+  const [unavailableGrouped, unknownGrouped, brandsToken] = await Promise.all([
+    groupAvailabilityByDevice(hass, unavailableEntities),
+    groupAvailabilityByDevice(hass, unknownEntities),
+    fetchBrandsAccessToken(hass),
+  ]);
+
+  const summaryCards = [
+    ...unavailableGrouped.devices.map((device) =>
+      makeAvailabilityDeviceCard(
+        device,
+        deviceSubtitle(
+          localize,
+          device,
+          "availability.device_unavailable_one",
+          "availability.device_unavailable_other",
+        ),
+        brandsToken,
+      ),
+    ),
+    ...unknownGrouped.devices.map((device) =>
+      makeAvailabilityDeviceCard(
+        device,
+        deviceSubtitle(
+          localize,
+          device,
+          "availability.device_unknown_one",
+          "availability.device_unknown_other",
+        ),
+        brandsToken,
+      ),
+    ),
+    ...unavailableGrouped.ungrouped.map((entity) =>
+      makeAvailabilityCard(entity, {
+        name: entity.deviceId ? ATTENTION_ENTITY_NAME : entity.displayName,
+      }),
+    ),
+    ...unknownGrouped.ungrouped.map((entity) =>
+      makeAvailabilityCard(entity, {
+        name: entity.deviceId ? ATTENTION_ENTITY_NAME : entity.displayName,
+      }),
+    ),
+  ];
+
+  const { items: shownCards, hiddenCount } = limitItems(summaryCards, options?.limit);
+  const cards = [...shownCards];
+
+  if (options?.showMorePath && hiddenCount > 0) {
+    cards.push(makeShowMoreCard(localize, hiddenCount, options.showMorePath));
   }
 
   return makeSection(
     localize("availability.heading_unavailable_or_unknown"),
     "mdi:help-circle-outline",
-    limitAndMakeCards(
-      localize,
-      entities,
-      (entity) =>
-        makeAvailabilityCard(entity, {
-          name: entity.deviceId ? ATTENTION_ENTITY_NAME : entity.displayName,
-        }),
-      options,
-    ),
+    cards,
     SUMMARY_COLUMN_SPAN,
     "availability",
   );

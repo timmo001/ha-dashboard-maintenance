@@ -70,7 +70,7 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
       const availabilityEntities =
         await getMaintenanceAvailabilityEntities(hass);
       rawSections.push(
-        makeAvailabilitySummarySection(localize, availabilityEntities, {
+        await makeAvailabilitySummarySection(localize, hass, availabilityEntities, {
           limit: SUMMARY_ITEM_LIMIT,
           showMorePath: "availability",
         }),
