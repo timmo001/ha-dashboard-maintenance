@@ -5,7 +5,7 @@
   "packageManager": "pnpm@10.32.1",
   "scripts": {
     "build": "tsc --noEmit && rolldown -c",
-    "lint": "pnpm run build && node --check dist/dashboard-maintenance.js",
+    "lint": "pnpm run build && node --check dist/ha-dashboard-maintenance.js",
     "prepare": "simple-git-hooks",
     "publish-to-local": "bash ./scripts/publish-to-local.sh",
     "start": "rolldown -c --watch",

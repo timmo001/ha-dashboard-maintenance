@@ -23,4 +23,4 @@ jobs:
       - name: "⬆ Upload dashboard bundle to release"
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/dashboard-maintenance.js
+          files: dist/ha-dashboard-maintenance.js

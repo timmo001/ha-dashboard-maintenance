@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV_FILE="${ROOT_DIR}/.env"
-BUNDLE_NAME="dashboard-maintenance.js"
+BUNDLE_NAME="ha-dashboard-maintenance.js"
 PUBLISH_PATH="/config/www/community/ha-dashboard-maintenance"
 
 if [[ -t 2 && -z "${NO_COLOR:-}" ]]; then

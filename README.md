@@ -23,7 +23,7 @@ The generated dashboard focuses on battery-powered devices with numeric battery 
 4. Open `Settings -> Dashboards -> three dots menu -> Resources`.
 5. Add this Lovelace resource:
 
-   - URL: `/hacsfiles/ha-dashboard-maintenance/dashboard-maintenance.js`
+   - URL: `/hacsfiles/ha-dashboard-maintenance/ha-dashboard-maintenance.js`
    - Type: `module`
 
 6. Reload Lovelace resources or refresh Home Assistant.
@@ -44,7 +44,7 @@ If you run Home Assistant OS or Supervised, you can use the SSH app:
 6. Open `Settings -> Dashboards -> three dots menu -> Resources`.
 7. Add this Lovelace resource:
 
-   - URL: `/local/community/ha-dashboard-maintenance/dashboard-maintenance.js`
+   - URL: `/local/community/ha-dashboard-maintenance/ha-dashboard-maintenance.js`
    - Type: `module`
 
 8. Reload Lovelace resources or refresh Home Assistant.
@@ -98,14 +98,14 @@ views:
 ```bash
 pnpm install
 pnpm run build
-node --check dist/dashboard-maintenance.js
+node --check dist/ha-dashboard-maintenance.js
 ```
 
 Git commits also run `pnpm run lint` through a `pre-commit` hook, which rebuilds the bundle and checks the generated JavaScript syntax.
 
 ## Release layout
 
-- HACS release asset: `dashboard-maintenance.js`
-- Local build output: `dist/dashboard-maintenance.js`
-- Local publish target: `/config/www/community/ha-dashboard-maintenance/dashboard-maintenance.js`
-- Recommended local dev resource URL: `/local/community/ha-dashboard-maintenance/dashboard-maintenance.js`
+- HACS release asset: `ha-dashboard-maintenance.js`
+- Local build output: `dist/ha-dashboard-maintenance.js`
+- Local publish target: `/config/www/community/ha-dashboard-maintenance/ha-dashboard-maintenance.js`
+- Recommended local dev resource URL: `/local/community/ha-dashboard-maintenance/ha-dashboard-maintenance.js`

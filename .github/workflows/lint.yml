@@ -28,4 +28,4 @@ jobs:
       - name: 🏗 Build frontend assets
         run: pnpm run build
       - name: 🚀 Check frontend syntax
-        run: node --check dist/dashboard-maintenance.js
+        run: node --check dist/ha-dashboard-maintenance.js
