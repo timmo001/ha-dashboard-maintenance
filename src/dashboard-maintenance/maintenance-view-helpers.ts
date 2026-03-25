@@ -604,6 +604,9 @@ export const makeAvailabilityDeviceCard = (
     subtitle,
     picture,
     icon: computeDomainIcon(device.entities[0].entityId),
+    grid_options: {
+      columns: 6,
+    },
     enable_safe_toggle: options?.enableSafeToggle === true,
     navigation_path: `/config/devices/device/${device.deviceId}`,
   };
