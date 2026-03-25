@@ -2,6 +2,12 @@ import { normalizeAvailabilitySafeListDeviceIds } from "./availability-data";
 import { setupLocalize } from "./localize";
 import type { HomeAssistant } from "./types";
 
+interface LovelaceController {
+  rawConfig: Record<string, unknown>;
+  urlPath: string | null;
+  saveConfig(newConfig: Record<string, unknown>): Promise<void>;
+}
+
 /**
  * A lightweight custom Lovelace card that displays a device with
  * availability issues. Renders a tile-like layout with:
@@ -317,7 +323,7 @@ class DmAvailabilityDeviceCard extends HTMLElement {
   }
 
   private async _toggleSafeList(): Promise<void> {
-    if (!this._hass?.connection || !this._config?.device_id) {
+    if (!this._config?.device_id) {
       return;
     }
 
@@ -326,12 +332,10 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     this._update();
 
     try {
-      const urlPath = this._currentDashboardUrlPath();
-      const rawConfig = await this._hass.connection.sendMessagePromise<Record<string, unknown>>({
-        type: "lovelace/config",
-        url_path: urlPath,
-        force: false,
-      });
+      const lovelace = this._findLovelaceController();
+      const rawConfig = lovelace
+        ? lovelace.rawConfig
+        : await this._fetchRawConfig();
 
       const strategy = rawConfig.strategy;
       if (!this._isMaintenanceDashboardStrategy(strategy)) {
@@ -346,22 +350,72 @@ class DmAvailabilityDeviceCard extends HTMLElement {
         ? existingSafeList.filter((deviceId) => deviceId !== this._config!.device_id)
         : [...existingSafeList, this._config.device_id];
 
-      await this._hass.connection.sendMessagePromise({
-        type: "lovelace/config/save",
-        url_path: urlPath,
-        config: {
-          ...rawConfig,
-          strategy: {
-            ...strategy,
-            availability_safe_list_device_ids:
-              nextSafeList.length > 0 ? nextSafeList : undefined,
-          },
+      const nextConfig = {
+        ...rawConfig,
+        strategy: {
+          ...strategy,
+          availability_safe_list_device_ids:
+            nextSafeList.length > 0 ? nextSafeList : undefined,
         },
-      });
+      };
+
+      if (lovelace) {
+        await lovelace.saveConfig(nextConfig);
+      } else {
+        await this._saveRawConfig(nextConfig);
+      }
     } finally {
       this._savingSafeList = false;
       this._update();
     }
+  }
+
+  private async _fetchRawConfig(): Promise<Record<string, unknown>> {
+    if (!this._hass?.connection) {
+      throw new Error("Home Assistant connection unavailable");
+    }
+
+    return this._hass.connection.sendMessagePromise<Record<string, unknown>>({
+      type: "lovelace/config",
+      url_path: this._currentDashboardUrlPath(),
+      force: false,
+    });
+  }
+
+  private async _saveRawConfig(config: Record<string, unknown>): Promise<void> {
+    if (!this._hass?.connection) {
+      throw new Error("Home Assistant connection unavailable");
+    }
+
+    await this._hass.connection.sendMessagePromise({
+      type: "lovelace/config/save",
+      url_path: this._currentDashboardUrlPath(),
+      config,
+    });
+  }
+
+  private _findLovelaceController(): LovelaceController | undefined {
+    let node: Node | undefined = this;
+
+    while (node) {
+      const candidate = node as Node & { lovelace?: LovelaceController };
+      if (
+        candidate.lovelace &&
+        typeof candidate.lovelace.saveConfig === "function"
+      ) {
+        return candidate.lovelace;
+      }
+
+      const rootNode = node.getRootNode();
+      if (rootNode instanceof ShadowRoot && rootNode.host) {
+        node = rootNode.host;
+        continue;
+      }
+
+      node = node.parentNode ?? undefined;
+    }
+
+    return undefined;
   }
 
   private _currentDashboardUrlPath(): string | null {
