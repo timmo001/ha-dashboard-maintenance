@@ -10,6 +10,44 @@ export const computeDomain = (entityId: string): string =>
 export const computeObjectId = (entityId: string): string =>
   entityId.split(".", 2)[1] || entityId;
 
+/** Map of entity domains to their Material Design icons. */
+const DOMAIN_ICONS: Record<string, string> = {
+  alert: "mdi:alert",
+  automation: "mdi:robot",
+  binary_sensor: "mdi:binary-sensor",
+  button: "mdi:button-pointer",
+  camera: "mdi:camera",
+  climate: "mdi:thermostat",
+  cover: "mdi:blinds",
+  device_tracker: "mdi:device-tracker",
+  fan: "mdi:fan",
+  group: "mdi:group",
+  light: "mdi:lightbulb",
+  lock: "mdi:lock",
+  media_player: "mdi:cast",
+  notify: "mdi:bell",
+  number: "mdi:numeric",
+  scene: "mdi:palette",
+  script: "mdi:script-text",
+  select: "mdi:form-dropdown",
+  sensor: "mdi:sensor",
+  siren: "mdi:bullhorn",
+  switch: "mdi:switch",
+  text: "mdi:text",
+  update: "mdi:package-up",
+  vacuum: "mdi:vacuum",
+  water_heater: "mdi:water-boiler",
+};
+
+/**
+ * Get the default icon for an entity domain.
+ * Returns the domain-specific icon if known, otherwise falls back to mdi:exclamation.
+ */
+export const computeDomainIcon = (entityId: string): string => {
+  const domain = computeDomain(entityId);
+  return DOMAIN_ICONS[domain] || "mdi:exclamation-thick";
+};
+
 export const compareText = (left: string, right: string, language?: string): number =>
   left.localeCompare(right, language, { sensitivity: "base" });
 

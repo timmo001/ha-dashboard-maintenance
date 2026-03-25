@@ -1,5 +1,6 @@
 import {
   compareText,
+  computeDeviceName,
   computeDomain,
   computeEntityDisplayName,
   isAvailabilityIssue,
@@ -7,6 +8,7 @@ import {
   parseTimestamp,
 } from "./entity-helpers";
 import {
+  fetchConfigEntries,
   fetchDeviceRegistry,
   fetchEntityRegistry,
 } from "./maintenance-data";
@@ -111,3 +113,86 @@ export const hasAvailabilityIssues = (
 
 export const isAvailabilityDomainRelevant = (entityId: string): boolean =>
   computeDomain(entityId) !== "group";
+
+// ---------------------------------------------------------------------------
+// Device grouping
+// ---------------------------------------------------------------------------
+
+export interface MaintenanceAvailabilityDevice {
+  deviceId: string;
+  deviceName: string;
+  devicePicture?: string | null;
+  integrationDomain?: string | null;
+  areaId?: string | null;
+  entities: MaintenanceAvailabilityEntity[];
+  unavailableCount: number;
+}
+
+/**
+ * Group availability entities by their parent device.
+ * Returns an array of device groups sorted by entity count descending,
+ * plus any ungrouped (device-less) entities in a separate list.
+ */
+export const groupAvailabilityByDevice = async (
+  hass: HomeAssistant,
+  entities: MaintenanceAvailabilityEntity[],
+): Promise<{
+  devices: MaintenanceAvailabilityDevice[];
+  ungrouped: MaintenanceAvailabilityEntity[];
+}> => {
+  const [deviceRegistry, configEntries] = await Promise.all([
+    fetchDeviceRegistry(hass),
+    fetchConfigEntries(hass),
+  ]);
+
+  const deviceMap = new Map<string, MaintenanceAvailabilityEntity[]>();
+  const ungrouped: MaintenanceAvailabilityEntity[] = [];
+
+  for (const entity of entities) {
+    if (entity.deviceId) {
+      const existing = deviceMap.get(entity.deviceId);
+
+      if (existing) {
+        existing.push(entity);
+      } else {
+        deviceMap.set(entity.deviceId, [entity]);
+      }
+    } else {
+      ungrouped.push(entity);
+    }
+  }
+
+  const devices: MaintenanceAvailabilityDevice[] = [];
+
+  for (const [deviceId, deviceEntities] of deviceMap) {
+    const device = deviceRegistry[deviceId];
+    const deviceName = computeDeviceName(device) || deviceId;
+
+    // Prefer the primary config entry, then fall back to the first one.
+    let integrationDomain: string | null | undefined;
+    const configEntryId =
+      device?.primary_config_entry || device?.config_entries?.[0];
+    if (configEntryId) {
+      const configEntry = configEntries[configEntryId];
+      integrationDomain = configEntry?.domain;
+    }
+
+    devices.push({
+      deviceId,
+      deviceName,
+      devicePicture: device?.picture,
+      integrationDomain,
+      areaId: device?.area_id || deviceEntities[0]?.areaId,
+      entities: deviceEntities,
+      unavailableCount: deviceEntities.length,
+    });
+  }
+
+  devices.sort(
+    (left, right) =>
+      right.unavailableCount - left.unavailableCount ||
+      compareText(left.deviceName, right.deviceName),
+  );
+
+  return { devices, ungrouped };
+};

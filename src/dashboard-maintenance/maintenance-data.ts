@@ -6,6 +6,7 @@ import {
 } from "./entity-helpers";
 import type {
   AreaRegistryEntry,
+  ConfigEntry,
   DeviceRegistryEntry,
   EntityRegistryEntry,
   FloorRegistryEntry,
@@ -46,6 +47,10 @@ let areaRegistryPromise:
 
 let floorRegistryPromise:
   | Promise<Record<string, FloorRegistryEntry>>
+  | undefined;
+
+let configEntriesPromise:
+  | Promise<Record<string, ConfigEntry>>
   | undefined;
 
 const clamp = (value: number, min: number, max: number): number =>
@@ -198,6 +203,31 @@ export const getMaintenanceFloors = async (
     .catch(() => ({}));
 
   return floorRegistryPromise;
+};
+
+export const fetchConfigEntries = async (
+  hass: HomeAssistant,
+): Promise<Record<string, ConfigEntry>> => {
+  if (hass.configEntries?.entries?.length) {
+    return Object.fromEntries(
+      hass.configEntries.entries.map((entry) => [entry.entry_id, entry]),
+    );
+  }
+
+  if (!hass.connection) {
+    return {};
+  }
+
+  configEntriesPromise ??= hass.connection
+    .sendMessagePromise<ConfigEntry[]>({
+      type: "config_entries/get",
+    })
+    .then((entries) =>
+      Object.fromEntries(entries.map((entry) => [entry.entry_id, entry])),
+    )
+    .catch(() => ({}));
+
+  return configEntriesPromise;
 };
 
 const fallbackDevicesFromStates = (

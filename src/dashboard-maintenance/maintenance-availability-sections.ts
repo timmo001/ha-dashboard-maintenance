@@ -1,16 +1,23 @@
 import {
   getMaintenanceAvailabilityEntities,
+  groupAvailabilityByDevice,
+  type MaintenanceAvailabilityDevice,
   type MaintenanceAvailabilityEntity,
 } from "./availability-data";
-import type { LocalizeFunc } from "./localize";
+import type { LocalizeFunc, TranslationKey } from "./localize";
 import {
   ATTENTION_ENTITY_NAME,
+  fetchBrandsAccessToken,
   limitAndMakeCards,
   makeAvailabilityCard,
+  makeAvailabilityDeviceCard,
   makeEmptyStateSection,
-  makeHierarchySections,
+  makeGridSection,
+  makeHeadingCard,
   makeSection,
+  MAINTENANCE_COLUMN_SPAN,
   SUMMARY_COLUMN_SPAN,
+  type LovelaceCardConfig,
   type LovelaceSectionConfig,
 } from "./maintenance-view-helpers";
 import type { HomeAssistant } from "./types";
@@ -47,11 +54,47 @@ export const makeAvailabilitySummarySection = (
   );
 };
 
+const deviceSubtitle = (
+  localize: LocalizeFunc,
+  device: MaintenanceAvailabilityDevice,
+  oneKey: TranslationKey,
+  otherKey: TranslationKey,
+): string =>
+  device.unavailableCount === 1
+    ? localize(oneKey, { count: device.unavailableCount })
+    : localize(otherKey, { count: device.unavailableCount });
+
+/** Build heading + device tile cards for a single state (unavailable or unknown). */
+const buildDeviceCards = (
+  localize: LocalizeFunc,
+  heading: string,
+  icon: string,
+  devices: MaintenanceAvailabilityDevice[],
+  subtitleOneKey: TranslationKey,
+  subtitleOtherKey: TranslationKey,
+  brandsToken?: string | null,
+): LovelaceCardConfig[] => {
+  if (devices.length === 0) {
+    return [];
+  }
+
+  const cards: LovelaceCardConfig[] = [
+    makeHeadingCard(heading, { icon }),
+  ];
+
+  for (const device of devices) {
+    const subtitle = deviceSubtitle(localize, device, subtitleOneKey, subtitleOtherKey);
+    cards.push(makeAvailabilityDeviceCard(device, subtitle, brandsToken));
+  }
+
+  return cards;
+};
+
 export const makeAvailabilitySections = async (
   localize: LocalizeFunc,
   hass: HomeAssistant,
   entities: MaintenanceAvailabilityEntity[],
-  options?: {
+  _options?: {
     limit?: number;
     showMorePath?: string;
   },
@@ -66,20 +109,59 @@ export const makeAvailabilitySections = async (
     ];
   }
 
-  return makeHierarchySections(
-    localize,
-    hass,
-    {
-      items: entities,
-      makeCard: (entity) => makeAvailabilityCard(entity),
-      buildAreaShowMorePath: buildAvailabilityAreaShowMorePath,
-      heading: localize("availability.heading_issues"),
-      icon: "mdi:help-circle-outline",
-      unassignedLabel: "common.other_entities",
-      unassignedFallbackLabel: "common.entities",
-    },
-    options,
+  const unavailableEntities = entities.filter((e) => e.state === "unavailable");
+  const unknownEntities = entities.filter((e) => e.state === "unknown");
+
+  const [unavailableGrouped, unknownGrouped, brandsToken] = await Promise.all([
+    groupAvailabilityByDevice(hass, unavailableEntities),
+    groupAvailabilityByDevice(hass, unknownEntities),
+    fetchBrandsAccessToken(hass),
+  ]);
+
+  const cards: LovelaceCardConfig[] = [];
+
+  cards.push(
+    ...buildDeviceCards(
+      localize,
+      localize("availability.heading_unavailable"),
+      "mdi:lan-disconnect",
+      unavailableGrouped.devices,
+      "availability.device_unavailable_one",
+      "availability.device_unavailable_other",
+      brandsToken,
+    ),
   );
+
+  cards.push(
+    ...buildDeviceCards(
+      localize,
+      localize("availability.heading_unknown"),
+      "mdi:help-rhombus-outline",
+      unknownGrouped.devices,
+      "availability.device_unknown_one",
+      "availability.device_unknown_other",
+      brandsToken,
+    ),
+  );
+
+  const allUngrouped = [
+    ...unavailableGrouped.ungrouped,
+    ...unknownGrouped.ungrouped,
+  ];
+
+  if (allUngrouped.length > 0) {
+    cards.push(
+      makeHeadingCard(localize("availability.ungrouped_entities"), {
+        headingStyle: "subtitle",
+      }),
+    );
+
+    for (const entity of allUngrouped) {
+      cards.push(makeAvailabilityCard(entity));
+    }
+  }
+
+  return [makeGridSection(cards, MAINTENANCE_COLUMN_SPAN)];
 };
 
 export const getAvailabilitySummaryData = async (

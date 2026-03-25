@@ -53,8 +53,15 @@ const en = {
 
   // Availability sections
   "availability.heading": "Availability",
+  "availability.heading_unavailable": "Unavailable",
+  "availability.heading_unknown": "Unknown",
   "availability.heading_unavailable_or_unknown": "Unavailable or unknown",
   "availability.heading_issues": "Availability issues",
+  "availability.device_unavailable_one": "{count} unavailable entity",
+  "availability.device_unavailable_other": "{count} unavailable entities",
+  "availability.device_unknown_one": "{count} unknown entity",
+  "availability.device_unknown_other": "{count} unknown entities",
+  "availability.ungrouped_entities": "Other entities",
   "availability.empty_no_issues_title": "No availability issues",
   "availability.empty_no_issues_content":
     "Home Assistant could not find any unavailable or unknown entities.",

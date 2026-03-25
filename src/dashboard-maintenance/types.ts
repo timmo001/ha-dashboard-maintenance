@@ -25,6 +25,9 @@ export interface DeviceRegistryEntry {
   area_id?: string | null;
   name_by_user?: string | null;
   name?: string | null;
+  picture?: string | null;
+  primary_config_entry?: string | null;
+  config_entries?: string[];
 }
 
 export interface AreaRegistryEntry {
@@ -40,6 +43,13 @@ export interface FloorRegistryEntry {
   name: string;
 }
 
+export interface ConfigEntry {
+  entry_id: string;
+  domain: string;
+  title: string;
+  state?: string;
+}
+
 export interface HomeAssistantConnection {
   sendMessagePromise<T>(message: unknown): Promise<T>;
 }
@@ -50,6 +60,9 @@ export interface HomeAssistant {
   entities?: Record<string, EntityRegistryEntry>;
   devices?: Record<string, DeviceRegistryEntry>;
   floors?: Record<string, FloorRegistryEntry>;
+  configEntries?: {
+    entries: ConfigEntry[];
+  };
   locale?: {
     language?: string;
   };

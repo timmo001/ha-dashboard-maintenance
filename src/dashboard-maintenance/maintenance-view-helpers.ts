@@ -1,4 +1,4 @@
-import { groupItemsByArea } from "./entity-helpers";
+import { computeDomainIcon, groupItemsByArea } from "./entity-helpers";
 import type { LocalizeFunc, TranslationKey } from "./localize";
 import type { MaintenanceBatteryDevice } from "./maintenance-data";
 import {
@@ -8,6 +8,7 @@ import {
 } from "./maintenance-data";
 import {
   availabilityIssueIcon,
+  type MaintenanceAvailabilityDevice,
   type MaintenanceAvailabilityEntity,
 } from "./availability-data";
 import { severityIcon, type MaintenanceRepairIssue } from "./repairs-data";
@@ -24,6 +25,38 @@ import type {
   MaintenanceViewMode,
   MaintenanceViewStrategyConfig,
 } from "./types";
+
+// ---------------------------------------------------------------------------
+// Brand access token for integration icons
+// ---------------------------------------------------------------------------
+
+let brandsAccessToken: string | null = null;
+
+/**
+ * Fetch the brands access token from Home Assistant.
+ * This token is required for the /api/brands/... proxy endpoints.
+ */
+export const fetchBrandsAccessToken = async (
+  hass: HomeAssistant,
+): Promise<string | null> => {
+  if (brandsAccessToken) {
+    return brandsAccessToken;
+  }
+
+  if (!hass.connection) {
+    return null;
+  }
+
+  try {
+    const result = await hass.connection.sendMessagePromise<{ token: string }>({
+      type: "brands/access_token",
+    });
+    brandsAccessToken = result.token;
+    return brandsAccessToken;
+  } catch {
+    return null;
+  }
+};
 
 export type LovelaceCardConfig = Record<string, unknown>;
 export type LovelaceViewConfig = Record<string, unknown>;
@@ -536,6 +569,39 @@ export const makeHierarchySections = async <T extends { areaId?: string | null }
       MAINTENANCE_COLUMN_SPAN,
     ),
   ];
+};
+
+// ---------------------------------------------------------------------------
+// Device tile card builder (for availability device grouping)
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a custom card that represents a device with availability issues.
+ * Uses the `dm-availability-device-card` custom element so we can display
+ * the device name and an arbitrary entity-count subtitle — something the
+ * built-in tile card cannot do.
+ *
+ * Shows the integration brand icon via HA's proxy if a token is available,
+ * otherwise falls back to the entity's domain icon.
+ */
+export const makeAvailabilityDeviceCard = (
+  device: MaintenanceAvailabilityDevice,
+  subtitle: string,
+  brandsToken?: string | null,
+): LovelaceCardConfig => {
+  const domain = device.integrationDomain || device.entities[0].entityId.split(".")[0];
+  const picture = brandsToken
+    ? `/api/brands/integration/${domain}/icon.png?token=${brandsToken}`
+    : null;
+
+  return {
+    type: "custom:dm-availability-device-card",
+    device_name: device.deviceName,
+    subtitle,
+    picture,
+    icon: computeDomainIcon(device.entities[0].entityId),
+    navigation_path: `/config/devices/device/${device.deviceId}`,
+  };
 };
 
 // ---------------------------------------------------------------------------
