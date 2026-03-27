@@ -9,7 +9,7 @@ import {
   makeHierarchySections,
   makeSection,
   makeStaleCard,
-  STALE_ENTITY_NAME,
+  staleEntityTileName,
   SUMMARY_COLUMN_SPAN,
   type LovelaceSectionConfig,
 } from "./maintenance-view-helpers";
@@ -38,7 +38,7 @@ export const makeStaleSummarySection = (
       entities,
       (entity) =>
         makeStaleCard(entity, {
-          name: entity.deviceId ? STALE_ENTITY_NAME : entity.displayName,
+          name: staleEntityTileName(entity),
         }),
       options,
     ),
@@ -73,7 +73,7 @@ export const makeStaleSections = async (
       items: entities,
       makeCard: (entity) =>
         makeStaleCard(entity, {
-          name: entity.deviceId ? STALE_ENTITY_NAME : entity.displayName,
+          name: staleEntityTileName(entity),
         }),
       buildAreaShowMorePath: buildStaleAreaShowMorePath,
       heading: localize("stale.heading_issues"),

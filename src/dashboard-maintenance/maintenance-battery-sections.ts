@@ -1,8 +1,8 @@
 import type { LocalizeFunc } from "./localize";
 import type { MaintenanceBatteryDevice } from "./maintenance-data";
 import {
-  AREA_BATTERY_NAME,
-  ATTENTION_BATTERY_NAME,
+  batteryAreaTileName,
+  batteryAttentionTileName,
   limitAndMakeCards,
   SUMMARY_COLUMN_SPAN,
   type LovelaceSectionConfig,
@@ -41,7 +41,7 @@ export const makeBatteryAttentionSection = (
       attentionDevices,
       (device) =>
         makeBatteryCard(device, {
-          name: device.deviceId ? ATTENTION_BATTERY_NAME : device.deviceName,
+          name: batteryAttentionTileName(device),
         }),
       options,
     ),
@@ -66,7 +66,7 @@ export const makeBatterySections = async (
       items: batteryDevices,
       makeCard: (device) =>
         makeBatteryCard(device, {
-          name: device.deviceId ? AREA_BATTERY_NAME : device.deviceName,
+          name: batteryAreaTileName(device),
         }),
       buildAreaShowMorePath: buildBatteryAreaShowMorePath,
       heading: localize("battery.heading_devices"),

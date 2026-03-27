@@ -125,6 +125,24 @@ export const AREA_BATTERY_NAME = NAME_DEVICE;
 export const AVAILABILITY_ENTITY_NAME = NAME_AREA_DEVICE_ENTITY;
 export const STALE_ENTITY_NAME = NAME_DEVICE_ENTITY;
 
+export const batteryAttentionTileName = (
+  device: MaintenanceBatteryDevice,
+): string | EntityNameItem[] =>
+  device.deviceId ? ATTENTION_BATTERY_NAME : device.deviceName;
+
+export const batteryAreaTileName = (
+  device: MaintenanceBatteryDevice,
+): string | EntityNameItem[] =>
+  device.deviceId ? AREA_BATTERY_NAME : device.deviceName;
+
+export const availabilityEntityTileName = (): EntityNameItem[] =>
+  AVAILABILITY_ENTITY_NAME;
+
+export const staleEntityTileName = (
+  entity: MaintenanceStaleEntity,
+): string | EntityNameItem[] =>
+  entity.deviceId ? STALE_ENTITY_NAME : entity.displayName;
+
 export const VIEW_DEFAULTS: Record<
   MaintenanceViewMode,
   { columnSpan: number; icon: string; path: string; titleKey: TranslationKey }
