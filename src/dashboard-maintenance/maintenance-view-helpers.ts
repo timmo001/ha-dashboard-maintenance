@@ -71,10 +71,20 @@ export const MAINTENANCE_COLUMN_SPAN = 3;
 export const ATTENTION_BATTERY_NAME: EntityNameItem[] = [
   { type: "area" },
   { type: "device" },
+  { type: "entity" },
 ];
 
 export const ATTENTION_ENTITY_NAME: EntityNameItem[] = [
   { type: "area" },
+  { type: "device" },
+  { type: "entity" },
+];
+
+export const AREA_BATTERY_NAME: EntityNameItem[] = [
+  { type: "device" },
+];
+
+export const AREA_ENTITY_NAME: EntityNameItem[] = [
   { type: "device" },
   { type: "entity" },
 ];

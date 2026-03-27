@@ -4,6 +4,7 @@ import {
 } from "./stale-data";
 import type { LocalizeFunc } from "./localize";
 import {
+  AREA_ENTITY_NAME,
   ATTENTION_ENTITY_NAME,
   limitAndMakeCards,
   makeEmptyStateSection,
@@ -71,7 +72,10 @@ export const makeStaleSections = async (
     hass,
     {
       items: entities,
-      makeCard: (entity) => makeStaleCard(entity),
+      makeCard: (entity) =>
+        makeStaleCard(entity, {
+          name: entity.deviceId ? AREA_ENTITY_NAME : entity.displayName,
+        }),
       buildAreaShowMorePath: buildStaleAreaShowMorePath,
       heading: localize("stale.heading_issues"),
       icon: staleEntityIcon(),

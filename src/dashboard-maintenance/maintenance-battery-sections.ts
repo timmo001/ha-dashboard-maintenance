@@ -1,6 +1,7 @@
 import type { LocalizeFunc } from "./localize";
 import type { MaintenanceBatteryDevice } from "./maintenance-data";
 import {
+  AREA_BATTERY_NAME,
   ATTENTION_BATTERY_NAME,
   limitAndMakeCards,
   SUMMARY_COLUMN_SPAN,
@@ -63,7 +64,10 @@ export const makeBatterySections = async (
     hass,
     {
       items: batteryDevices,
-      makeCard: (device) => makeBatteryCard(device),
+      makeCard: (device) =>
+        makeBatteryCard(device, {
+          name: device.deviceId ? AREA_BATTERY_NAME : device.deviceName,
+        }),
       buildAreaShowMorePath: buildBatteryAreaShowMorePath,
       heading: localize("battery.heading_devices"),
       icon: "mdi:battery-heart-variant",
