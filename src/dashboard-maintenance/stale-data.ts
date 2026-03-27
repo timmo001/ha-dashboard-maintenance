@@ -2,6 +2,7 @@ import {
   compareText,
   computeDomain,
   computeEntityDisplayName,
+  isEntityRegistryVisible,
   isAvailabilityIssue,
   isDefined,
   isStateVisible,
@@ -93,7 +94,7 @@ export const getMaintenanceStaleEntities = async (
       const deviceId = entry?.device_id || undefined;
       const device = deviceId ? devices[deviceId] : undefined;
 
-      if (entry?.disabled_by || entry?.hidden_by || device?.disabled_by) {
+      if ((entry && !isEntityRegistryVisible(entry)) || device?.disabled_by) {
         return undefined;
       }
 

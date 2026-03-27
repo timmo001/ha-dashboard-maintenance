@@ -3,6 +3,7 @@ import {
   computeDeviceName,
   computeDomain,
   computeEntityDisplayName,
+  isEntityRegistryVisible,
   isAvailabilityIssue,
   isDefined,
   isStateVisible,
@@ -108,8 +109,7 @@ export const getMaintenanceAvailabilityEntities = async (
       );
 
       if (
-        entry?.disabled_by ||
-        entry?.hidden_by ||
+        (entry && !isEntityRegistryVisible(entry)) ||
         device?.disabled_by ||
         hasDisabledConfigEntry
       ) {

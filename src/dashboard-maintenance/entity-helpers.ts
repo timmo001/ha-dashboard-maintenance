@@ -111,6 +111,20 @@ export const isStateVisible = (stateObj: HassEntity): boolean => {
   return attributes.hidden !== true && attributes.visible !== false;
 };
 
+/**
+ * Match Home Overview visibility behavior: prefer `hidden` from display registry,
+ * while also supporting full entity registry fields.
+ */
+export const isEntityRegistryVisible = (
+  entry: EntityRegistryEntry | undefined,
+): boolean => {
+  if (!entry) {
+    return false;
+  }
+
+  return entry.hidden !== true && !entry.hidden_by && !entry.disabled_by;
+};
+
 /** Filter items by area ID. Works with any entity/device that has an areaId field. */
 export const filterItemsByArea = <T extends { areaId?: string | null }>(
   items: T[],

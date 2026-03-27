@@ -15,6 +15,7 @@ export interface EntityRegistryEntry {
   config_entry_id?: string | null;
   device_id: string | null;
   area_id?: string | null;
+  hidden?: boolean;
   disabled_by?: string | null;
   hidden_by?: string | null;
   name?: string | null;

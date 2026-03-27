@@ -3,6 +3,7 @@ import {
   computeDomain,
   computeEntityDisplayName,
   computeStateName,
+  isEntityRegistryVisible,
   isStateVisible,
 } from "./entity-helpers";
 import type {
@@ -270,8 +271,7 @@ export const getMaintenanceBatteryDevices = async (
   for (const entry of Object.values(entities)) {
     if (
       !entry.device_id ||
-      entry.disabled_by ||
-      entry.hidden_by ||
+      !isEntityRegistryVisible(entry) ||
       !(entry.entity_id in hass.states)
     ) {
       continue;

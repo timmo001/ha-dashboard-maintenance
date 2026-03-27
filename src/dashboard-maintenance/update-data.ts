@@ -1,4 +1,10 @@
-import { compareText, computeDomain, isStateVisible } from "./entity-helpers";
+import {
+  compareText,
+  computeDomain,
+  isEntityRegistryVisible,
+  isStateVisible,
+} from "./entity-helpers";
+import type { EntityRegistryEntry } from "./types";
 import { fetchEntityRegistry } from "./maintenance-data";
 import type { HassEntity, HomeAssistant } from "./types";
 
@@ -52,7 +58,7 @@ export const updateCanNotInstall = (
 
 const isVisibleUpdateEntity = (
   entityId: string,
-  entities: Record<string, { disabled_by?: string | null; hidden_by?: string | null }>,
+  entities: Record<string, EntityRegistryEntry>,
   hasEntityRegistry: boolean,
 ): boolean => {
   const entry = entities[entityId];
@@ -61,7 +67,7 @@ const isVisibleUpdateEntity = (
     return !hasEntityRegistry;
   }
 
-  return !entry.disabled_by && !entry.hidden_by;
+  return isEntityRegistryVisible(entry);
 };
 
 export const getMaintenanceUpdates = async (
