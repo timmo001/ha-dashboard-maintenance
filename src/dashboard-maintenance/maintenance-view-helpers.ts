@@ -90,8 +90,16 @@ interface AreaScopedItem {
   areaId?: string | null;
 }
 
+// ---------------------------------------------------------------------------
+// Layout defaults
+// ---------------------------------------------------------------------------
+
 export const SUMMARY_COLUMN_SPAN = 3;
 export const MAINTENANCE_COLUMN_SPAN = 3;
+
+// ---------------------------------------------------------------------------
+// Tile naming presets
+// ---------------------------------------------------------------------------
 
 export const NAME_AREA_DEVICE_ENTITY: EntityNameItem[] = [
   { type: "area" },
@@ -108,7 +116,10 @@ export const NAME_DEVICE_ENTITY: EntityNameItem[] = [
   { type: "entity" },
 ];
 
-// Context-specific aliases kept in helpers so naming is configured in one place.
+// ---------------------------------------------------------------------------
+// Tile naming aliases by view context
+// ---------------------------------------------------------------------------
+
 export const ATTENTION_BATTERY_NAME = NAME_AREA_DEVICE_ENTITY;
 export const AREA_BATTERY_NAME = NAME_DEVICE;
 export const AVAILABILITY_ENTITY_NAME = NAME_AREA_DEVICE_ENTITY;
