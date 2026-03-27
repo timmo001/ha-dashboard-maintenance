@@ -11,7 +11,7 @@ import {
   type MaintenanceAvailabilityDevice,
   type MaintenanceAvailabilityEntity,
 } from "./availability-data";
-import { severityIcon, type MaintenanceRepairIssue } from "./repairs-data";
+import type { MaintenanceRepairIssue } from "./repairs-data";
 import {
   staleEntityIcon,
   type MaintenanceStaleEntity,
@@ -64,6 +64,31 @@ export type LovelaceSectionConfig = Record<string, unknown>;
 export type EntityNameItem =
   | { type: "entity" | "device" | "area" | "floor" }
   | { type: "text"; text: string };
+
+export interface HeadingCardOptions {
+  headingStyle?: "title" | "subtitle";
+  icon?: string;
+  navigationPath?: string;
+}
+
+export interface TileCardOptions {
+  name?: string | EntityNameItem[];
+  features?: unknown[];
+}
+
+export type NameOnlyTileOptions = Pick<TileCardOptions, "name">;
+
+export interface LimitOptions {
+  limit?: number;
+}
+
+export interface LimitAndShowMoreOptions extends LimitOptions {
+  showMorePath?: string;
+}
+
+interface AreaScopedItem {
+  areaId?: string | null;
+}
 
 export const SUMMARY_COLUMN_SPAN = 3;
 export const MAINTENANCE_COLUMN_SPAN = 3;
@@ -137,11 +162,7 @@ export const VIEW_DEFAULTS: Record<
 
 export const makeHeadingCard = (
   heading: string,
-  options?: {
-    headingStyle?: "title" | "subtitle";
-    icon?: string;
-    navigationPath?: string;
-  },
+  options?: HeadingCardOptions,
 ): LovelaceCardConfig => ({
   type: "heading",
   heading,
@@ -198,7 +219,7 @@ interface TileCardEntity {
 const makeTileCard = (
   entity: TileCardEntity,
   icon: string | undefined,
-  options?: { name?: string | EntityNameItem[]; features?: unknown[] },
+  options?: TileCardOptions,
 ): LovelaceCardConfig => ({
   type: "tile",
   entity: entity.entityId,
@@ -222,7 +243,7 @@ const makeTileCard = (
 
 export const makeBatteryCard = (
   device: MaintenanceBatteryDevice,
-  options?: { name?: string | EntityNameItem[] },
+  options?: NameOnlyTileOptions,
 ): LovelaceCardConfig =>
   makeTileCard(
     { entityId: device.entityId, deviceId: device.deviceId, displayName: device.deviceName },
@@ -277,13 +298,13 @@ export const makeRepairCard = (
 
 export const makeAvailabilityCard = (
   entity: MaintenanceAvailabilityEntity,
-  options?: { name?: string | EntityNameItem[] },
+  options?: NameOnlyTileOptions,
 ): LovelaceCardConfig =>
   makeTileCard(entity, availabilityIssueIcon(entity), options);
 
 export const makeStaleCard = (
   entity: MaintenanceStaleEntity,
-  options?: { name?: string | EntityNameItem[] },
+  options?: NameOnlyTileOptions,
 ): LovelaceCardConfig =>
   makeTileCard(entity, staleEntityIcon(), options);
 
@@ -310,17 +331,15 @@ export const limitAndMakeCards = <T,>(
   localize: LocalizeFunc,
   items: T[],
   makeCard: (item: T) => LovelaceCardConfig,
-  options?: { limit?: number; showMorePath?: string },
-): LovelaceCardConfig[] => {
-  const { items: shown, hiddenCount } = limitItems(items, options?.limit);
-  const cards = shown.map(makeCard);
-
-  if (options?.showMorePath && hiddenCount > 0) {
-    cards.push(makeShowMoreCard(localize, hiddenCount, options.showMorePath));
-  }
-
-  return cards;
-};
+  options?: LimitAndShowMoreOptions,
+): LovelaceCardConfig[] =>
+  makeLimitedCards(
+    localize,
+    items,
+    makeCard,
+    options?.showMorePath,
+    options?.limit,
+  );
 
 // ---------------------------------------------------------------------------
 // Section builders
@@ -331,19 +350,12 @@ export const makeEmptyStateSection = (
   content: string,
   icon: string,
 ): LovelaceSectionConfig =>
-  makeGridSection(
-    [
-      {
-        type: "empty-state",
-        icon,
-        content_only: true,
-        title,
-        content,
-        grid_options: { columns: 12 },
-      },
-    ],
-    1,
-  );
+  makeGridSection([
+    {
+      ...makeEmptyStateCard(title, content, icon),
+      grid_options: { columns: 12 },
+    },
+  ], 1);
 
 export const makeGridSection = (
   cards: LovelaceCardConfig[],
@@ -373,25 +385,40 @@ export const makeSection = (
   ),
 });
 
-export const makeShowMoreSection = (
-  localize: LocalizeFunc,
-  hiddenCount: number,
-  navigationPath: string,
-  columnSpan: number,
-): LovelaceSectionConfig =>
-  makeGridSection(
-    [makeShowMoreCard(localize, hiddenCount, navigationPath)],
-    columnSpan,
-  );
-
 // ---------------------------------------------------------------------------
 // Generic area-cards builder (replaces 3 near-identical makeAreaCards functions)
 // ---------------------------------------------------------------------------
 
-export const floorHeadingIcon = (floor: FloorRegistryEntry): string =>
+const floorHeadingIcon = (floor: FloorRegistryEntry): string =>
   floor.icon || "mdi:floor-plan";
 
-export const makeAreaCards = <T extends { areaId?: string | null }>(
+const makeAreaHeadingCard = (
+  area: AreaRegistryEntry,
+  hass: HomeAssistant,
+): LovelaceCardConfig =>
+  makeHeadingCard(area.name, {
+    headingStyle: "subtitle",
+    navigationPath: hass.panels?.home ? `/home/areas-${area.area_id}` : undefined,
+  });
+
+const makeLimitedCards = <T,>(
+  localize: LocalizeFunc,
+  items: T[],
+  makeCard: (item: T) => LovelaceCardConfig,
+  showMorePath?: string,
+  limit?: number,
+): LovelaceCardConfig[] => {
+  const { items: shown, hiddenCount } = limitItems(items, limit);
+
+  return [
+    ...shown.map(makeCard),
+    ...(showMorePath && hiddenCount > 0
+      ? [makeShowMoreCard(localize, hiddenCount, showMorePath)]
+      : []),
+  ];
+};
+
+const makeAreaCards = <T extends AreaScopedItem>(
   localize: LocalizeFunc,
   areaIds: string[],
   areas: Record<string, AreaRegistryEntry>,
@@ -399,7 +426,7 @@ export const makeAreaCards = <T extends { areaId?: string | null }>(
   items: T[],
   makeCard: (item: T) => LovelaceCardConfig,
   buildShowMorePath: (areaId: string) => string,
-  options?: { limit?: number },
+  options?: LimitOptions,
 ): LovelaceCardConfig[] => {
   const cards: LovelaceCardConfig[] = [];
 
@@ -419,14 +446,7 @@ export const makeAreaCards = <T extends { areaId?: string | null }>(
       continue;
     }
 
-    cards.push(
-      makeHeadingCard(area.name, {
-        headingStyle: "subtitle",
-        navigationPath: hass.panels?.home
-          ? `/home/areas-${area.area_id}`
-          : undefined,
-      }),
-    );
+    cards.push(makeAreaHeadingCard(area, hass));
 
     cards.push(...shown.items.map(makeCard));
     if (shown.hiddenCount > 0) {
@@ -455,11 +475,124 @@ export interface HierarchySectionsConfig<T> {
   unassignedFallbackLabel: TranslationKey;
 }
 
-export const makeHierarchySections = async <T extends { areaId?: string | null }>(
+const makeFloorSection = <T extends AreaScopedItem>(
   localize: LocalizeFunc,
   hass: HomeAssistant,
   config: HierarchySectionsConfig<T>,
-  options?: { limit?: number; showMorePath?: string },
+  floor: FloorRegistryEntry,
+  areaIds: string[],
+  areas: Record<string, AreaRegistryEntry>,
+  floorCount: number,
+  limit?: number,
+): LovelaceSectionConfig | null => {
+  const areaCards = makeAreaCards(
+    localize,
+    areaIds,
+    areas,
+    hass,
+    config.items,
+    config.makeCard,
+    config.buildAreaShowMorePath,
+    { limit },
+  );
+
+  if (areaCards.length === 0) {
+    return null;
+  }
+
+  return makeGridSection(
+    [
+      makeHeadingCard(floorCount > 1 ? floor.name : localize("common.areas"), {
+        icon: floorHeadingIcon(floor),
+      }),
+      ...areaCards,
+    ],
+    MAINTENANCE_COLUMN_SPAN,
+  );
+};
+
+const makeTopLevelAreasSection = <T extends AreaScopedItem>(
+  localize: LocalizeFunc,
+  hass: HomeAssistant,
+  config: HierarchySectionsConfig<T>,
+  areaIds: string[],
+  areas: Record<string, AreaRegistryEntry>,
+  floorCount: number,
+  limit?: number,
+): LovelaceSectionConfig | null => {
+  const areaCards = makeAreaCards(
+    localize,
+    areaIds,
+    areas,
+    hass,
+    config.items,
+    config.makeCard,
+    config.buildAreaShowMorePath,
+    { limit },
+  );
+
+  if (areaCards.length === 0) {
+    return null;
+  }
+
+  return makeGridSection(
+    [
+      makeHeadingCard(
+        floorCount > 1 ? localize("common.other_areas") : localize("common.areas"),
+      ),
+      ...areaCards,
+    ],
+    MAINTENANCE_COLUMN_SPAN,
+  );
+};
+
+const makeUnassignedSection = <T extends AreaScopedItem>(
+  localize: LocalizeFunc,
+  config: HierarchySectionsConfig<T>,
+  sections: LovelaceSectionConfig[],
+  options?: LimitAndShowMoreOptions,
+): LovelaceSectionConfig | null => {
+  const unassignedItems = config.items.filter((item) => !item.areaId);
+  if (unassignedItems.length === 0) {
+    return null;
+  }
+
+  return makeGridSection(
+    [
+      makeHeadingCard(
+        sections.length > 0
+          ? localize(config.unassignedLabel)
+          : localize(config.unassignedFallbackLabel),
+      ),
+      ...makeLimitedCards(
+        localize,
+        unassignedItems,
+        config.makeCard,
+        options?.showMorePath,
+        options?.limit,
+      ),
+    ],
+    MAINTENANCE_COLUMN_SPAN,
+  );
+};
+
+const makeFlatFallbackSection = <T extends AreaScopedItem>(
+  localize: LocalizeFunc,
+  config: HierarchySectionsConfig<T>,
+  options?: LimitAndShowMoreOptions,
+): LovelaceSectionConfig =>
+  makeSection(
+    config.heading,
+    config.icon,
+    limitAndMakeCards(localize, config.items, config.makeCard, options),
+    MAINTENANCE_COLUMN_SPAN,
+  );
+
+export const makeHierarchySections = async <T extends AreaScopedItem>(
+  localize: LocalizeFunc,
+  hass: HomeAssistant,
+  config: HierarchySectionsConfig<T>,
+  options?: LimitAndShowMoreOptions,
 ): Promise<LovelaceSectionConfig[]> => {
   if (config.items.length === 0) {
     return [];
@@ -492,83 +625,41 @@ export const makeHierarchySections = async <T extends { areaId?: string | null }
       continue;
     }
 
-    const areaCards = makeAreaCards(
+    const floorSection = makeFloorSection(
       localize,
+      hass,
+      config,
+      floor,
       floorStructure.areas,
       areas,
-      hass,
-      config.items,
-      config.makeCard,
-      config.buildAreaShowMorePath,
-      { limit: options?.limit },
+      floorCount,
+      options?.limit,
     );
-    if (areaCards.length === 0) {
-      continue;
-    }
 
-    sections.push(
-      makeGridSection(
-        [
-          makeHeadingCard(
-            floorCount > 1 ? floor.name : localize("common.areas"),
-            { icon: floorHeadingIcon(floor) },
-          ),
-          ...areaCards,
-        ],
-        MAINTENANCE_COLUMN_SPAN,
-      ),
-    );
+    if (floorSection) {
+      sections.push(floorSection);
+    }
   }
 
   if (hierarchy.areas.length > 0) {
-    const areaCards = makeAreaCards(
+    const topLevelAreasSection = makeTopLevelAreasSection(
       localize,
+      hass,
+      config,
       hierarchy.areas,
       areas,
-      hass,
-      config.items,
-      config.makeCard,
-      config.buildAreaShowMorePath,
-      { limit: options?.limit },
+      floorCount,
+      options?.limit,
     );
 
-    if (areaCards.length > 0) {
-      sections.push(
-        makeGridSection(
-          [
-            makeHeadingCard(
-              floorCount > 1
-                ? localize("common.other_areas")
-                : localize("common.areas"),
-            ),
-            ...areaCards,
-          ],
-          MAINTENANCE_COLUMN_SPAN,
-        ),
-      );
+    if (topLevelAreasSection) {
+      sections.push(topLevelAreasSection);
     }
   }
 
-  const unassignedItems = config.items.filter((item) => !item.areaId);
-  const unassignedCards = limitItems(unassignedItems, options?.limit);
-
-  if (unassignedCards.items.length > 0) {
-    sections.push(
-      makeGridSection(
-        [
-          makeHeadingCard(
-            sections.length > 0
-              ? localize(config.unassignedLabel)
-              : localize(config.unassignedFallbackLabel),
-          ),
-          ...unassignedCards.items.map(config.makeCard),
-          ...(options?.showMorePath && unassignedCards.hiddenCount > 0
-            ? [makeShowMoreCard(localize, unassignedCards.hiddenCount, options.showMorePath)]
-            : []),
-        ],
-        MAINTENANCE_COLUMN_SPAN,
-      ),
-    );
+  const unassignedSection = makeUnassignedSection(localize, config, sections, options);
+  if (unassignedSection) {
+    sections.push(unassignedSection);
   }
 
   if (sections.length > 0) {
@@ -576,14 +667,7 @@ export const makeHierarchySections = async <T extends { areaId?: string | null }
   }
 
   // Fallback: flat list when no items match any area
-  return [
-    makeSection(
-      config.heading,
-      config.icon,
-      limitAndMakeCards(localize, config.items, config.makeCard, options),
-      MAINTENANCE_COLUMN_SPAN,
-    ),
-  ];
+  return [makeFlatFallbackSection(localize, config, options)];
 };
 
 // ---------------------------------------------------------------------------
