@@ -4,13 +4,12 @@ import {
 } from "./stale-data";
 import type { LocalizeFunc } from "./localize";
 import {
-  AREA_ENTITY_NAME,
-  ATTENTION_ENTITY_NAME,
   limitAndMakeCards,
   makeEmptyStateSection,
   makeHierarchySections,
   makeSection,
   makeStaleCard,
+  STALE_ENTITY_NAME,
   SUMMARY_COLUMN_SPAN,
   type LovelaceSectionConfig,
 } from "./maintenance-view-helpers";
@@ -39,7 +38,7 @@ export const makeStaleSummarySection = (
       entities,
       (entity) =>
         makeStaleCard(entity, {
-          name: entity.deviceId ? ATTENTION_ENTITY_NAME : entity.displayName,
+          name: entity.deviceId ? STALE_ENTITY_NAME : entity.displayName,
         }),
       options,
     ),
@@ -74,7 +73,7 @@ export const makeStaleSections = async (
       items: entities,
       makeCard: (entity) =>
         makeStaleCard(entity, {
-          name: entity.deviceId ? AREA_ENTITY_NAME : entity.displayName,
+          name: entity.deviceId ? STALE_ENTITY_NAME : entity.displayName,
         }),
       buildAreaShowMorePath: buildStaleAreaShowMorePath,
       heading: localize("stale.heading_issues"),

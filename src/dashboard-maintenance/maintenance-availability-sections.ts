@@ -6,7 +6,7 @@ import {
 } from "./availability-data";
 import type { LocalizeFunc, TranslationKey } from "./localize";
 import {
-  ATTENTION_ENTITY_NAME,
+  AVAILABILITY_ENTITY_NAME,
   fetchBrandsAccessToken,
   limitItems,
   makeAvailabilityCard,
@@ -74,7 +74,7 @@ const makeAvailabilitySummarySectionContent = async (
     ),
     ...unavailableGrouped.ungrouped.map((entity) =>
       makeAvailabilityCard(entity, {
-        name: entity.deviceId ? ATTENTION_ENTITY_NAME : entity.displayName,
+        name: entity.deviceId ? AVAILABILITY_ENTITY_NAME : entity.displayName,
       }),
     ),
   ];
@@ -187,7 +187,11 @@ export const makeAvailabilitySections = async (
     );
 
     for (const entity of allUngrouped) {
-      cards.push(makeAvailabilityCard(entity));
+      cards.push(
+        makeAvailabilityCard(entity, {
+          name: entity.deviceId ? AVAILABILITY_ENTITY_NAME : entity.displayName,
+        }),
+      );
     }
   }
 

@@ -104,6 +104,13 @@ export const isAvailabilityIssue = (
 ): stateObj is HassEntity & { state: "unavailable" } =>
   stateObj.state === "unavailable";
 
+/** Whether an entity is visible from state attributes. */
+export const isStateVisible = (stateObj: HassEntity): boolean => {
+  const attributes = stateObj.attributes as Record<string, unknown>;
+
+  return attributes.hidden !== true && attributes.visible !== false;
+};
+
 /** Filter items by area ID. Works with any entity/device that has an areaId field. */
 export const filterItemsByArea = <T extends { areaId?: string | null }>(
   items: T[],

@@ -5,6 +5,7 @@ import {
   computeEntityDisplayName,
   isAvailabilityIssue,
   isDefined,
+  isStateVisible,
   parseTimestamp,
 } from "./entity-helpers";
 import {
@@ -76,6 +77,7 @@ export const getMaintenanceAvailabilityEntities = async (
     fetchConfigEntries(hass),
     getCommonControlUsagePrediction(hass),
   ]);
+  const hasEntityRegistry = Object.keys(entities).length > 0;
   const mostUsedEntityOrder = new Map(
     mostUsedEntities.map((entityId, index) => [entityId, index]),
   );
@@ -83,7 +85,15 @@ export const getMaintenanceAvailabilityEntities = async (
   return Object.values(hass.states)
     .filter(isRelevantAvailabilityIssue)
     .map<MaintenanceAvailabilityEntity | undefined>((stateObj) => {
+      if (!isStateVisible(stateObj)) {
+        return undefined;
+      }
+
       const entry = entities[stateObj.entity_id];
+      if (hasEntityRegistry && !entry) {
+        return undefined;
+      }
+
       const deviceId = entry?.device_id || undefined;
       const device = deviceId ? devices[deviceId] : undefined;
       const relatedConfigEntryIds = new Set<string>(

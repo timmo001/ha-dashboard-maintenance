@@ -3,6 +3,7 @@ import {
   computeDomain,
   computeEntityDisplayName,
   computeStateName,
+  isStateVisible,
 } from "./entity-helpers";
 import type {
   AreaRegistryEntry,
@@ -32,26 +33,6 @@ export interface MaintenanceAreaHierarchy {
   }>;
   areas: string[];
 }
-
-let entityRegistryPromise:
-  | Promise<Record<string, EntityRegistryEntry>>
-  | undefined;
-
-let deviceRegistryPromise:
-  | Promise<Record<string, DeviceRegistryEntry>>
-  | undefined;
-
-let areaRegistryPromise:
-  | Promise<Record<string, AreaRegistryEntry>>
-  | undefined;
-
-let floorRegistryPromise:
-  | Promise<Record<string, FloorRegistryEntry>>
-  | undefined;
-
-let configEntriesPromise:
-  | Promise<Record<string, ConfigEntry>>
-  | undefined;
 
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
@@ -115,39 +96,45 @@ const sortDevices = (
 export const fetchEntityRegistry = async (
   hass: HomeAssistant,
 ): Promise<Record<string, EntityRegistryEntry>> => {
-  if (!hass.connection) {
-    return hass.entities ?? {};
+  // Prefer the live HA frontend cache when available so visibility changes
+  // (hidden_by / disabled_by) are reflected without stale websocket caching.
+  if (hass.entities) {
+    return hass.entities;
   }
 
-  entityRegistryPromise ??= hass.connection
-    .sendMessagePromise<EntityRegistryEntry[]>({
-      type: "config/entity_registry/list",
-    })
-    .then((entries) =>
-      Object.fromEntries(entries.map((entry) => [entry.entity_id, entry])),
-    )
-    .catch(() => hass.entities ?? {});
+  if (!hass.connection) {
+    return {};
+  }
 
-  return entityRegistryPromise;
+  try {
+    const entries = await hass.connection.sendMessagePromise<EntityRegistryEntry[]>({
+      type: "config/entity_registry/list",
+    });
+    return Object.fromEntries(entries.map((entry) => [entry.entity_id, entry]));
+  } catch {
+    return {};
+  }
 };
 
 export const fetchDeviceRegistry = async (
   hass: HomeAssistant,
 ): Promise<Record<string, DeviceRegistryEntry>> => {
-  if (!hass.connection) {
-    return hass.devices ?? {};
+  if (hass.devices) {
+    return hass.devices;
   }
 
-  deviceRegistryPromise ??= hass.connection
-    .sendMessagePromise<DeviceRegistryEntry[]>({
-      type: "config/device_registry/list",
-    })
-    .then((entries) =>
-      Object.fromEntries(entries.map((entry) => [entry.id, entry])),
-    )
-    .catch(() => hass.devices ?? {});
+  if (!hass.connection) {
+    return {};
+  }
 
-  return deviceRegistryPromise;
+  try {
+    const entries = await hass.connection.sendMessagePromise<DeviceRegistryEntry[]>({
+      type: "config/device_registry/list",
+    });
+    return Object.fromEntries(entries.map((entry) => [entry.id, entry]));
+  } catch {
+    return {};
+  }
 };
 
 export const getAreasFloorHierarchy = (
@@ -190,16 +177,14 @@ export const getMaintenanceAreas = async (
     return {};
   }
 
-  areaRegistryPromise ??= hass.connection
-    .sendMessagePromise<AreaRegistryEntry[]>({
+  try {
+    const entries = await hass.connection.sendMessagePromise<AreaRegistryEntry[]>({
       type: "config/area_registry/list",
-    })
-    .then((entries) =>
-      Object.fromEntries(entries.map((entry) => [entry.area_id, entry])),
-    )
-    .catch(() => ({}));
-
-  return areaRegistryPromise;
+    });
+    return Object.fromEntries(entries.map((entry) => [entry.area_id, entry]));
+  } catch {
+    return {};
+  }
 };
 
 export const getMaintenanceFloors = async (
@@ -213,41 +198,37 @@ export const getMaintenanceFloors = async (
     return {};
   }
 
-  floorRegistryPromise ??= hass.connection
-    .sendMessagePromise<FloorRegistryEntry[]>({
+  try {
+    const entries = await hass.connection.sendMessagePromise<FloorRegistryEntry[]>({
       type: "config/floor_registry/list",
-    })
-    .then((entries) =>
-      Object.fromEntries(entries.map((entry) => [entry.floor_id, entry])),
-    )
-    .catch(() => ({}));
-
-  return floorRegistryPromise;
+    });
+    return Object.fromEntries(entries.map((entry) => [entry.floor_id, entry]));
+  } catch {
+    return {};
+  }
 };
 
 export const fetchConfigEntries = async (
   hass: HomeAssistant,
 ): Promise<Record<string, ConfigEntry>> => {
-  if (!hass.connection) {
+  if (hass.configEntries?.entries) {
     return Object.fromEntries(
       (hass.configEntries?.entries ?? []).map((entry) => [entry.entry_id, entry]),
     );
   }
 
-  configEntriesPromise ??= hass.connection
-    .sendMessagePromise<ConfigEntry[]>({
-      type: "config_entries/get",
-    })
-    .then((entries) =>
-      Object.fromEntries(entries.map((entry) => [entry.entry_id, entry])),
-    )
-    .catch(() =>
-      Object.fromEntries(
-        (hass.configEntries?.entries ?? []).map((entry) => [entry.entry_id, entry]),
-      ),
-    );
+  if (!hass.connection) {
+    return {};
+  }
 
-  return configEntriesPromise;
+  try {
+    const entries = await hass.connection.sendMessagePromise<ConfigEntry[]>({
+      type: "config_entries/get",
+    });
+    return Object.fromEntries(entries.map((entry) => [entry.entry_id, entry]));
+  } catch {
+    return {};
+  }
 };
 
 const fallbackDevicesFromStates = (
@@ -255,7 +236,7 @@ const fallbackDevicesFromStates = (
   attentionThreshold: number,
 ): MaintenanceBatteryDevice[] =>
   Object.values(hass.states)
-    .filter(isMaintenanceBatteryState)
+    .filter((stateObj) => isMaintenanceBatteryState(stateObj) && isStateVisible(stateObj))
     .map((stateObj) => {
       const level = batteryStateLevel(stateObj);
 
@@ -297,7 +278,11 @@ export const getMaintenanceBatteryDevices = async (
     }
 
     const stateObj = hass.states[entry.entity_id];
-    if (!isMaintenanceBatteryState(stateObj)) {
+    if (
+      !isMaintenanceBatteryState(stateObj) ||
+      !isStateVisible(stateObj) ||
+      devices[entry.device_id]?.disabled_by
+    ) {
       continue;
     }
 

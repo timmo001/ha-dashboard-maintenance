@@ -68,26 +68,26 @@ export type EntityNameItem =
 export const SUMMARY_COLUMN_SPAN = 3;
 export const MAINTENANCE_COLUMN_SPAN = 3;
 
-export const ATTENTION_BATTERY_NAME: EntityNameItem[] = [
+export const NAME_AREA_DEVICE_ENTITY: EntityNameItem[] = [
   { type: "area" },
   { type: "device" },
   { type: "entity" },
 ];
 
-export const ATTENTION_ENTITY_NAME: EntityNameItem[] = [
-  { type: "area" },
+export const NAME_DEVICE: EntityNameItem[] = [
+  { type: "device" },
+];
+
+export const NAME_DEVICE_ENTITY: EntityNameItem[] = [
   { type: "device" },
   { type: "entity" },
 ];
 
-export const AREA_BATTERY_NAME: EntityNameItem[] = [
-  { type: "device" },
-];
-
-export const AREA_ENTITY_NAME: EntityNameItem[] = [
-  { type: "device" },
-  { type: "entity" },
-];
+// Context-specific aliases kept in helpers so naming is configured in one place.
+export const ATTENTION_BATTERY_NAME = NAME_AREA_DEVICE_ENTITY;
+export const AREA_BATTERY_NAME = NAME_DEVICE;
+export const AVAILABILITY_ENTITY_NAME = NAME_AREA_DEVICE_ENTITY;
+export const STALE_ENTITY_NAME = NAME_DEVICE_ENTITY;
 
 export const VIEW_DEFAULTS: Record<
   MaintenanceViewMode,

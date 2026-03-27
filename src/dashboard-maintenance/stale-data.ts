@@ -4,6 +4,7 @@ import {
   computeEntityDisplayName,
   isAvailabilityIssue,
   isDefined,
+  isStateVisible,
   parseTimestamp,
 } from "./entity-helpers";
 import {
@@ -72,6 +73,7 @@ export const getMaintenanceStaleEntities = async (
     fetchEntityRegistry(hass),
     fetchDeviceRegistry(hass),
   ]);
+  const hasEntityRegistry = Object.keys(entities).length > 0;
 
   return Object.values(hass.states)
     .filter((stateObj) =>
@@ -79,9 +81,19 @@ export const getMaintenanceStaleEntities = async (
       !isAvailabilityIssue(stateObj),
     )
     .map<MaintenanceStaleEntity | undefined>((stateObj) => {
-      const entry = entities[stateObj.entity_id];
+      if (!isStateVisible(stateObj)) {
+        return undefined;
+      }
 
-      if (entry?.disabled_by || entry?.hidden_by) {
+      const entry = entities[stateObj.entity_id];
+      if (hasEntityRegistry && !entry) {
+        return undefined;
+      }
+
+      const deviceId = entry?.device_id || undefined;
+      const device = deviceId ? devices[deviceId] : undefined;
+
+      if (entry?.disabled_by || entry?.hidden_by || device?.disabled_by) {
         return undefined;
       }
 
@@ -102,9 +114,6 @@ export const getMaintenanceStaleEntities = async (
       if (staleDurationMs < thresholdMs) {
         return undefined;
       }
-
-      const deviceId = entry?.device_id || undefined;
-      const device = deviceId ? devices[deviceId] : undefined;
 
       return {
         areaId: device?.area_id || entry?.area_id,
