@@ -194,12 +194,15 @@ const makeTileCard = (
   entity: entity.entityId,
   name: options?.name || entity.displayName,
   ...(icon ? { icon } : {}),
-  tap_action: entity.deviceId
+  tap_action: { action: "more-info" },
+  ...(entity.deviceId
     ? {
-        action: "navigate",
-        navigation_path: `/config/devices/device/${entity.deviceId}`,
+        hold_action: {
+          action: "navigate",
+          navigation_path: `/config/devices/device/${entity.deviceId}`,
+        },
       }
-    : { action: "more-info" },
+    : {}),
   ...(options?.features ? { features: options.features } : {}),
 });
 
