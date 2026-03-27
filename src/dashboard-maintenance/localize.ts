@@ -19,7 +19,7 @@ const en = {
   "battery.heading_needing_attention": "Batteries needing attention",
   "battery.empty_no_devices_title": "No battery devices found",
   "battery.empty_no_devices_content":
-    "Home Assistant could not find any devices with numeric battery sensors.",
+    "Home Assistant could not find any devices with battery sensors.",
   "battery.empty_no_attention_title": "No batteries need attention",
   "battery.empty_no_attention_content":
     "All battery devices are at or above the attention threshold.",
@@ -91,7 +91,7 @@ const en = {
   "editor.show_attention_in_areas_label":
     "Show batteries needing attention in their area sections",
   "editor.battery_threshold_helper":
-    "Devices below this battery level are marked as needing attention.",
+    "Devices below this battery level, or with unknown/unavailable battery state, are marked as needing attention.",
   "editor.show_attention_in_areas_helper":
     "When enabled, low-battery devices appear in the top attention section and again in their area sections.",
   "editor.repairs_header": "Repairs",

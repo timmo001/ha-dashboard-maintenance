@@ -21,7 +21,7 @@ export interface MaintenanceBatteryDevice {
   areaId?: string | null;
   deviceName: string;
   entityId: string;
-  level: number;
+  level: number | null;
   needsAttention: boolean;
 }
 
@@ -56,17 +56,45 @@ let configEntriesPromise:
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(value, min), max);
 
-const isNumericBatteryState = (stateObj: HassEntity): boolean => {
+const isBatterySensorEntity = (stateObj: HassEntity): boolean => {
   if (computeDomain(stateObj.entity_id) !== "sensor") {
     return false;
   }
 
-  if (stateObj.attributes.device_class !== "battery") {
-    return false;
+  return stateObj.attributes.device_class === "battery";
+};
+
+const batteryStateLevel = (stateObj: HassEntity): number | null => {
+  if (!isBatterySensorEntity(stateObj)) {
+    return null;
   }
 
   const level = Number(stateObj.state);
-  return Number.isFinite(level) && level >= 0 && level <= 100;
+  if (Number.isFinite(level) && level >= 0 && level <= 100) {
+    return level;
+  }
+
+  return null;
+};
+
+const isUnknownOrUnavailableBatteryState = (stateObj: HassEntity): boolean =>
+  isBatterySensorEntity(stateObj) &&
+  (stateObj.state === "unknown" || stateObj.state === "unavailable");
+
+const isMaintenanceBatteryState = (stateObj: HassEntity): boolean =>
+  batteryStateLevel(stateObj) !== null ||
+  isUnknownOrUnavailableBatteryState(stateObj);
+
+const batteryStatePriority = (stateObj: HassEntity): number => {
+  if (stateObj.state === "unavailable") {
+    return 0;
+  }
+
+  if (stateObj.state === "unknown") {
+    return 1;
+  }
+
+  return 2;
 };
 
 export const normalizeBatteryAttentionThreshold = (
@@ -81,7 +109,7 @@ const sortDevices = (
   right: MaintenanceBatteryDevice,
 ): number =>
   Number(right.needsAttention) - Number(left.needsAttention) ||
-  left.level - right.level ||
+  (left.level ?? -1) - (right.level ?? -1) ||
   compareText(left.deviceName, right.deviceName);
 
 export const fetchEntityRegistry = async (
@@ -227,16 +255,16 @@ const fallbackDevicesFromStates = (
   attentionThreshold: number,
 ): MaintenanceBatteryDevice[] =>
   Object.values(hass.states)
-    .filter(isNumericBatteryState)
+    .filter(isMaintenanceBatteryState)
     .map((stateObj) => {
-      const level = Number(stateObj.state);
+      const level = batteryStateLevel(stateObj);
 
       return {
         areaId: undefined,
         entityId: stateObj.entity_id,
         deviceName: computeStateName(stateObj),
         level,
-        needsAttention: level < attentionThreshold,
+        needsAttention: level === null || level < attentionThreshold,
       };
     })
     .sort(sortDevices);
@@ -269,7 +297,7 @@ export const getMaintenanceBatteryDevices = async (
     }
 
     const stateObj = hass.states[entry.entity_id];
-    if (!isNumericBatteryState(stateObj)) {
+    if (!isMaintenanceBatteryState(stateObj)) {
       continue;
     }
 
@@ -284,11 +312,13 @@ export const getMaintenanceBatteryDevices = async (
     .map(([deviceId, batteryStates]) => {
       const selectedBatteryState = batteryStates.sort(
         (left, right) =>
-          Number(left.state) - Number(right.state) ||
+          batteryStatePriority(left) - batteryStatePriority(right) ||
+          (batteryStateLevel(left) ?? Number.POSITIVE_INFINITY) -
+            (batteryStateLevel(right) ?? Number.POSITIVE_INFINITY) ||
           compareText(left.entity_id, right.entity_id),
       )[0];
 
-      const level = Number(selectedBatteryState.state);
+      const level = batteryStateLevel(selectedBatteryState);
       const areaId =
         devices[deviceId]?.area_id ||
         entities[selectedBatteryState.entity_id]?.area_id;
@@ -303,7 +333,7 @@ export const getMaintenanceBatteryDevices = async (
         ),
         entityId: selectedBatteryState.entity_id,
         level,
-        needsAttention: level < normalizedThreshold,
+        needsAttention: level === null || level < normalizedThreshold,
       };
     })
     .sort(sortDevices);

@@ -216,7 +216,9 @@ export const makeBatteryCard = (
     device.needsAttention ? "mdi:battery-alert-variant-outline" : undefined,
     {
       ...options,
-      features: [{ type: "bar-gauge", min: 0, max: 100 }],
+      ...(device.level !== null
+        ? { features: [{ type: "bar-gauge", min: 0, max: 100 }] }
+        : {}),
     },
   );
 
