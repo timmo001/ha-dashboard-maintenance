@@ -1,4 +1,5 @@
 import "./dashboard-maintenance/dm-availability-device-card";
+import "./dashboard-maintenance/dm-maintenance-summary-card";
 import "./dashboard-maintenance/editor";
 import "./dashboard-maintenance/maintenance-availability-view-strategy";
 import "./dashboard-maintenance/maintenance-batteries-view-strategy";

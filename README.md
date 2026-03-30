@@ -9,6 +9,7 @@ Custom Lovelace dashboard and view strategy for Home Assistant maintenance dashb
 
 - `custom:maintenance` dashboard strategy for full dashboards
 - `custom:maintenance` view strategy for single Lovelace views
+- `custom:dm-maintenance-summary-card` for linking to maintenance dashboards
 - a strategy editor with a battery attention threshold slider
 
 The generated dashboard focuses on battery-powered devices with numeric battery sensors, orders the devices that need attention first, and opens the device page when you click a tile.
@@ -24,6 +25,17 @@ Shows a condensed snapshot of every enabled module in one place, with the most c
 - Items are sorted by urgency: batteries by attention status then level, repairs by severity, updates by install status.
 - Sections only appear when their module is enabled.
 - Shows an empty-state message when no maintenance issues are found.
+
+### Maintenance summary card
+
+Use `custom:dm-maintenance-summary-card` on any dashboard (for example Home Overview) to show a single maintenance count tile that links to your maintenance dashboard.
+
+- Default metric is batteries needing attention.
+- Metric can be switched to repairs, updates, availability, or stale.
+- Navigation is configurable through `tap_action` / `hold_action` (or `navigation_path`).
+- Summary thresholds and safe-list settings are read from the detected `custom:maintenance` dashboard strategy.
+- If no maintenance dashboard strategy is found, the card shows an error state.
+- Includes a visual card editor in the Lovelace card editor.
 
 ### Batteries view
 
@@ -143,6 +155,29 @@ views:
       icon: mdi:battery-heart-variant
       battery_attention_threshold: 30
 ```
+
+## Use the maintenance summary card
+
+```yaml
+type: custom:dm-maintenance-summary-card
+summary: batteries
+tap_action:
+  action: navigate
+  navigation_path: /maintenance/summary
+hold_action:
+  action: none
+```
+
+### Summary card options
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `summary` | `"batteries" \| "repairs" \| "updates" \| "availability" \| "stale"` | `"batteries"` | Which summary count to display. |
+| `tap_action` | action config | auto-detected maintenance summary path | Frontend-style tap action. If unset, the card auto-detects a maintenance dashboard summary path. |
+| `hold_action` | action config | `none` | Optional frontend-style hold action. |
+| `navigation_path` | `string` | detected summary path | Shortcut path for navigation (used when `tap_action` is not set). |
+| `title` | `string` | `Maintenance` | Optional primary label override. |
+| `icon` | `string` | `mdi:home-heart` | Optional icon override. |
 
 ## Configuration
 

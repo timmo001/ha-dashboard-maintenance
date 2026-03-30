@@ -76,6 +76,48 @@ const en = {
   "summary.empty_content":
     "All enabled modules are clear — nothing needs your attention.",
 
+  // Summary card
+  "summary_card.title": "Maintenance",
+  "summary_card.metric.batteries": "Batteries needing attention",
+  "summary_card.metric.repairs": "Repairs",
+  "summary_card.metric.updates": "Updates needing attention",
+  "summary_card.metric.availability": "Availability issues",
+  "summary_card.metric.stale": "Stale entities",
+  "summary_card.count.batteries_one": "{count} battery needing attention",
+  "summary_card.count.batteries_other": "{count} batteries needing attention",
+  "summary_card.count.repairs_one": "{count} repair issue",
+  "summary_card.count.repairs_other": "{count} repair issues",
+  "summary_card.count.updates_one": "{count} update needing attention",
+  "summary_card.count.updates_other": "{count} updates needing attention",
+  "summary_card.count.availability_one": "{count} availability issue",
+  "summary_card.count.availability_other": "{count} availability issues",
+  "summary_card.count.stale_one": "{count} stale entity",
+  "summary_card.count.stale_other": "{count} stale entities",
+  "summary_card.error": "Unable to load summary right now",
+  "summary_card.error_dashboard_not_found":
+    "Maintenance dashboard strategy not found",
+  "summary_card.editor.summary_label": "Summary metric",
+  "summary_card.editor.summary_helper":
+    "Choose which maintenance summary count this card shows.",
+  "summary_card.editor.title_label": "Title",
+  "summary_card.editor.icon_label": "Icon",
+  "summary_card.editor.attention_threshold_label": "Battery attention threshold",
+  "summary_card.editor.attention_threshold_helper":
+    "Used when the summary metric is batteries.",
+  "summary_card.editor.stale_threshold_label": "Stale threshold (hours)",
+  "summary_card.editor.stale_threshold_helper":
+    "Used when the summary metric is stale.",
+  "summary_card.editor.availability_safe_list_label":
+    "Known safe offline devices",
+  "summary_card.editor.availability_safe_list_helper":
+    "Used when the summary metric is availability.",
+  "summary_card.editor.tap_action_label": "Tap action",
+  "summary_card.editor.tap_action_helper":
+    "Defaults to navigate to the maintenance summary when left unset.",
+  "summary_card.editor.hold_action_label": "Hold action",
+  "summary_card.editor.hold_action_helper":
+    "Optional hold action for this card.",
+
   // Common / shared
   "common.areas": "Areas",
   "common.other_areas": "Other areas",
