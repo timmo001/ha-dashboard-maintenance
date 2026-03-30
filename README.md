@@ -59,7 +59,7 @@ Shows entities that are currently unavailable, grouped by area with per-area sub
 
 - Unavailable entities are grouped by device; entities not belonging to any device are listed separately.
 - Per-area subviews let you focus on a single room.
-- Device IDs added to `availability_safe_list_device_ids` are excluded from tracking.
+- Device IDs added to `availability_safe_list_device_ids` are excluded from tracking. This is intended for devices you know can go offline and/or do not want to track.
 - Shows an empty-state message when all entities are reachable.
 
 ### Stale view
