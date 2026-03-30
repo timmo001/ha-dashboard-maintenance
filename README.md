@@ -111,6 +111,55 @@ views:
       battery_attention_threshold: 30
 ```
 
+## Configuration
+
+All options are optional. Omitting a key uses the default shown below.
+
+### Common options (dashboard and view strategy)
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `batteries_enabled` | `boolean` | `true` | Enable or disable the batteries module. |
+| `battery_attention_threshold` | `number` | `30` | Battery percentage (0 – 100) below which a device is flagged as needing attention. |
+| `show_attention_batteries_in_areas` | `boolean` | `true` | Show attention-flagged batteries inside per-area sections. |
+| `repairs_enabled` | `boolean` | `true` | Enable or disable the repairs module. |
+| `updates_enabled` | `boolean` | `true` | Enable or disable the updates module. |
+| `availability_enabled` | `boolean` | `true` | Enable or disable the availability module. |
+| `availability_safe_list_device_ids` | `string[]` | `[]` | Device IDs to exclude from availability checks. |
+| `stale_enabled` | `boolean` | `true` | Enable or disable the stale-data module. |
+| `stale_threshold_hours` | `number` | `24` | Hours (1 – 168) after which an entity is considered stale. |
+
+### View-only options
+
+These options are only used when the strategy is placed on a single view.
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `view` | `"summary" \| "batteries" \| "repairs" \| "updates" \| "availability" \| "stale"` | Which view to render. |
+| `title` | `string` | Title shown in the view heading. |
+| `path` | `string` | URL path for the view. |
+| `icon` | `string` | Icon shown in the navigation. |
+| `subview` | `boolean` | Mark this view as a subview (hides it from the sidebar). |
+| `area_id` | `string` | Restrict the view to a single Home Assistant area. |
+| `heading_navigation_path` | `string` | Navigation path displayed in the view heading. |
+
+### Full example
+
+```yaml
+strategy:
+  type: custom:maintenance
+  batteries_enabled: true
+  battery_attention_threshold: 20
+  show_attention_batteries_in_areas: false
+  repairs_enabled: true
+  updates_enabled: true
+  availability_enabled: true
+  availability_safe_list_device_ids:
+    - abc123def456
+  stale_enabled: true
+  stale_threshold_hours: 48
+```
+
 ## Current limitations
 
 - It does not add a new built-in or system dashboard.
