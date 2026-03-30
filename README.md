@@ -19,25 +19,58 @@ The generated dashboard focuses on battery-powered devices with numeric battery 
 
 Shows a condensed snapshot of every enabled module in one place, with the most critical items listed first.
 
+- Displays up to 12 items per category from each enabled module.
+- Each category links to its full view when clicked.
+- Items are sorted by urgency: batteries by attention status then level, repairs by severity, updates by install status.
+- Sections only appear when their module is enabled.
+- Shows an empty-state message when no maintenance issues are found.
+
 ### Batteries view
 
 Shows devices with numeric battery sensors, sorted so low-battery devices appear first. Devices can be browsed by area using per-area subviews.
+
+- Devices below `battery_attention_threshold` (default 30 %) are highlighted in an attention section at the top.
+- Remaining devices are grouped by floor and area, with unassigned devices in an "Other Devices" section.
+- Per-area subviews let you browse batteries for a single room; an "All Batteries" subview shows every device.
+- When a device has multiple battery sensors the most relevant one is selected automatically.
+- Toggle `show_attention_batteries_in_areas` to include or exclude attention-level batteries from area sections.
 
 ### Repairs view
 
 Shows all open Home Assistant repair issues.
 
+- Issues are split into three sections by severity: Critical, Error, and Warning.
+- Within each section issues are sorted by creation date, newest first.
+- Only active, non-ignored issues are shown.
+- Shows an empty-state message when there are no open repair issues.
+
 ### Updates view
 
 Shows all pending software and firmware updates.
+
+- Updates are grouped into four sections: In Progress, Available & Installable, Skipped Versions, and Other (not installable).
+- Each tile shows the friendly name, current version, and latest available version.
+- The Summary view shows only in-progress, skipped, and installable updates.
+- Shows an empty-state message when everything is up to date.
 
 ### Availability view
 
 Shows entities that are currently unavailable, grouped by area with per-area subviews.
 
+- Unavailable entities are grouped by device; entities not belonging to any device are listed separately.
+- Per-area subviews let you focus on a single room.
+- Device IDs added to `availability_safe_list_device_ids` are excluded from tracking.
+- Shows an empty-state message when all entities are reachable.
+
 ### Stale view
 
 Shows entities whose state has not been updated within a configurable time window, grouped by area with per-area subviews.
+
+- Entities are considered stale after `stale_threshold_hours` hours without an update (default 24 h, range 1–168 h).
+- Monitored domains include sensors, binary sensors, lights, switches, covers, climate, locks, and more.
+- Entities are sorted by staleness, longest first, then alphabetically.
+- Per-area subviews let you browse stale entities for a single room; an "All Stale" subview shows everything.
+- Unavailable entities are excluded because they are unreachable rather than stale.
 
 ## Install with HACS
 
