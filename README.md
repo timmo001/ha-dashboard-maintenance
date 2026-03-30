@@ -66,7 +66,7 @@ Shows entities that are currently unavailable, grouped by area with per-area sub
 
 Shows entities whose state has not been updated within a configurable time window, grouped by area with per-area subviews.
 
-- Entities are considered stale after `stale_threshold_hours` hours without an update (default 24 h, range 1–168 h).
+- Entities are considered stale after `stale_threshold_hours` hours without an update (default 6 h, range 1–72 h).
 - Monitored domains include sensors, binary sensors, lights, switches, covers, climate, locks, and more.
 - Entities are sorted by staleness, longest first, then alphabetically.
 - Per-area subviews let you browse stale entities for a single room; an "All Stale" subview shows everything.
@@ -160,7 +160,7 @@ All options are optional. Omitting a key uses the default shown below.
 | `availability_enabled` | `boolean` | `true` | Enable or disable the availability module. |
 | `availability_safe_list_device_ids` | `string[]` | `[]` | Device IDs to exclude from availability checks. |
 | `stale_enabled` | `boolean` | `true` | Enable or disable the stale-data module. |
-| `stale_threshold_hours` | `number` | `24` | Hours (1 – 168) after which an entity is considered stale. |
+| `stale_threshold_hours` | `number` | `6` | Hours (1 – 72) after which an entity is considered stale. |
 
 ### View-only options
 
