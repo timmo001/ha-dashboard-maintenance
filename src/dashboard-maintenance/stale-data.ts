@@ -18,6 +18,8 @@ import type {
 } from "./types";
 
 export const DEFAULT_STALE_THRESHOLD_HOURS = 6;
+export const MIN_STALE_THRESHOLD_HOURS = 1;
+export const MAX_STALE_THRESHOLD_HOURS = 72;
 
 export interface MaintenanceStaleEntity {
   areaId?: string | null;
@@ -57,10 +59,15 @@ const isStaleRelevantDomain = (entityId: string): boolean =>
 
 export const normalizeStaleThresholdHours = (
   hours?: number,
-): number =>
-  typeof hours === "number" && !Number.isNaN(hours) && hours > 0
-    ? Math.round(hours)
-    : DEFAULT_STALE_THRESHOLD_HOURS;
+): number => {
+  if (typeof hours !== "number" || Number.isNaN(hours) || hours <= 0) {
+    return DEFAULT_STALE_THRESHOLD_HOURS;
+  }
+  return Math.min(
+    MAX_STALE_THRESHOLD_HOURS,
+    Math.max(MIN_STALE_THRESHOLD_HOURS, Math.round(hours)),
+  );
+};
 
 export const getMaintenanceStaleEntities = async (
   hass: HomeAssistant,

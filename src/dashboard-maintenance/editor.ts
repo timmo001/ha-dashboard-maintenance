@@ -8,7 +8,7 @@ import type {
   MaintenanceModuleId,
 } from "./types";
 import { DEFAULT_BATTERY_ATTENTION_THRESHOLD } from "./maintenance-data";
-import { DEFAULT_STALE_THRESHOLD_HOURS } from "./stale-data";
+import { DEFAULT_STALE_THRESHOLD_HOURS, MAX_STALE_THRESHOLD_HOURS, MIN_STALE_THRESHOLD_HOURS } from "./stale-data";
 
 const DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS = true;
 
@@ -256,8 +256,8 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
           <input
             id="stale-threshold"
             type="range"
-            min="1"
-            max="168"
+            min=${MIN_STALE_THRESHOLD_HOURS}
+            max=${MAX_STALE_THRESHOLD_HOURS}
             step="1"
             .value=${String(staleThreshold)}
             @input=${this._nativeStaleValueChanged}
@@ -281,8 +281,8 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
             name: "stale_threshold_hours",
             selector: {
               number: {
-                min: 1,
-                max: 168,
+                min: MIN_STALE_THRESHOLD_HOURS,
+                max: MAX_STALE_THRESHOLD_HOURS,
                 mode: "slider",
                 unit_of_measurement: "h",
               },
