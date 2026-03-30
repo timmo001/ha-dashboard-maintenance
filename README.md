@@ -13,6 +13,56 @@ Custom Lovelace dashboard and view strategy for Home Assistant maintenance dashb
 
 The generated dashboard focuses on battery-powered devices with numeric battery sensors, orders the devices that need attention first, and opens the device page when you click a tile.
 
+## Features
+
+### Summary view
+
+A central overview that brings together all enabled modules in one place, showing the items that need the most attention first.
+
+### Battery monitoring
+
+- Tracks all devices with numeric battery percentage sensors
+- Highlights devices below a configurable attention threshold (default 30 %)
+- Sorts low-battery devices to the top so the worst offenders are immediately visible
+- Groups batteries by area with per-area drill-down subviews
+- Optionally shows only attention-worthy batteries inside area sections
+
+### Repairs
+
+- Lists all open Home Assistant repair issues
+- Links directly to the repair entry so issues can be resolved without leaving the dashboard
+
+### Updates
+
+- Displays all pending software and firmware updates
+- Groups updates by integration or device for a quick at-a-glance count
+
+### Availability
+
+- Shows devices and entities that are currently unavailable
+- Supports a configurable safe-list of device IDs to exclude known-offline devices from the view
+- Groups unavailable entities by area with per-area drill-down subviews
+
+### Stale data
+
+- Flags entities whose state has not changed within a configurable time window (default 24 h)
+- Helps surface sensors that may have stopped reporting without going fully unavailable
+- Groups stale entities by area with per-area drill-down subviews
+
+### Module system
+
+Every module (batteries, repairs, updates, availability, stale) can be individually enabled or disabled through the strategy configuration or via the built-in editor UI, so you only see what is relevant to your setup.
+
+### Strategy editor
+
+An in-dashboard configuration editor with an expandable panel for each module lets you toggle modules on or off and adjust per-module settings (battery threshold, stale threshold, availability safe-list) without editing YAML.
+
+### Flexible deployment
+
+- Works as a **full dashboard strategy** that generates an entire multi-view dashboard
+- Works as a **single Lovelace view** embedded in any existing dashboard
+- Localisation support — strings are resolved through Home Assistant's locale setting
+
 ## Install with HACS
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=timmo001&repository=ha-dashboard-maintenance&category=dashboard)
