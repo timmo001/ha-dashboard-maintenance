@@ -13,6 +13,65 @@ Custom Lovelace dashboard and view strategy for Home Assistant maintenance dashb
 
 The generated dashboard focuses on battery-powered devices with numeric battery sensors, orders the devices that need attention first, and opens the device page when you click a tile.
 
+## Features
+
+### Summary view
+
+Shows a condensed snapshot of every enabled module in one place, with the most critical items listed first.
+
+- Displays up to 12 items per category from each enabled module.
+- Each category links to its full view when clicked.
+- Items are sorted by urgency: batteries by attention status then level, repairs by severity, updates by install status.
+- Sections only appear when their module is enabled.
+- Shows an empty-state message when no maintenance issues are found.
+
+### Batteries view
+
+Shows devices with numeric battery sensors, sorted so low-battery devices appear first. Devices can be browsed by area using per-area subviews.
+
+- Devices below `battery_attention_threshold` (default 30 %) are highlighted in an attention section at the top.
+- Remaining devices are grouped by floor and area, with unassigned devices in an "Other Devices" section.
+- Per-area subviews let you browse batteries for a single room; an "All Batteries" subview shows every device.
+- When a device has multiple battery sensors the most relevant one is selected automatically.
+- Toggle `show_attention_batteries_in_areas` to include or exclude attention-level batteries from area sections.
+
+### Repairs view
+
+Shows all open Home Assistant repair issues.
+
+- Issues are split into three sections by severity: Critical, Error, and Warning.
+- Within each section issues are sorted by creation date, newest first.
+- Only active, non-ignored issues are shown.
+- Shows an empty-state message when there are no open repair issues.
+
+### Updates view
+
+Shows all pending software and firmware updates.
+
+- Updates are grouped into four sections: In Progress, Available & Installable, Skipped Versions, and Other (not installable).
+- Each tile shows the friendly name, current version, and latest available version.
+- The Summary view shows only in-progress, skipped, and installable updates.
+- Shows an empty-state message when everything is up to date.
+
+### Availability view
+
+Shows entities that are currently unavailable, grouped by area with per-area subviews.
+
+- Unavailable entities are grouped by device; entities not belonging to any device are listed separately.
+- Per-area subviews let you focus on a single room.
+- Device IDs added to `availability_safe_list_device_ids` are excluded from tracking.
+- Shows an empty-state message when all entities are reachable.
+
+### Stale view
+
+Shows entities whose state has not been updated within a configurable time window, grouped by area with per-area subviews.
+
+- Entities are considered stale after `stale_threshold_hours` hours without an update (default 24 h, range 1–168 h).
+- Monitored domains include sensors, binary sensors, lights, switches, covers, climate, locks, and more.
+- Entities are sorted by staleness, longest first, then alphabetically.
+- Per-area subviews let you browse stale entities for a single room; an "All Stale" subview shows everything.
+- Unavailable entities are excluded because they are unreachable rather than stale.
+
 ## Install with HACS
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=timmo001&repository=ha-dashboard-maintenance&category=dashboard)
@@ -83,6 +142,55 @@ views:
       path: maintenance
       icon: mdi:battery-heart-variant
       battery_attention_threshold: 30
+```
+
+## Configuration
+
+All options are optional. Omitting a key uses the default shown below.
+
+### Common options (dashboard and view strategy)
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `batteries_enabled` | `boolean` | `true` | Enable or disable the batteries module. |
+| `battery_attention_threshold` | `number` | `30` | Battery percentage (0 – 100) below which a device is flagged as needing attention. |
+| `show_attention_batteries_in_areas` | `boolean` | `true` | Show attention-flagged batteries inside per-area sections. |
+| `repairs_enabled` | `boolean` | `true` | Enable or disable the repairs module. |
+| `updates_enabled` | `boolean` | `true` | Enable or disable the updates module. |
+| `availability_enabled` | `boolean` | `true` | Enable or disable the availability module. |
+| `availability_safe_list_device_ids` | `string[]` | `[]` | Device IDs to exclude from availability checks. |
+| `stale_enabled` | `boolean` | `true` | Enable or disable the stale-data module. |
+| `stale_threshold_hours` | `number` | `24` | Hours (1 – 168) after which an entity is considered stale. |
+
+### View-only options
+
+These options are only used when the strategy is placed on a single view.
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `view` | `"summary" \| "batteries" \| "repairs" \| "updates" \| "availability" \| "stale"` | Which view to render. |
+| `title` | `string` | Title shown in the view heading. |
+| `path` | `string` | URL path for the view. |
+| `icon` | `string` | Icon shown in the navigation. |
+| `subview` | `boolean` | Mark this view as a subview (hides it from the sidebar). |
+| `area_id` | `string` | Restrict the view to a single Home Assistant area. |
+| `heading_navigation_path` | `string` | Navigation path displayed in the view heading. |
+
+### Full example
+
+```yaml
+strategy:
+  type: custom:maintenance
+  batteries_enabled: true
+  battery_attention_threshold: 20
+  show_attention_batteries_in_areas: false
+  repairs_enabled: true
+  updates_enabled: true
+  availability_enabled: true
+  availability_safe_list_device_ids:
+    - abc123def456
+  stale_enabled: true
+  stale_threshold_hours: 48
 ```
 
 ## Current limitations
