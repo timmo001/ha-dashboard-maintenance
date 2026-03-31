@@ -107,6 +107,11 @@ export const NAME_AREA_DEVICE_ENTITY: EntityNameItem[] = [
   { type: "entity" },
 ];
 
+export const NAME_AREA_DEVICE: EntityNameItem[] = [
+  { type: "area" },
+  { type: "device" },
+];
+
 export const NAME_DEVICE: EntityNameItem[] = [
   { type: "device" },
 ];
@@ -120,7 +125,7 @@ export const NAME_DEVICE_ENTITY: EntityNameItem[] = [
 // Tile naming aliases by view context
 // ---------------------------------------------------------------------------
 
-export const ATTENTION_BATTERY_NAME = NAME_AREA_DEVICE_ENTITY;
+export const ATTENTION_BATTERY_NAME = NAME_AREA_DEVICE;
 export const AREA_BATTERY_NAME = NAME_DEVICE;
 export const AVAILABILITY_ENTITY_NAME = NAME_AREA_DEVICE_ENTITY;
 export const STALE_ENTITY_NAME = NAME_DEVICE_ENTITY;
