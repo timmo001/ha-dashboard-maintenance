@@ -8,6 +8,7 @@ import "./dashboard-maintenance/maintenance-repairs-view-strategy";
 import "./dashboard-maintenance/maintenance-stale-view-strategy";
 import "./dashboard-maintenance/maintenance-summary-view-strategy";
 import "./dashboard-maintenance/maintenance-updates-view-strategy";
+import { MAINTENANCE_DASHBOARD_IMAGES } from "./dashboard-maintenance/strategy-images";
 
 window.customStrategies = window.customStrategies || [];
 
@@ -22,6 +23,7 @@ if (
     name: "Maintenance",
     description:
       "Home maintenance overview with batteries, repairs, updates, availability, and stale data.",
+    images: MAINTENANCE_DASHBOARD_IMAGES,
     strategyType: "dashboard",
   });
 }
@@ -33,6 +35,12 @@ declare global {
       name?: string;
       description?: string;
       documentationURL?: string;
+      images?:
+        | string
+        | {
+            dark: string;
+            light: string;
+          };
       strategyType: "dashboard" | "view" | "section";
     }>;
   }
