@@ -66,6 +66,7 @@ const DEFAULT_METRIC: SummaryMetric = "batteries";
 const DEFAULT_NAVIGATION_PATH = "summary";
 const DEFAULT_ICON = "mdi:home-heart";
 const REFRESH_INTERVAL_MS = 60_000;
+const INITIAL_LOAD_RETRY_MS = 1_500;
 
 const METRIC_COLOR: Record<SummaryMetric, string> = {
   batteries: "var(--warning-color)",
@@ -153,12 +154,14 @@ class DmMaintenanceSummaryCard extends LitElement {
 
   @state() private _config?: DmMaintenanceSummaryCardConfig;
   @state() private _count = 0;
+  @state() private _countLoaded = false;
   @state() private _hasError = false;
   @state() private _dashboardNotFound = false;
   @state() private _resolvedMaintenanceSummaryPath?: string;
   @state() private _resolvedMaintenanceStrategy?: MaintenanceStrategyConfig;
 
   private _refreshTimer?: number;
+  private _initialLoadRetryTimer?: number;
   private _refreshInFlight = false;
   private _lastRefreshAt = 0;
   private _discoveryInFlight = false;
@@ -185,6 +188,9 @@ class DmMaintenanceSummaryCard extends LitElement {
       ...config,
     };
 
+    this._countLoaded = false;
+    this._clearInitialLoadRetryTimer();
+
     void this._refreshCount(true);
     void this._discoverMaintenanceSummaryPath();
   }
@@ -198,6 +204,7 @@ class DmMaintenanceSummaryCard extends LitElement {
 
   public disconnectedCallback(): void {
     this._clearRefreshTimer();
+    this._clearInitialLoadRetryTimer();
     super.disconnectedCallback();
   }
 
@@ -377,6 +384,28 @@ class DmMaintenanceSummaryCard extends LitElement {
     }
   }
 
+  private _scheduleInitialLoadRetry(): void {
+    if (this._initialLoadRetryTimer !== undefined) {
+      return;
+    }
+
+    this._initialLoadRetryTimer = window.setTimeout(() => {
+      this._initialLoadRetryTimer = undefined;
+      void this._refreshCount(true);
+    }, INITIAL_LOAD_RETRY_MS);
+  }
+
+  private _clearInitialLoadRetryTimer(): void {
+    if (this._initialLoadRetryTimer !== undefined) {
+      window.clearTimeout(this._initialLoadRetryTimer);
+      this._initialLoadRetryTimer = undefined;
+    }
+  }
+
+  private _hasLoadedStateData(): boolean {
+    return Boolean(this.hass && Object.keys(this.hass.states).length > 0);
+  }
+
   private async _refreshCount(force: boolean): Promise<void> {
     if (!this.hass || !this._config || this._refreshInFlight) {
       return;
@@ -402,7 +431,20 @@ class DmMaintenanceSummaryCard extends LitElement {
         }
       }
 
-      this._count = await this._computeCount();
+      const count = await this._computeCount();
+      const hasLoadedStateData = this._hasLoadedStateData();
+      const isReliableInitialCount = count > 0 || hasLoadedStateData;
+
+      if (!this._countLoaded && !isReliableInitialCount) {
+        this._count = count;
+        this._countLoaded = false;
+        this._scheduleInitialLoadRetry();
+      } else {
+        this._count = count;
+        this._countLoaded = true;
+        this._clearInitialLoadRetryTimer();
+      }
+
       this._hasError = false;
     } catch {
       this._hasError = true;
@@ -467,6 +509,9 @@ class DmMaintenanceSummaryCard extends LitElement {
     const icon = this._config.icon || DEFAULT_ICON;
     const title = this._config.title || localize("summary_card.title");
     const secondary = this._countLabel(metric);
+    const secondaryLoading =
+      !this._countLoaded && !this._hasError && !this._dashboardNotFound;
+    const secondaryText = secondaryLoading ? "" : secondary;
 
     const tapAction = this._tapAction();
     const holdAction = this._holdAction();
@@ -475,11 +520,11 @@ class DmMaintenanceSummaryCard extends LitElement {
     const interactive = hasTap || hasHold;
 
     return html`
-      <ha-card
-        class=${classMap({ error: this._hasError || this._dashboardNotFound })}
-        aria-label=${`${title}: ${secondary}`}
-        style=${styleMap({ "--tile-color": METRIC_COLOR[metric] })}
-      >
+        <ha-card
+          class=${classMap({ error: this._hasError || this._dashboardNotFound })}
+          aria-label=${secondaryLoading ? title : `${title}: ${secondary}`}
+          style=${styleMap({ "--tile-color": METRIC_COLOR[metric] })}
+        >
         <ha-tile-container
           .interactive=${interactive}
           .actionHandlerOptions=${{ hasTap, hasHold }}
@@ -489,7 +534,8 @@ class DmMaintenanceSummaryCard extends LitElement {
           <ha-tile-info
             slot="info"
             .primary=${title}
-            .secondary=${secondary}
+            .secondary=${secondaryText}
+            .secondaryLoading=${secondaryLoading}
           ></ha-tile-info>
         </ha-tile-container>
       </ha-card>

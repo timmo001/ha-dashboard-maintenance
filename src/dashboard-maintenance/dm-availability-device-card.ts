@@ -32,6 +32,7 @@ interface DmAvailabilityDeviceCardConfig {
   device_id?: string;
   device_name: string;
   subtitle: string;
+  subtitle_loading?: boolean;
   picture: string | null;
   icon: string;
   enable_safe_toggle?: boolean;
@@ -106,9 +107,33 @@ const CARD_STYLES = `
     font-weight: 400;
     line-height: 16px;
     color: var(--secondary-text-color, #727272);
+    width: 100%;
+    min-height: 16px;
+    display: flex;
+    align-items: center;
+  }
+  .subtitle-content {
+    width: 100%;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+  .subtitle-placeholder {
+    width: 140px;
+    max-width: 100%;
+    height: 12px;
+    border-radius: var(--ha-border-radius-sm);
+    background: var(--ha-color-fill-neutral-normal-hover, var(--divider-color, #e0e0e0));
+    animation: dm-subtitle-pulse 1200ms ease-in-out infinite;
+  }
+  @keyframes dm-subtitle-pulse {
+    0%,
+    100% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
   }
 `;
 
@@ -128,6 +153,8 @@ class DmAvailabilityDeviceCard extends HTMLElement {
   private _iconEl?: HTMLElement;
   private _nameEl?: HTMLElement;
   private _subtitleEl?: HTMLElement;
+  private _subtitleContentEl?: HTMLElement;
+  private _subtitleSkeletonEl?: HTMLElement;
   private _activePictureSrc: string | null = null;
   private _failedPictureSrc: string | null = null;
 
@@ -219,8 +246,18 @@ class DmAvailabilityDeviceCard extends HTMLElement {
 
     const subtitle = document.createElement("div");
     subtitle.className = "subtitle";
+    subtitle.setAttribute("aria-live", "polite");
+
+    const subtitleContent = document.createElement("span");
+    subtitleContent.className = "subtitle-content";
+
+    const subtitleSkeleton = document.createElement("div");
+    subtitleSkeleton.className = "subtitle-placeholder";
+    subtitleSkeleton.setAttribute("aria-hidden", "true");
 
     info.appendChild(name);
+    subtitle.appendChild(subtitleContent);
+    subtitle.appendChild(subtitleSkeleton);
     info.appendChild(subtitle);
 
     media.appendChild(picture);
@@ -237,6 +274,8 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     this._iconEl = icon;
     this._nameEl = name;
     this._subtitleEl = subtitle;
+    this._subtitleContentEl = subtitleContent;
+    this._subtitleSkeletonEl = subtitleSkeleton;
     this._built = true;
   }
 
@@ -278,8 +317,18 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     if (this._nameEl) {
       this._nameEl.textContent = config.device_name;
     }
+    const subtitle = config.subtitle || "";
+    const subtitleLoading =
+      config.subtitle_loading === true || subtitle.trim().length === 0;
     if (this._subtitleEl) {
-      this._subtitleEl.textContent = config.subtitle || "";
+      this._subtitleEl.setAttribute("aria-busy", subtitleLoading ? "true" : "false");
+    }
+    if (this._subtitleContentEl) {
+      this._subtitleContentEl.textContent = subtitle;
+      this._subtitleContentEl.style.display = subtitleLoading ? "none" : "block";
+    }
+    if (this._subtitleSkeletonEl) {
+      this._subtitleSkeletonEl.style.display = subtitleLoading ? "block" : "none";
     }
   }
 
