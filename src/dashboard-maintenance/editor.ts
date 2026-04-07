@@ -8,7 +8,11 @@ import type {
   MaintenanceModuleId,
 } from "./types";
 import { DEFAULT_BATTERY_ATTENTION_THRESHOLD } from "./maintenance-data";
-import { DEFAULT_STALE_THRESHOLD_HOURS, MAX_STALE_THRESHOLD_HOURS, MIN_STALE_THRESHOLD_HOURS } from "./stale-data";
+import {
+  DEFAULT_STALE_THRESHOLD_HOURS,
+  MAX_STALE_THRESHOLD_HOURS,
+  MIN_STALE_THRESHOLD_HOURS,
+} from "./stale-data";
 
 const DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS = true;
 
@@ -32,12 +36,42 @@ interface ModuleDescriptor {
 }
 
 const MODULES: ReadonlyArray<ModuleDescriptor> = [
-  { id: "batteries", icon: "mdi:battery-heart-variant", headerKey: "editor.batteries_header", enabledKey: "batteries_enabled" },
-  { id: "repairs", icon: "mdi:wrench", headerKey: "editor.repairs_header", enabledKey: "repairs_enabled" },
-  { id: "updates", icon: "mdi:package-up", headerKey: "editor.updates_header", enabledKey: "updates_enabled" },
-  { id: "availability", icon: "mdi:help-circle-outline", headerKey: "editor.availability_header", enabledKey: "availability_enabled" },
-  { id: "stale", icon: "mdi:clock-alert-outline", headerKey: "editor.stale_header", enabledKey: "stale_enabled" },
-  { id: "integrations", icon: "mdi:puzzle", headerKey: "editor.integrations_header", enabledKey: "integrations_enabled" },
+  {
+    id: "batteries",
+    icon: "mdi:battery-heart-variant",
+    headerKey: "editor.batteries_header",
+    enabledKey: "batteries_enabled",
+  },
+  {
+    id: "repairs",
+    icon: "mdi:wrench",
+    headerKey: "editor.repairs_header",
+    enabledKey: "repairs_enabled",
+  },
+  {
+    id: "updates",
+    icon: "mdi:package-up",
+    headerKey: "editor.updates_header",
+    enabledKey: "updates_enabled",
+  },
+  {
+    id: "availability",
+    icon: "mdi:help-circle-outline",
+    headerKey: "editor.availability_header",
+    enabledKey: "availability_enabled",
+  },
+  {
+    id: "stale",
+    icon: "mdi:clock-alert-outline",
+    headerKey: "editor.stale_header",
+    enabledKey: "stale_enabled",
+  },
+  {
+    id: "integrations",
+    icon: "mdi:puzzle",
+    headerKey: "editor.integrations_header",
+    enabledKey: "integrations_enabled",
+  },
 ];
 
 @customElement("dashboard-maintenance-strategy-editor")
@@ -45,6 +79,8 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
   @state() private _config?: MaintenanceDashboardStrategyConfig;
+
+  @state() private _activeModule: MaintenanceModuleId = MODULES[0]!.id;
 
   public setConfig(config: MaintenanceDashboardStrategyConfig): void {
     this._config = config;
@@ -56,25 +92,47 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     const localize = setupLocalize(this.hass);
+    const activeModule =
+      MODULES.find((mod) => mod.id === this._activeModule) ?? MODULES[0]!;
+    const enabled = this._config[activeModule.enabledKey] !== false;
 
     return html`
-      ${MODULES.map((mod) => {
-        const enabled = this._config![mod.enabledKey] !== false;
-        return html`
-          <ha-expansion-panel outlined>
-            <ha-icon
-              slot="leading-icon"
-              icon=${mod.icon}
-            ></ha-icon>
-            <h3 slot="header">${localize(mod.headerKey)}</h3>
-            <div class="content">
-              ${this._renderEnableToggle(localize, mod, enabled)}
-              ${enabled ? this._renderModuleSettings(localize, mod) : nothing}
-            </div>
-          </ha-expansion-panel>
-        `;
-      })}
+      <ha-tab-group @wa-tab-show=${this._moduleTabChanged}>
+        ${MODULES.map(
+          (mod) => html`
+            <ha-tab-group-tab
+              slot="nav"
+              panel=${mod.id}
+              .active=${activeModule.id === mod.id}
+            >
+              <ha-icon icon=${mod.icon}></ha-icon>
+              ${localize(mod.headerKey)}
+            </ha-tab-group-tab>
+          `,
+        )}
+      </ha-tab-group>
+
+      <div class="panel-content">
+        ${this._renderEnableToggle(localize, activeModule, enabled)}
+        ${enabled
+          ? this._renderModuleSettings(localize, activeModule)
+          : nothing}
+      </div>
     `;
+  }
+
+  private _moduleTabChanged(ev: CustomEvent<{ name?: string }>): void {
+    const tabName = ev.detail?.name;
+    if (!tabName || tabName === this._activeModule) {
+      return;
+    }
+
+    const matchedModule = MODULES.find((mod) => mod.id === tabName);
+    if (!matchedModule) {
+      return;
+    }
+
+    this._activeModule = matchedModule.id;
   }
 
   private _renderEnableToggle(
@@ -94,9 +152,7 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
             />
             ${localize("editor.module_enabled_label")}
           </label>
-          <div class="helper">
-            ${localize("editor.module_enabled_helper")}
-          </div>
+          <div class="helper">${localize("editor.module_enabled_helper")}</div>
         </div>
       `;
     }
@@ -134,7 +190,9 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     }
   }
 
-  private _renderAvailabilitySettings(localize: ReturnType<typeof setupLocalize>) {
+  private _renderAvailabilitySettings(
+    localize: ReturnType<typeof setupLocalize>,
+  ) {
     const safeListDeviceIds =
       this._config!.availability_safe_list_device_ids ?? [];
 
@@ -275,9 +333,7 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
             .value=${String(staleThreshold)}
             @input=${this._nativeStaleValueChanged}
           />
-          <div class="helper">
-            ${localize("editor.stale_threshold_helper")}
-          </div>
+          <div class="helper">${localize("editor.stale_threshold_helper")}</div>
           <div class="value">${staleThreshold}h</div>
         </div>
       `;
@@ -313,8 +369,12 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     const localize = setupLocalize(this.hass);
     const labelMap: Record<string, ReturnType<typeof localize>> = {
       battery_attention_threshold: localize("editor.battery_threshold_label"),
-      show_attention_batteries_in_areas: localize("editor.show_attention_in_areas_label"),
-      availability_safe_list_device_ids: localize("editor.availability_safe_list_label"),
+      show_attention_batteries_in_areas: localize(
+        "editor.show_attention_in_areas_label",
+      ),
+      availability_safe_list_device_ids: localize(
+        "editor.availability_safe_list_label",
+      ),
       stale_threshold_hours: localize("editor.stale_threshold_label"),
     };
 
@@ -329,8 +389,12 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     const localize = setupLocalize(this.hass);
     const helperMap: Record<string, ReturnType<typeof localize>> = {
       battery_attention_threshold: localize("editor.battery_threshold_helper"),
-      show_attention_batteries_in_areas: localize("editor.show_attention_in_areas_helper"),
-      availability_safe_list_device_ids: localize("editor.availability_safe_list_helper"),
+      show_attention_batteries_in_areas: localize(
+        "editor.show_attention_in_areas_helper",
+      ),
+      availability_safe_list_device_ids: localize(
+        "editor.availability_safe_list_helper",
+      ),
       stale_threshold_hours: localize("editor.stale_threshold_helper"),
     };
 
@@ -370,15 +434,16 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     ev.stopPropagation();
 
     const threshold = ev.detail.value.battery_attention_threshold as number;
-    const showAttentionBatteriesInAreas =
-      ev.detail.value.show_attention_batteries_in_areas as boolean;
+    const showAttentionBatteriesInAreas = ev.detail.value
+      .show_attention_batteries_in_areas as boolean;
     this._emitConfigUpdate({
       battery_attention_threshold:
         threshold === DEFAULT_BATTERY_ATTENTION_THRESHOLD
           ? undefined
           : threshold,
       show_attention_batteries_in_areas:
-        showAttentionBatteriesInAreas === DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS
+        showAttentionBatteriesInAreas ===
+        DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS
           ? undefined
           : showAttentionBatteriesInAreas,
     });
@@ -438,12 +503,12 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
   }
 
   private _nativeBooleanChanged(ev: Event): void {
-    const showAttentionBatteriesInAreas = (
-      ev.currentTarget as HTMLInputElement
-    ).checked;
+    const showAttentionBatteriesInAreas = (ev.currentTarget as HTMLInputElement)
+      .checked;
     this._emitConfigUpdate({
       show_attention_batteries_in_areas:
-        showAttentionBatteriesInAreas === DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS
+        showAttentionBatteriesInAreas ===
+        DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS
           ? undefined
           : showAttentionBatteriesInAreas,
     });
@@ -497,8 +562,9 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
   static styles = [
     css`
       :host {
-        display: grid;
-        gap: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
       }
 
       .fallback-editor {
@@ -506,21 +572,27 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
         gap: 8px;
       }
 
-      ha-expansion-panel {
+      ha-tab-group {
         display: block;
-        --expansion-panel-content-padding: 0;
-        border-radius: var(--ha-border-radius-md);
-        --ha-card-border-radius: var(--ha-border-radius-md);
       }
 
-      .content {
+      ha-tab-group-tab {
+        flex: 1;
+      }
+
+      ha-tab-group-tab::part(base) {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .panel-content {
         padding: 12px;
       }
 
-      h3[slot="header"] {
-        margin: 0;
-        font-size: inherit;
-        font-weight: inherit;
+      ha-tab-group-tab ha-icon,
+      .panel-content ha-icon {
+        color: var(--secondary-text-color);
+        margin-inline-end: 8px;
       }
 
       label {
