@@ -15,8 +15,20 @@ const DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS = true;
 interface ModuleDescriptor {
   id: MaintenanceModuleId;
   icon: string;
-  headerKey: "editor.batteries_header" | "editor.updates_header" | "editor.repairs_header" | "editor.stale_header" | "editor.availability_header";
-  enabledKey: "batteries_enabled" | "updates_enabled" | "repairs_enabled" | "stale_enabled" | "availability_enabled";
+  headerKey:
+    | "editor.batteries_header"
+    | "editor.updates_header"
+    | "editor.repairs_header"
+    | "editor.stale_header"
+    | "editor.availability_header"
+    | "editor.integrations_header";
+  enabledKey:
+    | "batteries_enabled"
+    | "updates_enabled"
+    | "repairs_enabled"
+    | "stale_enabled"
+    | "availability_enabled"
+    | "integrations_enabled";
 }
 
 const MODULES: ReadonlyArray<ModuleDescriptor> = [
@@ -25,6 +37,7 @@ const MODULES: ReadonlyArray<ModuleDescriptor> = [
   { id: "updates", icon: "mdi:package-up", headerKey: "editor.updates_header", enabledKey: "updates_enabled" },
   { id: "availability", icon: "mdi:help-circle-outline", headerKey: "editor.availability_header", enabledKey: "availability_enabled" },
   { id: "stale", icon: "mdi:clock-alert-outline", headerKey: "editor.stale_header", enabledKey: "stale_enabled" },
+  { id: "integrations", icon: "mdi:puzzle", headerKey: "editor.integrations_header", enabledKey: "integrations_enabled" },
 ];
 
 @customElement("dashboard-maintenance-strategy-editor")

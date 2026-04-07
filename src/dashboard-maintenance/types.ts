@@ -52,6 +52,8 @@ export interface ConfigEntry {
   domain: string;
   title: string;
   state?: string;
+  /** Raw error detail when `state` is an error state (may be shown in the UI). */
+  reason?: string | null;
 }
 
 export interface HomeAssistantConnection {
@@ -83,7 +85,8 @@ export type MaintenanceModuleId =
   | "repairs"
   | "updates"
   | "availability"
-  | "stale";
+  | "stale"
+  | "integrations";
 
 export interface MaintenanceStrategyConfig {
   type: "custom:maintenance";
@@ -96,6 +99,7 @@ export interface MaintenanceStrategyConfig {
   availability_safe_list_device_ids?: string[];
   stale_enabled?: boolean;
   stale_threshold_hours?: number;
+  integrations_enabled?: boolean;
 }
 
 export type MaintenanceViewMode =
@@ -104,7 +108,8 @@ export type MaintenanceViewMode =
   | "repairs"
   | "updates"
   | "availability"
-  | "stale";
+  | "stale"
+  | "integrations";
 
 export interface MaintenanceViewStrategyConfig extends MaintenanceStrategyConfig {
   area_id?: string;

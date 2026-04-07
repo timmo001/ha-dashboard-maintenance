@@ -7,6 +7,7 @@ import "./dashboard-maintenance/maintenance-dashboard-strategy";
 import "./dashboard-maintenance/maintenance-repairs-view-strategy";
 import "./dashboard-maintenance/maintenance-stale-view-strategy";
 import "./dashboard-maintenance/maintenance-summary-view-strategy";
+import "./dashboard-maintenance/maintenance-integrations-view-strategy";
 import "./dashboard-maintenance/maintenance-updates-view-strategy";
 import { MAINTENANCE_DASHBOARD_IMAGES } from "./dashboard-maintenance/strategy-images";
 
@@ -22,7 +23,7 @@ if (
     type: "maintenance",
     name: "Maintenance",
     description:
-      "Home maintenance overview with batteries, repairs, updates, availability, and stale data.",
+      "Home maintenance overview with batteries, repairs, updates, availability, stale data, and integrations.",
     images: MAINTENANCE_DASHBOARD_IMAGES,
     strategyType: "dashboard",
   });

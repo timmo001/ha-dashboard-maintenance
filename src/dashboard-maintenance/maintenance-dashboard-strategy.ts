@@ -12,6 +12,7 @@ import { MaintenanceAvailabilityViewStrategy } from "./maintenance-availability-
 import { buildStaleAreaShowMorePath } from "./maintenance-stale-sections";
 import { MaintenanceStaleViewStrategy } from "./maintenance-stale-view-strategy";
 import { MaintenanceSummaryViewStrategy } from "./maintenance-summary-view-strategy";
+import { MaintenanceIntegrationsViewStrategy } from "./maintenance-integrations-view-strategy";
 import type {
   AreaRegistryEntry,
   HomeAssistant,
@@ -187,6 +188,22 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
             ),
           ),
         )),
+      );
+    }
+
+    /* --- Integrations --- */
+    if (isModuleEnabled(config, "integrations")) {
+      views.push(
+        await MaintenanceIntegrationsViewStrategy.generate(
+          {
+            ...config,
+            view: "integrations",
+            title: localize("view.integrations"),
+            path: "integrations",
+            icon: "mdi:puzzle",
+          },
+          hass,
+        ),
       );
     }
 

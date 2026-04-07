@@ -20,6 +20,7 @@ import type { MaintenanceUpdateEntity } from "./update-data";
 import { updateCanInstall } from "./update-data";
 import type {
   AreaRegistryEntry,
+  ConfigEntry,
   FloorRegistryEntry,
   HomeAssistant,
   MaintenanceViewMode,
@@ -188,6 +189,12 @@ export const VIEW_DEFAULTS: Record<
     path: "availability",
     icon: "mdi:help-circle-outline",
   },
+  integrations: {
+    columnSpan: MAINTENANCE_COLUMN_SPAN,
+    titleKey: "view.integrations",
+    path: "integrations",
+    icon: "mdi:puzzle",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -327,6 +334,68 @@ export const makeRepairCard = (
     grid_options: {
       columns: 12,
     },
+  };
+};
+
+/**
+ * Opens the integration page with the config entry row highlighted (HA reads hash as URLSearchParams).
+ * Optional `subentryId` is included for forward compatibility if the UI gains hash support.
+ */
+export const configEntryNavigationPath = (
+  domain: string,
+  entryId: string,
+  subentryId?: string,
+): string => {
+  const base = `/config/integrations/integration/${encodeURIComponent(domain)}`;
+  const params = new URLSearchParams();
+  params.set("config_entry", entryId);
+  if (subentryId) {
+    params.set("subentry", subentryId);
+  }
+  return `${base}#${params.toString()}`;
+};
+
+const INTEGRATION_STATE_LABEL: Partial<Record<string, TranslationKey>> = {
+  setup_error: "integration.state.setup_error",
+  migration_error: "integration.state.migration_error",
+  setup_retry: "integration.state.setup_retry",
+  failed_unload: "integration.state.failed_unload",
+};
+
+/**
+ * Reuses the availability custom card style + brand icon pipeline for integrations.
+ */
+export const makeIntegrationEntryCard = (
+  localize: LocalizeFunc,
+  entry: ConfigEntry,
+  brandsToken?: string | null,
+  options?: {
+    representativeEntityId?: string;
+    deviceId?: string | null;
+    subentryId?: string;
+  },
+): LovelaceCardConfig => {
+  const domain = entry.domain;
+  const navPath = configEntryNavigationPath(domain, entry.entry_id, options?.subentryId);
+  const stateKey = entry.state ? INTEGRATION_STATE_LABEL[entry.state] : undefined;
+  const stateText = stateKey ? localize(stateKey) : (entry.state ?? "");
+  const subtitle = entry.reason?.trim() ? `${stateText}: ${entry.reason.trim()}` : stateText;
+  const picture = brandsToken
+    ? `/api/brands/integration/${domain}/icon.png?token=${brandsToken}`
+    : null;
+  const fallbackEntity = options?.representativeEntityId ?? `${domain}.integration`;
+
+  return {
+    type: "custom:dm-availability-device-card",
+    ...(options?.deviceId ? { device_id: options.deviceId } : {}),
+    device_name: entry.title || domain,
+    subtitle,
+    picture,
+    icon: computeDomainIcon(fallbackEntity),
+    grid_options: {
+      columns: 6,
+    },
+    navigation_path: navPath,
   };
 };
 

@@ -11,6 +11,8 @@ import { makeAvailabilitySummarySection } from "./maintenance-availability-secti
 import { getMaintenanceAvailabilityEntities } from "./availability-data";
 import { makeStaleSummarySection } from "./maintenance-stale-sections";
 import { getMaintenanceStaleEntities } from "./stale-data";
+import { getGroupedIntegrationErrors } from "./integrations-data";
+import { makeIntegrationsSummarySection } from "./maintenance-integrations-sections";
 import {
   makeEmptyStateSection,
   makeViewConfig,
@@ -76,6 +78,21 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
           limit: SUMMARY_ITEM_LIMIT,
           showMorePath: "availability",
         }),
+      );
+    }
+
+    if (isModuleEnabled(config, "integrations")) {
+      const groupedIntegrations = await getGroupedIntegrationErrors(hass);
+      rawSections.push(
+        await makeIntegrationsSummarySection(
+          localize,
+          hass,
+          groupedIntegrations,
+          {
+            limit: SUMMARY_ITEM_LIMIT,
+            showMorePath: "integrations",
+          },
+        ),
       );
     }
 

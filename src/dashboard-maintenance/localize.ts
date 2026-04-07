@@ -13,6 +13,21 @@ const en = {
   "view.stale": "Stale",
   "view.all_stale": "All stale",
   "view.stale_area": "Stale - {area}",
+  "view.integrations": "Integrations",
+
+  // Integration sections
+  "integration.heading": "Integrations",
+  "integration.heading_summary": "Integration errors",
+  "integration.heading_setup_failed": "Setup failed",
+  "integration.heading_setup_retry": "Retrying setup",
+  "integration.heading_failed_unload": "Unload failed",
+  "integration.state.setup_error": "Setup error",
+  "integration.state.migration_error": "Migration error",
+  "integration.state.setup_retry": "Retrying setup",
+  "integration.state.failed_unload": "Unload failed",
+  "integration.empty_no_issues_title": "No integration errors",
+  "integration.empty_no_issues_content":
+    "Every config entry is loaded or in a non-error state.",
 
   // Battery sections
   "battery.heading_devices": "Battery devices",
@@ -143,6 +158,7 @@ const en = {
   "editor.availability_safe_list_helper":
     "Unavailable devices in this list are hidden from the availability results. You can also click and hold a device icon to add it.",
   "editor.stale_header": "Stale entities",
+  "editor.integrations_header": "Integrations",
   "editor.stale_threshold_label": "Stale threshold (hours)",
   "editor.stale_threshold_helper":
     "Entities that have not reported within this many hours are shown as stale.",
