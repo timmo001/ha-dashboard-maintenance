@@ -1,6 +1,6 @@
 {
   "name": "Dashboard Maintenance",
-  "content_in_root": true,
+  "content_in_root": false,
   "render_readme": false,
   "filename": "ha-dashboard-maintenance.js",
   "hide_default_branch": true
