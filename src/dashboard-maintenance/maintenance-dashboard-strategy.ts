@@ -253,6 +253,21 @@ export class MaintenanceDashboardStrategy extends ReactiveElement {
     return { views };
   }
 
+  /**
+   * Suggested title/icon when adding a dashboard from the Home Assistant UI
+   * (`loadDashboardStrategyWithCreateSuggestions` in the frontend).
+   */
+  public static getCreateSuggestions(hass: HomeAssistant): {
+    title: string;
+    icon: string;
+  } {
+    const localize = setupLocalize(hass);
+    return {
+      title: localize("dashboard.suggested_title"),
+      icon: "mdi:home-heart",
+    };
+  }
+
   public static async getConfigElement(): Promise<HTMLElement> {
     return document.createElement("dashboard-maintenance-strategy-editor");
   }

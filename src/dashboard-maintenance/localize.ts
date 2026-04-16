@@ -1,4 +1,7 @@
 const en = {
+  // Create-dashboard dialog default title (`getCreateSuggestions`)
+  "dashboard.suggested_title": "Maintenance",
+
   // View titles
   "view.summary": "Summary",
   "view.batteries": "Batteries",
