@@ -1,12 +1,16 @@
 import { LitElement, css, html, nothing } from "lit";
 import type { PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { setupLocalize } from "./localize";
+import { setupLocalize, type LocalizeFunc } from "./localize";
 import type {
   DmMaintenanceSummaryCardConfig,
   SummaryMetric,
   SummaryTapAction,
 } from "./dm-maintenance-summary-card";
+import {
+  buildDashboardSummaryPath,
+  findLovelaceDashboardConfig,
+} from "./lovelace-dashboard";
 import type { HomeAssistant } from "./types";
 
 const DEFAULT_SUMMARY: SummaryMetric = "batteries";
@@ -18,6 +22,15 @@ const SUMMARY_OPTIONS: SummaryMetric[] = [
   "availability",
   "stale",
 ];
+
+type HaFormValueChangedEvent<T extends Record<string, unknown>> = CustomEvent<{
+  value: T;
+}>;
+
+const SUMMARY_OPTION_VALUES = new Set<string>(SUMMARY_OPTIONS);
+
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
 
 const SUMMARY_LABEL_KEY: Record<
   SummaryMetric,
@@ -43,10 +56,11 @@ const cleanText = (value: unknown): string | undefined => {
   return normalized.length > 0 ? normalized : undefined;
 };
 
+const isSummaryMetric = (value: unknown): value is SummaryMetric =>
+  typeof value === "string" && SUMMARY_OPTION_VALUES.has(value);
+
 const normalizeSummary = (value: unknown): SummaryMetric =>
-  SUMMARY_OPTIONS.includes(value as SummaryMetric)
-    ? (value as SummaryMetric)
-    : DEFAULT_SUMMARY;
+  isSummaryMetric(value) ? value : DEFAULT_SUMMARY;
 
 const isDefaultNavigateAction = (action?: SummaryTapAction): boolean =>
   !action ||
@@ -54,17 +68,16 @@ const isDefaultNavigateAction = (action?: SummaryTapAction): boolean =>
   (action.action === "navigate" && !cleanText(action.navigation_path));
 
 const normalizeTapAction = (value: unknown): SummaryTapAction | undefined => {
-  if (typeof value !== "object" || value === null) {
+  if (!isObjectRecord(value)) {
     return undefined;
   }
 
-  const action = value as SummaryTapAction;
-  if (action.action === "none") {
+  if (value.action === "none") {
     return { action: "none" };
   }
 
-  if (action.action === "navigate") {
-    const path = cleanText(action.navigation_path);
+  if (value.action === "navigate") {
+    const path = cleanText(value.navigation_path);
     return path ? { action: "navigate", navigation_path: path } : { action: "navigate" };
   }
 
@@ -79,23 +92,23 @@ const normalizeHoldAction = (value: unknown): SummaryTapAction | undefined => {
   return action;
 };
 
-interface LovelaceDashboardListEntry {
-  url_path?: string | null;
-}
-
 interface LovelaceDashboardConfig {
   strategy?: {
     type?: string;
   };
 }
 
-const buildDashboardSummaryPath = (urlPath?: string | null): string =>
-  urlPath ? `/${encodeURIComponent(urlPath)}/summary` : "/lovelace/summary";
+const isMaintenanceDashboardConfig = (
+  config: unknown,
+): config is LovelaceDashboardConfig =>
+  isObjectRecord(config) &&
+  isObjectRecord(config.strategy) &&
+  config.strategy.type === "custom:maintenance";
 
 const DISCOVERY_RETRY_INTERVAL_MS = 15_000;
 
 @customElement("dm-maintenance-summary-card-editor")
-export class DmMaintenanceSummaryCardEditor extends LitElement {
+class DmMaintenanceSummaryCardEditor extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
   @state() private _config?: DmMaintenanceSummaryCardConfig;
@@ -153,36 +166,62 @@ export class DmMaintenanceSummaryCardEditor extends LitElement {
     this._discoveryInFlight = true;
 
     try {
-      const dashboards = await this.hass.connection.sendMessagePromise<
-        LovelaceDashboardListEntry[]
-      >({ type: "lovelace/dashboards/list" });
+      const result = await findLovelaceDashboardConfig(
+        this.hass.connection,
+        (config) => (isMaintenanceDashboardConfig(config) ? config : undefined),
+      );
 
-      const urlPaths = new Set<string | null>([null]);
-      for (const dashboard of dashboards) {
-        urlPaths.add(dashboard.url_path ?? null);
-      }
-
-      for (const urlPath of urlPaths) {
-        try {
-          const config = await this.hass.connection.sendMessagePromise<LovelaceDashboardConfig>({
-            type: "lovelace/config",
-            url_path: urlPath,
-            force: false,
-          });
-
-          if (config.strategy?.type === "custom:maintenance") {
-            this._resolvedMaintenanceSummaryPath = buildDashboardSummaryPath(urlPath);
-            break;
-          }
-        } catch {
-          // Skip dashboards that are not accessible.
-        }
+      if (result) {
+        this._resolvedMaintenanceSummaryPath = buildDashboardSummaryPath(result.urlPath);
       }
     } catch {
       // Keep fallback behavior.
     } finally {
       this._discoveryInFlight = false;
     }
+  }
+
+  private _buildFormData(config: DmMaintenanceSummaryCardConfig) {
+    const summary = normalizeSummary(config.summary ?? config.metric);
+    const defaultNavigationPath =
+      config.navigation_path || this._resolvedMaintenanceSummaryPath || "summary";
+    return {
+      summary,
+      title: config.title ?? "",
+      icon: config.icon ?? "",
+      tap_action: config.tap_action ?? {
+        action: "navigate",
+        navigation_path: defaultNavigationPath,
+      },
+      hold_action: config.hold_action ?? { action: "none" },
+    };
+  }
+
+  private _buildFormSchema(localize: LocalizeFunc) {
+    return [
+      {
+        name: "summary",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: SUMMARY_OPTIONS.map((value) => ({
+              value,
+              label: localize(SUMMARY_LABEL_KEY[value]),
+            })),
+          },
+        },
+      },
+      { name: "title", selector: { text: {} } },
+      { name: "icon", selector: { icon: {} } },
+      {
+        name: "tap_action",
+        selector: { ui_action: { actions: ["navigate", "none"] } },
+      },
+      {
+        name: "hold_action",
+        selector: { ui_action: { actions: ["navigate", "none"] } },
+      },
+    ];
   }
 
   protected render() {
@@ -195,61 +234,14 @@ export class DmMaintenanceSummaryCardEditor extends LitElement {
     }
 
     const localize = setupLocalize(this.hass);
-    const summary = normalizeSummary(this._config.summary ?? this._config.metric);
-    const defaultNavigationPath =
-      this._config.navigation_path || this._resolvedMaintenanceSummaryPath || "summary";
+    const data = this._buildFormData(this._config);
+    const schema = this._buildFormSchema(localize);
 
     return html`
       <ha-form
         .hass=${this.hass}
-        .data=${{
-          summary,
-          title: this._config.title ?? "",
-          icon: this._config.icon ?? "",
-          tap_action: this._config.tap_action ?? {
-            action: "navigate",
-            navigation_path: defaultNavigationPath,
-          },
-          hold_action: this._config.hold_action ?? { action: "none" },
-        }}
-        .schema=${[
-          {
-            name: "summary",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: SUMMARY_OPTIONS.map((value) => ({
-                  value,
-                  label: localize(SUMMARY_LABEL_KEY[value]),
-                })),
-              },
-            },
-          },
-          {
-            name: "title",
-            selector: { text: {} },
-          },
-          {
-            name: "icon",
-            selector: { icon: {} },
-          },
-          {
-            name: "tap_action",
-            selector: {
-              ui_action: {
-                actions: ["navigate", "none"],
-              },
-            },
-          },
-          {
-            name: "hold_action",
-            selector: {
-              ui_action: {
-                actions: ["navigate", "none"],
-              },
-            },
-          },
-        ]}
+        .data=${data}
+        .schema=${schema}
         .computeLabel=${this._computeLabel}
         .computeHelper=${this._computeHelper}
         @value-changed=${this._valueChanged}
@@ -281,13 +273,13 @@ export class DmMaintenanceSummaryCardEditor extends LitElement {
     return helpers[schema.name] ?? "";
   };
 
-  private _valueChanged(ev: CustomEvent): void {
+  private _valueChanged(ev: HaFormValueChangedEvent<Record<string, unknown>>): void {
     if (!this._config) {
       return;
     }
 
     ev.stopPropagation();
-    const value = ev.detail.value as Record<string, unknown>;
+    const value = ev.detail.value;
 
     const summary = normalizeSummary(value.summary);
     const title = cleanText(value.title);

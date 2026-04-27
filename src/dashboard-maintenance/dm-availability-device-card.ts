@@ -137,6 +137,9 @@ const CARD_STYLES = `
   }
 `;
 
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 class DmAvailabilityDeviceCard extends HTMLElement {
   private _config?: DmAvailabilityDeviceCardConfig;
   private _hass?: HomeAssistant;
@@ -193,7 +196,10 @@ class DmAvailabilityDeviceCard extends HTMLElement {
   }
 
   private _build(): void {
-    const config = this._config!;
+    const config = this._config;
+    if (!config) {
+      return;
+    }
 
     const style = document.createElement("style");
     style.textContent = CARD_STYLES;
@@ -279,44 +285,52 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     this._built = true;
   }
 
-  private _update(): void {
-    const config = this._config!;
+  private _updatePicture(config: DmAvailabilityDeviceCardConfig): boolean {
     const picture = config.picture;
     const shouldShowPicture = Boolean(picture) && picture !== this._failedPictureSrc;
 
-    if (this._pictureEl) {
-      if (shouldShowPicture && picture) {
-        if (this._activePictureSrc !== picture) {
-          this._activePictureSrc = picture;
-          this._pictureEl.src = picture;
-        }
-        this._pictureEl.style.display = "block";
-      } else {
-        if (this._activePictureSrc !== null) {
-          this._activePictureSrc = null;
-          this._pictureEl.removeAttribute("src");
-        }
-        this._pictureEl.style.display = "none";
+    if (!this._pictureEl) {
+      return shouldShowPicture;
+    }
+
+    if (shouldShowPicture && picture) {
+      if (this._activePictureSrc !== picture) {
+        this._activePictureSrc = picture;
+        this._pictureEl.src = picture;
       }
+      this._pictureEl.style.display = "block";
+    } else {
+      if (this._activePictureSrc !== null) {
+        this._activePictureSrc = null;
+        this._pictureEl.removeAttribute("src");
+      }
+      this._pictureEl.style.display = "none";
     }
-    if (this._iconEl) {
-      this._iconEl.setAttribute("icon", config.icon || "mdi:exclamation-thick");
-      this._iconEl.style.display = shouldShowPicture ? "none" : "block";
+    return shouldShowPicture;
+  }
+
+  private _updateIcon(config: DmAvailabilityDeviceCardConfig, shouldShowPicture: boolean): void {
+    if (!this._iconEl) {
+      return;
     }
-    if (this._mediaEl) {
-      const localize = setupLocalize(this._hass);
-      const canToggleSafeList = Boolean(
-        config.enable_safe_toggle && config.device_id,
-      );
-      this._mediaEl.classList.toggle("safe-toggle", canToggleSafeList);
-      this._mediaEl.classList.toggle("saving", this._savingSafeList);
-      this._mediaEl.title = canToggleSafeList
-        ? localize("availability.safe_list_hold_hint")
-        : "";
+    this._iconEl.setAttribute("icon", config.icon || "mdi:exclamation-thick");
+    this._iconEl.style.display = shouldShowPicture ? "none" : "block";
+  }
+
+  private _updateMedia(config: DmAvailabilityDeviceCardConfig): void {
+    if (!this._mediaEl) {
+      return;
     }
-    if (this._nameEl) {
-      this._nameEl.textContent = config.device_name;
-    }
+    const localize = setupLocalize(this._hass);
+    const canToggleSafeList = Boolean(config.enable_safe_toggle && config.device_id);
+    this._mediaEl.classList.toggle("safe-toggle", canToggleSafeList);
+    this._mediaEl.classList.toggle("saving", this._savingSafeList);
+    this._mediaEl.title = canToggleSafeList
+      ? localize("availability.safe_list_hold_hint")
+      : "";
+  }
+
+  private _updateSubtitle(config: DmAvailabilityDeviceCardConfig): void {
     const subtitle = config.subtitle || "";
     const subtitleLoading =
       config.subtitle_loading === true || subtitle.trim().length === 0;
@@ -330,6 +344,20 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     if (this._subtitleSkeletonEl) {
       this._subtitleSkeletonEl.style.display = subtitleLoading ? "block" : "none";
     }
+  }
+
+  private _update(): void {
+    const config = this._config;
+    if (!config) {
+      return;
+    }
+    const shouldShowPicture = this._updatePicture(config);
+    this._updateIcon(config, shouldShowPicture);
+    this._updateMedia(config);
+    if (this._nameEl) {
+      this._nameEl.textContent = config.device_name;
+    }
+    this._updateSubtitle(config);
   }
 
   private _handlePictureLoad = (): void => {
@@ -416,10 +444,11 @@ class DmAvailabilityDeviceCard extends HTMLElement {
       const existingSafeList = normalizeAvailabilitySafeListDeviceIds(
         strategy.availability_safe_list_device_ids,
       );
-      const hasDevice = existingSafeList.includes(this._config.device_id);
+      const deviceId = this._config.device_id;
+      const hasDevice = existingSafeList.includes(deviceId);
       const nextSafeList = hasDevice
-        ? existingSafeList.filter((deviceId) => deviceId !== this._config!.device_id)
-        : [...existingSafeList, this._config.device_id];
+        ? existingSafeList.filter((safeListDeviceId) => safeListDeviceId !== deviceId)
+        : [...existingSafeList, deviceId];
 
       const nextConfig = {
         ...rawConfig,
@@ -506,10 +535,8 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     availability_safe_list_device_ids?: string[];
   } {
     return (
-      typeof strategy === "object" &&
-      strategy !== null &&
-      "type" in strategy &&
-      (strategy as { type?: unknown }).type === "custom:maintenance"
+      isObjectRecord(strategy) &&
+      strategy.type === "custom:maintenance"
     );
   }
 }

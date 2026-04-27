@@ -35,7 +35,7 @@ interface ModuleDescriptor {
     | "integrations_enabled";
 }
 
-const MODULES: ReadonlyArray<ModuleDescriptor> = [
+const MODULES = [
   {
     id: "batteries",
     icon: "mdi:battery-heart-variant",
@@ -72,15 +72,31 @@ const MODULES: ReadonlyArray<ModuleDescriptor> = [
     headerKey: "editor.integrations_header",
     enabledKey: "integrations_enabled",
   },
-];
+] as const satisfies readonly ModuleDescriptor[];
+
+type ModuleEnabledKey = ModuleDescriptor["enabledKey"];
+
+type HaFormValueChangedEvent<T extends Record<string, unknown>> = CustomEvent<{
+  value: T;
+}>;
+
+const MODULE_ENABLED_KEYS = new Set<string>(
+  MODULES.map((mod) => mod.enabledKey),
+);
+
+const isMaintenanceModuleId = (value: string): value is MaintenanceModuleId =>
+  MODULES.some((mod) => mod.id === value);
+
+const isModuleEnabledKey = (value: string): value is ModuleEnabledKey =>
+  MODULE_ENABLED_KEYS.has(value);
 
 @customElement("dashboard-maintenance-strategy-editor")
-export class DashboardMaintenanceStrategyEditor extends LitElement {
+class DashboardMaintenanceStrategyEditor extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
   @state() private _config?: MaintenanceDashboardStrategyConfig;
 
-  @state() private _activeModule: MaintenanceModuleId = MODULES[0]!.id;
+  @state() private _activeModule: MaintenanceModuleId = MODULES[0].id;
 
   public setConfig(config: MaintenanceDashboardStrategyConfig): void {
     this._config = config;
@@ -93,7 +109,7 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
 
     const localize = setupLocalize(this.hass);
     const activeModule =
-      MODULES.find((mod) => mod.id === this._activeModule) ?? MODULES[0]!;
+      MODULES.find((mod) => mod.id === this._activeModule) ?? MODULES[0];
     const enabled = this._config[activeModule.enabledKey] !== false;
 
     return html`
@@ -115,7 +131,7 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
       <div class="panel-content">
         ${this._renderEnableToggle(localize, activeModule, enabled)}
         ${enabled
-          ? this._renderModuleSettings(localize, activeModule)
+          ? this._renderModuleSettings(localize, activeModule, this._config)
           : nothing}
       </div>
     `;
@@ -177,14 +193,15 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
   private _renderModuleSettings(
     localize: ReturnType<typeof setupLocalize>,
     mod: ModuleDescriptor,
+    config: MaintenanceDashboardStrategyConfig,
   ) {
     switch (mod.id) {
       case "batteries":
-        return this._renderBatterySettings(localize);
+        return this._renderBatterySettings(localize, config);
       case "stale":
-        return this._renderStaleSettings(localize);
+        return this._renderStaleSettings(localize, config);
       case "availability":
-        return this._renderAvailabilitySettings(localize);
+        return this._renderAvailabilitySettings(localize, config);
       default:
         return nothing;
     }
@@ -192,9 +209,10 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
 
   private _renderAvailabilitySettings(
     localize: ReturnType<typeof setupLocalize>,
+    config: MaintenanceDashboardStrategyConfig,
   ) {
     const safeListDeviceIds =
-      this._config!.availability_safe_list_device_ids ?? [];
+      config.availability_safe_list_device_ids ?? [];
 
     if (!customElements.get("ha-form")) {
       return html`
@@ -238,12 +256,15 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     `;
   }
 
-  private _renderBatterySettings(localize: ReturnType<typeof setupLocalize>) {
+  private _renderBatterySettings(
+    localize: ReturnType<typeof setupLocalize>,
+    config: MaintenanceDashboardStrategyConfig,
+  ) {
     const threshold =
-      this._config!.battery_attention_threshold ??
+      config.battery_attention_threshold ??
       DEFAULT_BATTERY_ATTENTION_THRESHOLD;
     const showAttentionBatteriesInAreas =
-      this._config!.show_attention_batteries_in_areas ??
+      config.show_attention_batteries_in_areas ??
       DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS;
 
     if (!customElements.get("ha-form")) {
@@ -314,9 +335,12 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     `;
   }
 
-  private _renderStaleSettings(localize: ReturnType<typeof setupLocalize>) {
+  private _renderStaleSettings(
+    localize: ReturnType<typeof setupLocalize>,
+    config: MaintenanceDashboardStrategyConfig,
+  ) {
     const staleThreshold =
-      this._config!.stale_threshold_hours ?? DEFAULT_STALE_THRESHOLD_HOURS;
+      config.stale_threshold_hours ?? DEFAULT_STALE_THRESHOLD_HOURS;
 
     if (!customElements.get("ha-form")) {
       return html`
@@ -407,35 +431,41 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
 
   /* ---- ha-form value-changed handlers ---- */
 
-  private _moduleEnabledChanged(ev: CustomEvent): void {
+  private _moduleEnabledChanged(
+    ev: HaFormValueChangedEvent<Partial<Record<ModuleEnabledKey, boolean>>>,
+  ): void {
     if (!this._config) {
       return;
     }
     ev.stopPropagation();
 
-    const data = ev.detail.value as Record<string, boolean>;
+    const data = ev.detail.value;
     const updates: Partial<MaintenanceDashboardStrategyConfig> = {};
 
     for (const key of Object.keys(data)) {
-      if (key.endsWith("_enabled")) {
-        (updates as Record<string, boolean | undefined>)[key] =
-          data[key] === true ? undefined : false;
+      if (isModuleEnabledKey(key)) {
+        updates[key] = data[key] === true ? undefined : false;
       }
     }
 
     this._emitConfigUpdate(updates);
   }
 
-  private _valueChanged(ev: CustomEvent): void {
+  private _valueChanged(
+    ev: HaFormValueChangedEvent<{
+      battery_attention_threshold?: number;
+      show_attention_batteries_in_areas?: boolean;
+    }>,
+  ): void {
     if (!this._config) {
       return;
     }
 
     ev.stopPropagation();
 
-    const threshold = ev.detail.value.battery_attention_threshold as number;
-    const showAttentionBatteriesInAreas = ev.detail.value
-      .show_attention_batteries_in_areas as boolean;
+    const threshold = ev.detail.value.battery_attention_threshold;
+    const showAttentionBatteriesInAreas =
+      ev.detail.value.show_attention_batteries_in_areas;
     this._emitConfigUpdate({
       battery_attention_threshold:
         threshold === DEFAULT_BATTERY_ATTENTION_THRESHOLD
@@ -449,14 +479,16 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     });
   }
 
-  private _staleValueChanged(ev: CustomEvent): void {
+  private _staleValueChanged(
+    ev: HaFormValueChangedEvent<{ stale_threshold_hours?: number }>,
+  ): void {
     if (!this._config) {
       return;
     }
 
     ev.stopPropagation();
 
-    const staleThreshold = ev.detail.value.stale_threshold_hours as number;
+    const staleThreshold = ev.detail.value.stale_threshold_hours;
     this._emitConfigUpdate({
       stale_threshold_hours:
         staleThreshold === DEFAULT_STALE_THRESHOLD_HOURS
@@ -465,7 +497,9 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     });
   }
 
-  private _availabilityValueChanged(ev: CustomEvent): void {
+  private _availabilityValueChanged(
+    ev: HaFormValueChangedEvent<{ availability_safe_list_device_ids?: string[] }>,
+  ): void {
     if (!this._config) {
       return;
     }
@@ -473,7 +507,7 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
     ev.stopPropagation();
 
     const safeListDeviceIds = normalizeAvailabilitySafeListDeviceIds(
-      ev.detail.value.availability_safe_list_device_ids as string[] | undefined,
+      ev.detail.value.availability_safe_list_device_ids,
     );
     this._emitConfigUpdate({
       availability_safe_list_device_ids:
@@ -484,16 +518,28 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
   /* ---- Native fallback handlers ---- */
 
   private _nativeModuleEnabledChanged(ev: Event): void {
-    const input = ev.currentTarget as HTMLInputElement;
-    const moduleId = input.dataset.module as MaintenanceModuleId;
+    if (!(ev.currentTarget instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const input = ev.currentTarget;
+    const moduleId = input.dataset.module;
+    if (!moduleId || !isMaintenanceModuleId(moduleId)) {
+      return;
+    }
+
     const enabled = input.checked;
     this._emitConfigUpdate({
       [`${moduleId}_enabled`]: enabled ? undefined : false,
-    } as Partial<MaintenanceDashboardStrategyConfig>);
+    });
   }
 
   private _nativeValueChanged(ev: Event): void {
-    const threshold = Number((ev.currentTarget as HTMLInputElement).value);
+    if (!(ev.currentTarget instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const threshold = Number(ev.currentTarget.value);
     this._emitConfigUpdate({
       battery_attention_threshold:
         threshold === DEFAULT_BATTERY_ATTENTION_THRESHOLD
@@ -503,8 +549,11 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
   }
 
   private _nativeBooleanChanged(ev: Event): void {
-    const showAttentionBatteriesInAreas = (ev.currentTarget as HTMLInputElement)
-      .checked;
+    if (!(ev.currentTarget instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const showAttentionBatteriesInAreas = ev.currentTarget.checked;
     this._emitConfigUpdate({
       show_attention_batteries_in_areas:
         showAttentionBatteriesInAreas ===
@@ -515,7 +564,11 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
   }
 
   private _nativeStaleValueChanged(ev: Event): void {
-    const staleThreshold = Number((ev.currentTarget as HTMLInputElement).value);
+    if (!(ev.currentTarget instanceof HTMLInputElement)) {
+      return;
+    }
+
+    const staleThreshold = Number(ev.currentTarget.value);
     this._emitConfigUpdate({
       stale_threshold_hours:
         staleThreshold === DEFAULT_STALE_THRESHOLD_HOURS
@@ -525,8 +578,12 @@ export class DashboardMaintenanceStrategyEditor extends LitElement {
   }
 
   private _nativeAvailabilitySafeListChanged(ev: Event): void {
+    if (!(ev.currentTarget instanceof HTMLTextAreaElement)) {
+      return;
+    }
+
     const safeListDeviceIds = normalizeAvailabilitySafeListDeviceIds(
-      (ev.currentTarget as HTMLTextAreaElement).value
+      ev.currentTarget.value
         .split(/[\n,]/)
         .map((value) => value.trim()),
     );
