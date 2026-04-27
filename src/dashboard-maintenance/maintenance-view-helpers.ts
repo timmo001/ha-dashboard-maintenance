@@ -225,6 +225,7 @@ interface TileCardEntity {
   displayName: string;
 }
 
+// The built-in "shortcut" card type requires Home Assistant 2026.5 or later.
 const makeShortcutCard = (
   label: string,
   description: string,
