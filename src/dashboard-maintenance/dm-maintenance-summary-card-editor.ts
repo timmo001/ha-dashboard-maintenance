@@ -1,7 +1,7 @@
 import { LitElement, css, html, nothing } from "lit";
 import type { PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
-import { setupLocalize } from "./localize";
+import { setupLocalize, type LocalizeFunc } from "./localize";
 import type {
   DmMaintenanceSummaryCardConfig,
   SummaryMetric,
@@ -197,7 +197,7 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
     };
   }
 
-  private _buildFormSchema(localize: (key: string) => string) {
+  private _buildFormSchema(localize: LocalizeFunc) {
     return [
       {
         name: "summary",
