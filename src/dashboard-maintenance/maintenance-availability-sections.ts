@@ -7,7 +7,6 @@ import {
 import type { LocalizeFunc, TranslationKey } from "./localize";
 import {
   availabilityEntityTileName,
-  fetchBrandsAccessToken,
   limitItems,
   makeAvailabilityCard,
   makeAvailabilityDeviceCard,
@@ -53,10 +52,7 @@ const makeAvailabilitySummarySectionContent = async (
 ): Promise<LovelaceSectionConfig> => {
   const unavailableEntities = entities.filter((entity) => entity.state === "unavailable");
 
-  const [unavailableGrouped, brandsToken] = await Promise.all([
-    groupAvailabilityByDevice(hass, unavailableEntities),
-    fetchBrandsAccessToken(hass),
-  ]);
+  const unavailableGrouped = await groupAvailabilityByDevice(hass, unavailableEntities);
 
   const summaryCards = [
     ...unavailableGrouped.devices.map((device) =>
@@ -68,8 +64,6 @@ const makeAvailabilitySummarySectionContent = async (
           "availability.device_unavailable_one",
           "availability.device_unavailable_other",
         ),
-        brandsToken,
-        { enableSafeToggle: true },
       ),
     ),
     ...unavailableGrouped.ungrouped.map((entity) =>
@@ -105,7 +99,7 @@ const deviceSubtitle = (
     ? localize(oneKey, { count: device.unavailableCount })
     : localize(otherKey, { count: device.unavailableCount });
 
-/** Build heading + device tile cards for a single state (unavailable or unknown). */
+/** Build heading + device shortcut cards for a single state. */
 const buildDeviceCards = (
   localize: LocalizeFunc,
   heading: string,
@@ -113,10 +107,6 @@ const buildDeviceCards = (
   devices: MaintenanceAvailabilityDevice[],
   subtitleOneKey: TranslationKey,
   subtitleOtherKey: TranslationKey,
-  brandsToken?: string | null,
-  options?: {
-    enableSafeToggle?: boolean;
-  },
 ): LovelaceCardConfig[] => {
   if (devices.length === 0) {
     return [];
@@ -128,7 +118,7 @@ const buildDeviceCards = (
 
   for (const device of devices) {
     const subtitle = deviceSubtitle(localize, device, subtitleOneKey, subtitleOtherKey);
-    cards.push(makeAvailabilityDeviceCard(device, subtitle, brandsToken, options));
+    cards.push(makeAvailabilityDeviceCard(device, subtitle));
   }
 
   return cards;
@@ -155,10 +145,7 @@ export const makeAvailabilitySections = async (
 
   const unavailableEntities = entities.filter((e) => e.state === "unavailable");
 
-  const [unavailableGrouped, brandsToken] = await Promise.all([
-    groupAvailabilityByDevice(hass, unavailableEntities),
-    fetchBrandsAccessToken(hass),
-  ]);
+  const unavailableGrouped = await groupAvailabilityByDevice(hass, unavailableEntities);
 
   const cards: LovelaceCardConfig[] = [];
 
@@ -170,8 +157,6 @@ export const makeAvailabilitySections = async (
       unavailableGrouped.devices,
       "availability.device_unavailable_one",
       "availability.device_unavailable_other",
-      brandsToken,
-      { enableSafeToggle: true },
     ),
   );
 

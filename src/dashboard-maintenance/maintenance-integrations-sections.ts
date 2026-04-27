@@ -5,7 +5,6 @@ import {
   type GroupedIntegrationErrors,
 } from "./integrations-data";
 import {
-  fetchBrandsAccessToken,
   limitAndMakeCards,
   makeEmptyStateSection,
   makeIntegrationEntryCard,
@@ -43,16 +42,15 @@ export const makeIntegrationsSections = async (
     ];
   }
 
-  const [entityByEntry, brandsToken] = await Promise.all([
-    getRepresentativeEntityContextForConfigEntries(hass, collectConfigEntryIds(grouped)),
-    fetchBrandsAccessToken(hass),
-  ]);
+  const entityByEntry = await getRepresentativeEntityContextForConfigEntries(
+    hass,
+    collectConfigEntryIds(grouped),
+  );
 
   const cardFor = (entry: ConfigEntry) => {
     const ctx = entityByEntry.get(entry.entry_id);
-    return makeIntegrationEntryCard(localize, entry, brandsToken, {
+    return makeIntegrationEntryCard(localize, entry, {
       representativeEntityId: ctx?.entityId,
-      deviceId: ctx?.deviceId,
     });
   };
 
@@ -100,10 +98,10 @@ export const makeIntegrationsSummarySection = async (
     return null;
   }
 
-  const [entityByEntry, brandsToken] = await Promise.all([
-    getRepresentativeEntityContextForConfigEntries(hass, collectConfigEntryIds(grouped)),
-    fetchBrandsAccessToken(hass),
-  ]);
+  const entityByEntry = await getRepresentativeEntityContextForConfigEntries(
+    hass,
+    collectConfigEntryIds(grouped),
+  );
 
   return makeSection(
     localize("integration.heading_summary"),
@@ -113,9 +111,8 @@ export const makeIntegrationsSummarySection = async (
       entries,
       (entry) => {
         const ctx = entityByEntry.get(entry.entry_id);
-        return makeIntegrationEntryCard(localize, entry, brandsToken, {
+        return makeIntegrationEntryCard(localize, entry, {
           representativeEntityId: ctx?.entityId,
-          deviceId: ctx?.deviceId,
         });
       },
       options,
