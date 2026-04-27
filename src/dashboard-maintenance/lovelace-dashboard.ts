@@ -7,7 +7,7 @@ interface LovelaceDashboardListEntry {
 export const buildDashboardSummaryPath = (urlPath?: string | null): string =>
   urlPath ? `/${encodeURIComponent(urlPath)}/summary` : "/lovelace/summary";
 
-export const fetchLovelaceDashboardUrlPaths = async (
+const fetchLovelaceDashboardUrlPaths = async (
   connection: HomeAssistantConnection,
 ): Promise<Set<string | null>> => {
   const dashboards = await connection.sendMessagePromise<
