@@ -9,7 +9,7 @@ import type {
 } from "./dm-maintenance-summary-card";
 import {
   buildDashboardSummaryPath,
-  fetchLovelaceDashboardUrlPaths,
+  findLovelaceDashboardConfig,
 } from "./lovelace-dashboard";
 import type { HomeAssistant } from "./types";
 
@@ -98,6 +98,13 @@ interface LovelaceDashboardConfig {
   };
 }
 
+const isMaintenanceDashboardConfig = (
+  config: unknown,
+): config is LovelaceDashboardConfig =>
+  isObjectRecord(config) &&
+  isObjectRecord(config.strategy) &&
+  config.strategy.type === "custom:maintenance";
+
 const DISCOVERY_RETRY_INTERVAL_MS = 15_000;
 
 @customElement("dm-maintenance-summary-card-editor")
@@ -159,23 +166,13 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
     this._discoveryInFlight = true;
 
     try {
-      const urlPaths = await fetchLovelaceDashboardUrlPaths(this.hass.connection);
+      const result = await findLovelaceDashboardConfig(
+        this.hass.connection,
+        (config) => (isMaintenanceDashboardConfig(config) ? config : undefined),
+      );
 
-      for (const urlPath of urlPaths) {
-        try {
-          const config = await this.hass.connection.sendMessagePromise<LovelaceDashboardConfig>({
-            type: "lovelace/config",
-            url_path: urlPath,
-            force: false,
-          });
-
-          if (config.strategy?.type === "custom:maintenance") {
-            this._resolvedMaintenanceSummaryPath = buildDashboardSummaryPath(urlPath);
-            break;
-          }
-        } catch {
-          // Skip dashboards that are not accessible.
-        }
+      if (result) {
+        this._resolvedMaintenanceSummaryPath = buildDashboardSummaryPath(result.urlPath);
       }
     } catch {
       // Keep fallback behavior.

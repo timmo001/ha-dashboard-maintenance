@@ -11,7 +11,7 @@ import {
 import { setupLocalize } from "./localize";
 import {
   buildDashboardSummaryPath,
-  fetchLovelaceDashboardUrlPaths,
+  findLovelaceDashboardConfig,
 } from "./lovelace-dashboard";
 import { getMaintenanceBatteryDevices } from "./maintenance-data";
 import { getMaintenanceRepairIssues } from "./repairs-data";
@@ -288,31 +288,20 @@ class DmMaintenanceSummaryCard extends LitElement {
     let found = false;
 
     try {
-      const urlPaths = await fetchLovelaceDashboardUrlPaths(this.hass.connection);
+      const result = await findLovelaceDashboardConfig(
+        this.hass.connection,
+        (config) => this._maintenanceStrategyFromConfig(config),
+      );
 
-      for (const urlPath of urlPaths) {
-        try {
-          const config = await this.hass.connection.sendMessagePromise({
-            type: "lovelace/config",
-            url_path: urlPath,
-            force: false,
-          });
-
-          const strategy = this._maintenanceStrategyFromConfig(config);
-          if (strategy) {
-            this._resolvedMaintenanceSummaryPath = buildDashboardSummaryPath(urlPath);
-            this._resolvedMaintenanceStrategy = {
-              ...strategy,
-              availability_safe_list_device_ids: normalizeAvailabilitySafeListDeviceIds(
-                strategy.availability_safe_list_device_ids,
-              ),
-            };
-            found = true;
-            break;
-          }
-        } catch {
-          // Ignore inaccessible dashboards and keep searching.
-        }
+      if (result) {
+        this._resolvedMaintenanceSummaryPath = buildDashboardSummaryPath(result.urlPath);
+        this._resolvedMaintenanceStrategy = {
+          ...result.match,
+          availability_safe_list_device_ids: normalizeAvailabilitySafeListDeviceIds(
+            result.match.availability_safe_list_device_ids,
+          ),
+        };
+        found = true;
       }
     } catch {
       // Keep fallback path behavior.
