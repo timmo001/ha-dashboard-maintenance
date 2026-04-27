@@ -9,6 +9,10 @@ import {
   normalizeAvailabilitySafeListDeviceIds,
 } from "./availability-data";
 import { setupLocalize } from "./localize";
+import {
+  buildDashboardSummaryPath,
+  fetchLovelaceDashboardUrlPaths,
+} from "./lovelace-dashboard";
 import { getMaintenanceBatteryDevices } from "./maintenance-data";
 import { getMaintenanceRepairIssues } from "./repairs-data";
 import { getMaintenanceStaleEntities } from "./stale-data";
@@ -42,10 +46,6 @@ interface ActionHandlerEvent extends Event {
   detail: {
     action?: "tap" | "hold" | "double_tap";
   };
-}
-
-interface LovelaceDashboardListEntry {
-  url_path?: string | null;
 }
 
 const SUMMARY_METRICS = [
@@ -129,9 +129,6 @@ const resolveMetric = (config?: DmMaintenanceSummaryCardConfig): SummaryMetric =
 
 const hasAction = (action?: SummaryTapAction): boolean =>
   action !== undefined && action.action !== "none";
-
-const buildDashboardSummaryPath = (urlPath?: string | null): string =>
-  urlPath ? `/${encodeURIComponent(urlPath)}/summary` : "/lovelace/summary";
 
 const tileCardStyle = css`
   ha-card:has(ha-tile-container[focused]) {
@@ -291,14 +288,7 @@ class DmMaintenanceSummaryCard extends LitElement {
     let found = false;
 
     try {
-      const dashboards = await this.hass.connection.sendMessagePromise<
-        LovelaceDashboardListEntry[]
-      >({ type: "lovelace/dashboards/list" });
-
-      const urlPaths = new Set<string | null>([null]);
-      for (const dashboard of dashboards) {
-        urlPaths.add(dashboard.url_path ?? null);
-      }
+      const urlPaths = await fetchLovelaceDashboardUrlPaths(this.hass.connection);
 
       for (const urlPath of urlPaths) {
         try {

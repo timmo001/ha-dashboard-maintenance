@@ -7,6 +7,10 @@ import type {
   SummaryMetric,
   SummaryTapAction,
 } from "./dm-maintenance-summary-card";
+import {
+  buildDashboardSummaryPath,
+  fetchLovelaceDashboardUrlPaths,
+} from "./lovelace-dashboard";
 import type { HomeAssistant } from "./types";
 
 const DEFAULT_SUMMARY: SummaryMetric = "batteries";
@@ -88,23 +92,16 @@ const normalizeHoldAction = (value: unknown): SummaryTapAction | undefined => {
   return action;
 };
 
-interface LovelaceDashboardListEntry {
-  url_path?: string | null;
-}
-
 interface LovelaceDashboardConfig {
   strategy?: {
     type?: string;
   };
 }
 
-const buildDashboardSummaryPath = (urlPath?: string | null): string =>
-  urlPath ? `/${encodeURIComponent(urlPath)}/summary` : "/lovelace/summary";
-
 const DISCOVERY_RETRY_INTERVAL_MS = 15_000;
 
 @customElement("dm-maintenance-summary-card-editor")
-export class DmMaintenanceSummaryCardEditor extends LitElement {
+class DmMaintenanceSummaryCardEditor extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
   @state() private _config?: DmMaintenanceSummaryCardConfig;
@@ -162,14 +159,7 @@ export class DmMaintenanceSummaryCardEditor extends LitElement {
     this._discoveryInFlight = true;
 
     try {
-      const dashboards = await this.hass.connection.sendMessagePromise<
-        LovelaceDashboardListEntry[]
-      >({ type: "lovelace/dashboards/list" });
-
-      const urlPaths = new Set<string | null>([null]);
-      for (const dashboard of dashboards) {
-        urlPaths.add(dashboard.url_path ?? null);
-      }
+      const urlPaths = await fetchLovelaceDashboardUrlPaths(this.hass.connection);
 
       for (const urlPath of urlPaths) {
         try {

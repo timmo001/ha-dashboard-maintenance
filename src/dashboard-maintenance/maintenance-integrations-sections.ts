@@ -18,7 +18,7 @@ import {
 import type { ConfigEntry, HomeAssistant } from "./types";
 
 /** Single list for summary: setup failures, then unload failures, then retry (matches full-view section order). */
-export const flattenGroupedIntegrationErrors = (
+const flattenGroupedIntegrationErrors = (
   grouped: GroupedIntegrationErrors,
 ): ConfigEntry[] => [
   ...grouped.setupFailed,

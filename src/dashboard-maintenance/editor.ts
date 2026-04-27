@@ -91,7 +91,7 @@ const isModuleEnabledKey = (value: string): value is ModuleEnabledKey =>
   MODULE_ENABLED_KEYS.has(value);
 
 @customElement("dashboard-maintenance-strategy-editor")
-export class DashboardMaintenanceStrategyEditor extends LitElement {
+class DashboardMaintenanceStrategyEditor extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
   @state() private _config?: MaintenanceDashboardStrategyConfig;
