@@ -137,6 +137,9 @@ const CARD_STYLES = `
   }
 `;
 
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 class DmAvailabilityDeviceCard extends HTMLElement {
   private _config?: DmAvailabilityDeviceCardConfig;
   private _hass?: HomeAssistant;
@@ -193,7 +196,10 @@ class DmAvailabilityDeviceCard extends HTMLElement {
   }
 
   private _build(): void {
-    const config = this._config!;
+    const config = this._config;
+    if (!config) {
+      return;
+    }
 
     const style = document.createElement("style");
     style.textContent = CARD_STYLES;
@@ -280,7 +286,11 @@ class DmAvailabilityDeviceCard extends HTMLElement {
   }
 
   private _update(): void {
-    const config = this._config!;
+    const config = this._config;
+    if (!config) {
+      return;
+    }
+
     const picture = config.picture;
     const shouldShowPicture = Boolean(picture) && picture !== this._failedPictureSrc;
 
@@ -416,10 +426,11 @@ class DmAvailabilityDeviceCard extends HTMLElement {
       const existingSafeList = normalizeAvailabilitySafeListDeviceIds(
         strategy.availability_safe_list_device_ids,
       );
-      const hasDevice = existingSafeList.includes(this._config.device_id);
+      const deviceId = this._config.device_id;
+      const hasDevice = existingSafeList.includes(deviceId);
       const nextSafeList = hasDevice
-        ? existingSafeList.filter((deviceId) => deviceId !== this._config!.device_id)
-        : [...existingSafeList, this._config.device_id];
+        ? existingSafeList.filter((safeListDeviceId) => safeListDeviceId !== deviceId)
+        : [...existingSafeList, deviceId];
 
       const nextConfig = {
         ...rawConfig,
@@ -506,10 +517,8 @@ class DmAvailabilityDeviceCard extends HTMLElement {
     availability_safe_list_device_ids?: string[];
   } {
     return (
-      typeof strategy === "object" &&
-      strategy !== null &&
-      "type" in strategy &&
-      (strategy as { type?: unknown }).type === "custom:maintenance"
+      isObjectRecord(strategy) &&
+      strategy.type === "custom:maintenance"
     );
   }
 }

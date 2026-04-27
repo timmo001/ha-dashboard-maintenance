@@ -48,12 +48,6 @@ interface LovelaceDashboardListEntry {
   url_path?: string | null;
 }
 
-interface LovelaceDashboardConfig {
-  strategy?: {
-    type?: string;
-  } & Partial<MaintenanceStrategyConfig>;
-}
-
 const SUMMARY_METRICS = [
   "batteries",
   "repairs",
@@ -61,6 +55,8 @@ const SUMMARY_METRICS = [
   "availability",
   "stale",
 ] as const;
+
+const SUMMARY_METRIC_VALUES = new Set<string>(SUMMARY_METRICS);
 
 const DEFAULT_METRIC: SummaryMetric = "batteries";
 const DEFAULT_NAVIGATION_PATH = "summary";
@@ -115,8 +111,16 @@ const COUNT_LABEL_KEY: Record<
   },
 };
 
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 const isSummaryMetric = (value: unknown): value is SummaryMetric =>
-  typeof value === "string" && SUMMARY_METRICS.includes(value as SummaryMetric);
+  typeof value === "string" && SUMMARY_METRIC_VALUES.has(value);
+
+const isMaintenanceStrategyConfig = (
+  value: unknown,
+): value is MaintenanceStrategyConfig =>
+  isObjectRecord(value) && value.type === "custom:maintenance";
 
 const resolveMetric = (config?: DmMaintenanceSummaryCardConfig): SummaryMetric => {
   const selected = config?.summary ?? config?.metric;
@@ -267,12 +271,11 @@ class DmMaintenanceSummaryCard extends LitElement {
   private _maintenanceStrategyFromConfig(
     config: unknown,
   ): MaintenanceStrategyConfig | undefined {
-    const strategy = (config as LovelaceDashboardConfig | undefined)?.strategy;
-    if (!strategy || strategy.type !== "custom:maintenance") {
+    if (!isObjectRecord(config) || !isMaintenanceStrategyConfig(config.strategy)) {
       return undefined;
     }
 
-    return strategy as MaintenanceStrategyConfig;
+    return config.strategy;
   }
 
   private async _discoverMaintenanceSummaryPath(): Promise<void> {

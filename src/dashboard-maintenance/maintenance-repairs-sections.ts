@@ -1,4 +1,5 @@
 import type { LocalizeFunc } from "./localize";
+import { isDefined } from "./entity-helpers";
 import { severityIcon, type MaintenanceRepairIssue } from "./repairs-data";
 import {
   limitAndMakeCards,
@@ -80,7 +81,7 @@ export const makeRepairsSections = (
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,
-  ].filter(Boolean) as LovelaceSectionConfig[];
+  ].filter(isDefined);
 
   if (sections.length > 0) {
     return sections;

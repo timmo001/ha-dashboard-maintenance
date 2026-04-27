@@ -19,6 +19,15 @@ const SUMMARY_OPTIONS: SummaryMetric[] = [
   "stale",
 ];
 
+type HaFormValueChangedEvent<T extends Record<string, unknown>> = CustomEvent<{
+  value: T;
+}>;
+
+const SUMMARY_OPTION_VALUES = new Set<string>(SUMMARY_OPTIONS);
+
+const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
 const SUMMARY_LABEL_KEY: Record<
   SummaryMetric,
   | "summary_card.metric.batteries"
@@ -43,10 +52,11 @@ const cleanText = (value: unknown): string | undefined => {
   return normalized.length > 0 ? normalized : undefined;
 };
 
+const isSummaryMetric = (value: unknown): value is SummaryMetric =>
+  typeof value === "string" && SUMMARY_OPTION_VALUES.has(value);
+
 const normalizeSummary = (value: unknown): SummaryMetric =>
-  SUMMARY_OPTIONS.includes(value as SummaryMetric)
-    ? (value as SummaryMetric)
-    : DEFAULT_SUMMARY;
+  isSummaryMetric(value) ? value : DEFAULT_SUMMARY;
 
 const isDefaultNavigateAction = (action?: SummaryTapAction): boolean =>
   !action ||
@@ -54,17 +64,16 @@ const isDefaultNavigateAction = (action?: SummaryTapAction): boolean =>
   (action.action === "navigate" && !cleanText(action.navigation_path));
 
 const normalizeTapAction = (value: unknown): SummaryTapAction | undefined => {
-  if (typeof value !== "object" || value === null) {
+  if (!isObjectRecord(value)) {
     return undefined;
   }
 
-  const action = value as SummaryTapAction;
-  if (action.action === "none") {
+  if (value.action === "none") {
     return { action: "none" };
   }
 
-  if (action.action === "navigate") {
-    const path = cleanText(action.navigation_path);
+  if (value.action === "navigate") {
+    const path = cleanText(value.navigation_path);
     return path ? { action: "navigate", navigation_path: path } : { action: "navigate" };
   }
 
@@ -281,13 +290,13 @@ export class DmMaintenanceSummaryCardEditor extends LitElement {
     return helpers[schema.name] ?? "";
   };
 
-  private _valueChanged(ev: CustomEvent): void {
+  private _valueChanged(ev: HaFormValueChangedEvent<Record<string, unknown>>): void {
     if (!this._config) {
       return;
     }
 
     ev.stopPropagation();
-    const value = ev.detail.value as Record<string, unknown>;
+    const value = ev.detail.value;
 
     const summary = normalizeSummary(value.summary);
     const title = cleanText(value.title);

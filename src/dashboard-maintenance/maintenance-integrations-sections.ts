@@ -1,4 +1,5 @@
 import type { LocalizeFunc } from "./localize";
+import { isDefined } from "./entity-helpers";
 import {
   countIntegrationErrors,
   getRepresentativeEntityContextForConfigEntries,
@@ -83,7 +84,7 @@ export const makeIntegrationsSections = async (
       : undefined,
   ];
 
-  return sections.filter(Boolean) as LovelaceSectionConfig[];
+  return sections.filter(isDefined);
 };
 
 export const makeIntegrationsSummarySection = async (

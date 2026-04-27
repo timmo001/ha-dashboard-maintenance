@@ -1,4 +1,5 @@
 import type { LocalizeFunc } from "./localize";
+import { isDefined } from "./entity-helpers";
 import {
   limitAndMakeCards,
   MAINTENANCE_COLUMN_SPAN,
@@ -108,7 +109,7 @@ export const makeUpdatesSections = (
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,
-  ].filter(Boolean) as LovelaceSectionConfig[];
+  ].filter(isDefined);
 
   if (sections.length > 0) {
     return sections;
