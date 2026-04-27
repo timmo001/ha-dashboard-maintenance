@@ -181,6 +181,49 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
     }
   }
 
+  private _buildFormData(config: DmMaintenanceSummaryCardConfig) {
+    const summary = normalizeSummary(config.summary ?? config.metric);
+    const defaultNavigationPath =
+      config.navigation_path || this._resolvedMaintenanceSummaryPath || "summary";
+    return {
+      summary,
+      title: config.title ?? "",
+      icon: config.icon ?? "",
+      tap_action: config.tap_action ?? {
+        action: "navigate",
+        navigation_path: defaultNavigationPath,
+      },
+      hold_action: config.hold_action ?? { action: "none" },
+    };
+  }
+
+  private _buildFormSchema(localize: (key: string) => string) {
+    return [
+      {
+        name: "summary",
+        selector: {
+          select: {
+            mode: "dropdown",
+            options: SUMMARY_OPTIONS.map((value) => ({
+              value,
+              label: localize(SUMMARY_LABEL_KEY[value]),
+            })),
+          },
+        },
+      },
+      { name: "title", selector: { text: {} } },
+      { name: "icon", selector: { icon: {} } },
+      {
+        name: "tap_action",
+        selector: { ui_action: { actions: ["navigate", "none"] } },
+      },
+      {
+        name: "hold_action",
+        selector: { ui_action: { actions: ["navigate", "none"] } },
+      },
+    ];
+  }
+
   protected render() {
     if (!this._config) {
       return nothing;
@@ -191,61 +234,14 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
     }
 
     const localize = setupLocalize(this.hass);
-    const summary = normalizeSummary(this._config.summary ?? this._config.metric);
-    const defaultNavigationPath =
-      this._config.navigation_path || this._resolvedMaintenanceSummaryPath || "summary";
+    const data = this._buildFormData(this._config);
+    const schema = this._buildFormSchema(localize);
 
     return html`
       <ha-form
         .hass=${this.hass}
-        .data=${{
-          summary,
-          title: this._config.title ?? "",
-          icon: this._config.icon ?? "",
-          tap_action: this._config.tap_action ?? {
-            action: "navigate",
-            navigation_path: defaultNavigationPath,
-          },
-          hold_action: this._config.hold_action ?? { action: "none" },
-        }}
-        .schema=${[
-          {
-            name: "summary",
-            selector: {
-              select: {
-                mode: "dropdown",
-                options: SUMMARY_OPTIONS.map((value) => ({
-                  value,
-                  label: localize(SUMMARY_LABEL_KEY[value]),
-                })),
-              },
-            },
-          },
-          {
-            name: "title",
-            selector: { text: {} },
-          },
-          {
-            name: "icon",
-            selector: { icon: {} },
-          },
-          {
-            name: "tap_action",
-            selector: {
-              ui_action: {
-                actions: ["navigate", "none"],
-              },
-            },
-          },
-          {
-            name: "hold_action",
-            selector: {
-              ui_action: {
-                actions: ["navigate", "none"],
-              },
-            },
-          },
-        ]}
+        .data=${data}
+        .schema=${schema}
         .computeLabel=${this._computeLabel}
         .computeHelper=${this._computeHelper}
         @value-changed=${this._valueChanged}

@@ -388,6 +388,30 @@ class DmMaintenanceSummaryCard extends LitElement {
     return Boolean(this.hass && Object.keys(this.hass.states).length > 0);
   }
 
+  private async _ensureMaintenanceStrategyResolved(): Promise<boolean> {
+    if (this._resolvedMaintenanceStrategy) {
+      return true;
+    }
+    if (this._dashboardNotFound) {
+      this._hasError = true;
+      return false;
+    }
+    await this._discoverMaintenanceSummaryPath();
+    return Boolean(this._resolvedMaintenanceStrategy);
+  }
+
+  private _commitCount(count: number): void {
+    const isReliableInitialCount = count > 0 || this._hasLoadedStateData();
+    this._count = count;
+    if (!this._countLoaded && !isReliableInitialCount) {
+      this._countLoaded = false;
+      this._scheduleInitialLoadRetry();
+    } else {
+      this._countLoaded = true;
+      this._clearInitialLoadRetryTimer();
+    }
+  }
+
   private async _refreshCount(force: boolean): Promise<void> {
     if (!this.hass || !this._config || this._refreshInFlight) {
       return;
@@ -401,32 +425,10 @@ class DmMaintenanceSummaryCard extends LitElement {
     this._lastRefreshAt = Date.now();
 
     try {
-      if (!this._resolvedMaintenanceStrategy) {
-        if (this._dashboardNotFound) {
-          this._hasError = true;
-          return;
-        }
-
-        await this._discoverMaintenanceSummaryPath();
-        if (!this._resolvedMaintenanceStrategy) {
-          return;
-        }
+      if (!(await this._ensureMaintenanceStrategyResolved())) {
+        return;
       }
-
-      const count = await this._computeCount();
-      const hasLoadedStateData = this._hasLoadedStateData();
-      const isReliableInitialCount = count > 0 || hasLoadedStateData;
-
-      if (!this._countLoaded && !isReliableInitialCount) {
-        this._count = count;
-        this._countLoaded = false;
-        this._scheduleInitialLoadRetry();
-      } else {
-        this._count = count;
-        this._countLoaded = true;
-        this._clearInitialLoadRetryTimer();
-      }
-
+      this._commitCount(await this._computeCount());
       this._hasError = false;
     } catch {
       this._hasError = true;
@@ -435,50 +437,84 @@ class DmMaintenanceSummaryCard extends LitElement {
     }
   }
 
+  private async _computeBatteryCount(hass: HomeAssistant): Promise<number> {
+    const devices = await getMaintenanceBatteryDevices(
+      hass,
+      this._resolvedMaintenanceStrategy?.battery_attention_threshold,
+    );
+    return devices.filter((device) => device.needsAttention).length;
+  }
+
+  private async _computeUpdatesCount(hass: HomeAssistant): Promise<number> {
+    const updates = await getMaintenanceUpdates(hass);
+    return updates.filter(
+      (update) =>
+        update.inProgress || update.skippedCurrentVersion || updateCanInstall(update),
+    ).length;
+  }
+
+  private async _computeAvailabilityCount(hass: HomeAssistant): Promise<number> {
+    const entities = await getMaintenanceAvailabilityEntities(
+      hass,
+      this._resolvedMaintenanceStrategy?.availability_safe_list_device_ids,
+    );
+    const grouped = await groupAvailabilityByDevice(hass, entities);
+    return grouped.devices.length + grouped.ungrouped.length;
+  }
+
+  private async _computeStaleCount(hass: HomeAssistant): Promise<number> {
+    const entities = await getMaintenanceStaleEntities(
+      hass,
+      this._resolvedMaintenanceStrategy?.stale_threshold_hours,
+    );
+    return entities.length;
+  }
+
   private async _computeCount(): Promise<number> {
-    if (!this.hass || !this._config) {
+    const hass = this.hass;
+    if (!hass || !this._config) {
       return 0;
     }
 
     const metric = resolveMetric(this._config);
-
     switch (metric) {
-      case "batteries": {
-        const devices = await getMaintenanceBatteryDevices(
-          this.hass,
-          this._resolvedMaintenanceStrategy?.battery_attention_threshold,
-        );
-        return devices.filter((device) => device.needsAttention).length;
-      }
-      case "repairs": {
-        const issues = await getMaintenanceRepairIssues(this.hass);
-        return issues.length;
-      }
-      case "updates": {
-        const updates = await getMaintenanceUpdates(this.hass);
-        return updates.filter(
-          (update) =>
-            update.inProgress || update.skippedCurrentVersion || updateCanInstall(update),
-        ).length;
-      }
-      case "availability": {
-        const entities = await getMaintenanceAvailabilityEntities(
-          this.hass,
-          this._resolvedMaintenanceStrategy?.availability_safe_list_device_ids,
-        );
-        const grouped = await groupAvailabilityByDevice(this.hass, entities);
-        return grouped.devices.length + grouped.ungrouped.length;
-      }
-      case "stale": {
-        const entities = await getMaintenanceStaleEntities(
-          this.hass,
-          this._resolvedMaintenanceStrategy?.stale_threshold_hours,
-        );
-        return entities.length;
-      }
+      case "batteries":
+        return this._computeBatteryCount(hass);
+      case "repairs":
+        return (await getMaintenanceRepairIssues(hass)).length;
+      case "updates":
+        return this._computeUpdatesCount(hass);
+      case "availability":
+        return this._computeAvailabilityCount(hass);
+      case "stale":
+        return this._computeStaleCount(hass);
       default:
         return 0;
     }
+  }
+
+  private _buildRenderModel(config: DmMaintenanceSummaryCardConfig) {
+    const localize = setupLocalize(this.hass);
+    const metric = resolveMetric(config);
+    const secondary = this._countLabel(metric);
+    const secondaryLoading =
+      !this._countLoaded && !this._hasError && !this._dashboardNotFound;
+    const tapAction = this._tapAction();
+    const holdAction = this._holdAction();
+    const hasTap = hasAction(tapAction);
+    const hasHold = hasAction(holdAction);
+    return {
+      metric,
+      icon: config.icon || DEFAULT_ICON,
+      title: config.title || localize("summary_card.title"),
+      secondary,
+      secondaryLoading,
+      secondaryText: secondaryLoading ? "" : secondary,
+      hasTap,
+      hasHold,
+      interactive: hasTap || hasHold,
+      isError: this._hasError || this._dashboardNotFound,
+    };
   }
 
   protected render() {
@@ -486,38 +522,25 @@ class DmMaintenanceSummaryCard extends LitElement {
       return html``;
     }
 
-    const localize = setupLocalize(this.hass);
-    const metric = resolveMetric(this._config);
-    const icon = this._config.icon || DEFAULT_ICON;
-    const title = this._config.title || localize("summary_card.title");
-    const secondary = this._countLabel(metric);
-    const secondaryLoading =
-      !this._countLoaded && !this._hasError && !this._dashboardNotFound;
-    const secondaryText = secondaryLoading ? "" : secondary;
-
-    const tapAction = this._tapAction();
-    const holdAction = this._holdAction();
-    const hasTap = hasAction(tapAction);
-    const hasHold = hasAction(holdAction);
-    const interactive = hasTap || hasHold;
+    const model = this._buildRenderModel(this._config);
 
     return html`
         <ha-card
-          class=${classMap({ error: this._hasError || this._dashboardNotFound })}
-          aria-label=${secondaryLoading ? title : `${title}: ${secondary}`}
-          style=${styleMap({ "--tile-color": METRIC_COLOR[metric] })}
+          class=${classMap({ error: model.isError })}
+          aria-label=${model.secondaryLoading ? model.title : `${model.title}: ${model.secondary}`}
+          style=${styleMap({ "--tile-color": METRIC_COLOR[model.metric] })}
         >
         <ha-tile-container
-          .interactive=${interactive}
-          .actionHandlerOptions=${{ hasTap, hasHold }}
+          .interactive=${model.interactive}
+          .actionHandlerOptions=${{ hasTap: model.hasTap, hasHold: model.hasHold }}
           @action=${this._handleAction}
         >
-          <ha-tile-icon slot="icon" .icon=${icon}></ha-tile-icon>
+          <ha-tile-icon slot="icon" .icon=${model.icon}></ha-tile-icon>
           <ha-tile-info
             slot="info"
-            .primary=${title}
-            .secondary=${secondaryText}
-            .secondaryLoading=${secondaryLoading}
+            .primary=${model.title}
+            .secondary=${model.secondaryText}
+            .secondaryLoading=${model.secondaryLoading}
           ></ha-tile-info>
         </ha-tile-container>
       </ha-card>
