@@ -76,7 +76,6 @@ const en = {
   "availability.device_unavailable_one": "{count} unavailable entity",
   "availability.device_unavailable_other": "{count} unavailable entities",
   "availability.ungrouped_entities": "Other entities",
-  "availability.safe_list_hold_hint": "Click and hold to hide this offline device from availability.",
   "availability.empty_no_issues_title": "No availability issues",
   "availability.empty_no_issues_content":
     "Home Assistant could not find any unavailable entities.",

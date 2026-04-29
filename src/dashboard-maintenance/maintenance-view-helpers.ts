@@ -27,38 +27,6 @@ import type {
   MaintenanceViewStrategyConfig,
 } from "./types";
 
-// ---------------------------------------------------------------------------
-// Brand access token for integration icons
-// ---------------------------------------------------------------------------
-
-let brandsAccessToken: string | null = null;
-
-/**
- * Fetch the brands access token from Home Assistant.
- * This token is required for the /api/brands/... proxy endpoints.
- */
-export const fetchBrandsAccessToken = async (
-  hass: HomeAssistant,
-): Promise<string | null> => {
-  if (brandsAccessToken) {
-    return brandsAccessToken;
-  }
-
-  if (!hass.connection) {
-    return null;
-  }
-
-  try {
-    const result = await hass.connection.sendMessagePromise<{ token: string }>({
-      type: "brands/access_token",
-    });
-    brandsAccessToken = result.token;
-    return brandsAccessToken;
-  } catch {
-    return null;
-  }
-};
-
 export type LovelaceCardConfig = Record<string, unknown>;
 export type LovelaceViewConfig = Record<string, unknown>;
 export type LovelaceSectionConfig = Record<string, unknown>;
@@ -257,6 +225,26 @@ interface TileCardEntity {
   displayName: string;
 }
 
+// The built-in "shortcut" card type requires Home Assistant 2026.5 or later.
+const makeShortcutCard = (
+  label: string,
+  description: string,
+  icon: string,
+  navigationPath: string,
+): LovelaceCardConfig => ({
+  type: "shortcut",
+  label,
+  description,
+  icon,
+  grid_options: {
+    columns: 6,
+  },
+  tap_action: {
+    action: "navigate",
+    navigation_path: navigationPath,
+  },
+});
+
 const makeTileCard = (
   entity: TileCardEntity,
   icon: string | undefined,
@@ -362,16 +350,11 @@ const INTEGRATION_STATE_LABEL: Partial<Record<string, TranslationKey>> = {
   failed_unload: "integration.state.failed_unload",
 };
 
-/**
- * Reuses the availability custom card style + brand icon pipeline for integrations.
- */
 export const makeIntegrationEntryCard = (
   localize: LocalizeFunc,
   entry: ConfigEntry,
-  brandsToken?: string | null,
   options?: {
     representativeEntityId?: string;
-    deviceId?: string | null;
     subentryId?: string;
   },
 ): LovelaceCardConfig => {
@@ -380,23 +363,14 @@ export const makeIntegrationEntryCard = (
   const stateKey = entry.state ? INTEGRATION_STATE_LABEL[entry.state] : undefined;
   const stateText = stateKey ? localize(stateKey) : (entry.state ?? "");
   const subtitle = entry.reason?.trim() ? `${stateText}: ${entry.reason.trim()}` : stateText;
-  const picture = brandsToken
-    ? `/api/brands/integration/${domain}/icon.png?token=${brandsToken}`
-    : null;
   const fallbackEntity = options?.representativeEntityId ?? `${domain}.integration`;
 
-  return {
-    type: "custom:dm-availability-device-card",
-    ...(options?.deviceId ? { device_id: options.deviceId } : {}),
-    device_name: entry.title || domain,
+  return makeShortcutCard(
+    entry.title || domain,
     subtitle,
-    picture,
-    icon: computeDomainIcon(fallbackEntity),
-    grid_options: {
-      columns: 6,
-    },
-    navigation_path: navPath,
-  };
+    computeDomainIcon(fallbackEntity),
+    navPath,
+  );
 };
 
 export const makeAvailabilityCard = (
@@ -774,44 +748,19 @@ export const makeHierarchySections = async <T extends AreaScopedItem>(
 };
 
 // ---------------------------------------------------------------------------
-// Device tile card builder (for availability device grouping)
+// Device shortcut card builder (for availability device grouping)
 // ---------------------------------------------------------------------------
 
-/**
- * Build a custom card that represents a device with availability issues.
- * Uses the `dm-availability-device-card` custom element so we can display
- * the device name and an arbitrary entity-count subtitle — something the
- * built-in tile card cannot do.
- *
- * Shows the integration brand icon via HA's proxy if a token is available,
- * otherwise falls back to the entity's domain icon.
- */
 export const makeAvailabilityDeviceCard = (
   device: MaintenanceAvailabilityDevice,
   subtitle: string,
-  brandsToken?: string | null,
-  options?: {
-    enableSafeToggle?: boolean;
-  },
 ): LovelaceCardConfig => {
-  const domain = device.integrationDomain || device.entities[0].entityId.split(".")[0];
-  const picture = brandsToken
-    ? `/api/brands/integration/${domain}/icon.png?token=${brandsToken}`
-    : null;
-
-  return {
-    type: "custom:dm-availability-device-card",
-    device_id: device.deviceId,
-    device_name: device.deviceName,
+  return makeShortcutCard(
+    device.deviceName,
     subtitle,
-    picture,
-    icon: computeDomainIcon(device.entities[0].entityId),
-    grid_options: {
-      columns: 6,
-    },
-    enable_safe_toggle: options?.enableSafeToggle === true,
-    navigation_path: `/config/devices/device/${device.deviceId}`,
-  };
+    computeDomainIcon(device.entities[0].entityId),
+    `/config/devices/device/${device.deviceId}`,
+  );
 };
 
 // ---------------------------------------------------------------------------

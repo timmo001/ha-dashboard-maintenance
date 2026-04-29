@@ -228,6 +228,10 @@ strategy:
   stale_threshold_hours: 48
 ```
 
+## Requirements
+
+- Home Assistant **2026.5** or later (required for the built-in `shortcut` card used in the availability and integrations views).
+
 ## Current limitations
 
 - It does not add a new built-in or system dashboard.
