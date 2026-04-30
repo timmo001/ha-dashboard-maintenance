@@ -26,7 +26,7 @@ const compareAreas = (left: AreaRegistryEntry, right: AreaRegistryEntry): number
   left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
 
 @customElement("ll-strategy-dashboard-maintenance")
-export class MaintenanceDashboardStrategy extends ReactiveElement {
+class MaintenanceDashboardStrategy extends ReactiveElement {
   public static async generate(
     config: MaintenanceDashboardStrategyConfig,
     hass: HomeAssistant,

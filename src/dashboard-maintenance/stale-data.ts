@@ -57,7 +57,7 @@ const STALE_RELEVANT_DOMAINS = new Set([
 const isStaleRelevantDomain = (entityId: string): boolean =>
   STALE_RELEVANT_DOMAINS.has(computeDomain(entityId));
 
-export const normalizeStaleThresholdHours = (
+const normalizeStaleThresholdHours = (
   hours?: number,
 ): number => {
   if (typeof hours !== "number" || Number.isNaN(hours) || hours <= 0) {
@@ -143,6 +143,6 @@ export const getMaintenanceStaleEntities = async (
 
 export const staleEntityIcon = (): string => "mdi:clock-alert-outline";
 
-export const hasStaleEntities = (
+const hasStaleEntities = (
   entities: MaintenanceStaleEntity[],
 ): boolean => entities.length > 0;

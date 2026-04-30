@@ -152,13 +152,13 @@ export const availabilityIssueIcon = (
     ? "mdi:lan-disconnect"
     : "mdi:help-rhombus-outline";
 
-export const availabilityHeadingIcon = (): string => "mdi:lan-disconnect";
+const availabilityHeadingIcon = (): string => "mdi:lan-disconnect";
 
-export const hasAvailabilityIssues = (
+const hasAvailabilityIssues = (
   entities: MaintenanceAvailabilityEntity[],
 ): boolean => entities.length > 0;
 
-export const isAvailabilityDomainRelevant = (entityId: string): boolean =>
+const isAvailabilityDomainRelevant = (entityId: string): boolean =>
   computeDomain(entityId) !== "group";
 
 // ---------------------------------------------------------------------------

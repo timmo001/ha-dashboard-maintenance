@@ -10,7 +10,7 @@ export interface GroupedIntegrationErrors {
   setupRetry: ConfigEntry[];
 }
 
-export const groupErroredConfigEntries = (
+const groupErroredConfigEntries = (
   entries: Record<string, ConfigEntry>,
   language?: string,
 ): GroupedIntegrationErrors => {
@@ -64,7 +64,7 @@ export const countIntegrationErrors = (grouped: GroupedIntegrationErrors): numbe
   grouped.setupFailed.length + grouped.failedUnload.length + grouped.setupRetry.length;
 
 /** Icon for integration error tiles — same pattern as `availabilityIssueIcon` + explicit `makeTileCard` icon. */
-export const integrationIssueIcon = (entry: ConfigEntry): string => {
+const integrationIssueIcon = (entry: ConfigEntry): string => {
   switch (entry.state) {
     case "migration_error":
       return "mdi:database-alert";

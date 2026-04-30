@@ -7,7 +7,7 @@ import type {
 export const computeDomain = (entityId: string): string =>
   entityId.split(".", 1)[0] || "";
 
-export const computeObjectId = (entityId: string): string =>
+const computeObjectId = (entityId: string): string =>
   entityId.split(".", 2)[1] || entityId;
 
 /** Map of entity domains to their Material Design icons. */
@@ -59,7 +59,7 @@ export const computeStateName = (stateObj: HassEntity): string =>
 export const computeDeviceName = (device: DeviceRegistryEntry | undefined): string | undefined =>
   (device?.name_by_user || device?.name)?.trim();
 
-export const computeEntityEntryName = (
+const computeEntityEntryName = (
   entry: EntityRegistryEntry | undefined,
 ): string | undefined => {
   if (entry?.name != null) {

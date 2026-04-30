@@ -72,22 +72,22 @@ export const MAINTENANCE_COLUMN_SPAN = 3;
 // Tile naming presets
 // ---------------------------------------------------------------------------
 
-export const NAME_AREA_DEVICE_ENTITY: EntityNameItem[] = [
+const NAME_AREA_DEVICE_ENTITY: EntityNameItem[] = [
   { type: "area" },
   { type: "device" },
   { type: "entity" },
 ];
 
-export const NAME_AREA_DEVICE: EntityNameItem[] = [
+const NAME_AREA_DEVICE: EntityNameItem[] = [
   { type: "area" },
   { type: "device" },
 ];
 
-export const NAME_DEVICE: EntityNameItem[] = [
+const NAME_DEVICE: EntityNameItem[] = [
   { type: "device" },
 ];
 
-export const NAME_DEVICE_ENTITY: EntityNameItem[] = [
+const NAME_DEVICE_ENTITY: EntityNameItem[] = [
   { type: "device" },
   { type: "entity" },
 ];
@@ -96,10 +96,10 @@ export const NAME_DEVICE_ENTITY: EntityNameItem[] = [
 // Tile naming aliases by view context
 // ---------------------------------------------------------------------------
 
-export const ATTENTION_BATTERY_NAME = NAME_AREA_DEVICE;
-export const AREA_BATTERY_NAME = NAME_DEVICE;
-export const AVAILABILITY_ENTITY_NAME = NAME_AREA_DEVICE_ENTITY;
-export const STALE_ENTITY_NAME = NAME_DEVICE_ENTITY;
+const ATTENTION_BATTERY_NAME = NAME_AREA_DEVICE;
+const AREA_BATTERY_NAME = NAME_DEVICE;
+const AVAILABILITY_ENTITY_NAME = NAME_AREA_DEVICE_ENTITY;
+const STALE_ENTITY_NAME = NAME_DEVICE_ENTITY;
 
 export const batteryAttentionTileName = (
   device: MaintenanceBatteryDevice,
@@ -119,7 +119,7 @@ export const staleEntityTileName = (
 ): string | EntityNameItem[] =>
   entity.deviceId ? STALE_ENTITY_NAME : entity.displayName;
 
-export const VIEW_DEFAULTS: Record<
+const VIEW_DEFAULTS: Record<
   MaintenanceViewMode,
   { columnSpan: number; icon: string; path: string; titleKey: TranslationKey }
 > = {
@@ -189,7 +189,7 @@ export const makeHeadingCard = (
     : {}),
 });
 
-export const makeEmptyStateCard = (
+const makeEmptyStateCard = (
   title: string,
   content: string,
   icon = "mdi:battery-outline",
@@ -341,7 +341,7 @@ export const makeRepairCard = (
  * Opens the integration page with the config entry row highlighted (HA reads hash as URLSearchParams).
  * Optional `subentryId` is included for forward compatibility if the UI gains hash support.
  */
-export const configEntryNavigationPath = (
+const configEntryNavigationPath = (
   domain: string,
   entryId: string,
   subentryId?: string,

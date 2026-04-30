@@ -183,6 +183,6 @@ export const makeAvailabilitySections = async (
   return [makeGridSection(cards, MAINTENANCE_COLUMN_SPAN)];
 };
 
-export const getAvailabilitySummaryData = async (
+const getAvailabilitySummaryData = async (
   hass: HomeAssistant,
 ): Promise<MaintenanceAvailabilityEntity[]> => getMaintenanceAvailabilityEntities(hass);

@@ -79,7 +79,7 @@ const batteryStatePriority = (stateObj: HassEntity): number => {
   return 2;
 };
 
-export const normalizeBatteryAttentionThreshold = (
+const normalizeBatteryAttentionThreshold = (
   threshold?: number,
 ): number =>
   typeof threshold === "number" && !Number.isNaN(threshold)
