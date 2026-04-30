@@ -3,9 +3,14 @@ import { customElement, property, state } from "lit/decorators.js";
 import { setupLocalize } from "./localize";
 import { normalizeAvailabilitySafeListDeviceIds } from "./availability-data";
 import type {
+  BatteryTileFeature,
   HomeAssistant,
   MaintenanceDashboardStrategyConfig,
   MaintenanceModuleId,
+} from "./types";
+import {
+  BATTERY_TILE_FEATURES,
+  DEFAULT_BATTERY_TILE_FEATURE,
 } from "./types";
 import { DEFAULT_BATTERY_ATTENTION_THRESHOLD } from "./maintenance-data";
 import {
@@ -15,7 +20,6 @@ import {
 } from "./stale-data";
 
 const DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS = true;
-const DEFAULT_BATTERY_TREND_GRAPH_ENABLED = true;
 
 interface ModuleDescriptor {
   id: MaintenanceModuleId;
@@ -90,6 +94,9 @@ const isMaintenanceModuleId = (value: string): value is MaintenanceModuleId =>
 
 const isModuleEnabledKey = (value: string): value is ModuleEnabledKey =>
   MODULE_ENABLED_KEYS.has(value);
+
+const isBatteryTileFeature = (value: string): value is BatteryTileFeature =>
+  (BATTERY_TILE_FEATURES as readonly string[]).includes(value);
 
 @customElement("dashboard-maintenance-strategy-editor")
 class DashboardMaintenanceStrategyEditor extends LitElement {
@@ -267,8 +274,8 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     const showAttentionBatteriesInAreas =
       config.show_attention_batteries_in_areas ??
       DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS;
-    const batteryTrendGraphEnabled =
-      config.battery_trend_graph_enabled ?? DEFAULT_BATTERY_TREND_GRAPH_ENABLED;
+    const batteryTileFeature =
+      config.battery_tile_feature ?? DEFAULT_BATTERY_TILE_FEATURE;
 
     if (!customElements.get("ha-form")) {
       return html`
@@ -301,18 +308,26 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           <div class="helper">
             ${localize("editor.show_attention_in_areas_helper")}
           </div>
-          <label for="battery-trend-graph-enabled">
-            <input
-              id="battery-trend-graph-enabled"
-              type="checkbox"
-              .checked=${batteryTrendGraphEnabled}
-              @change=${this._nativeTrendGraphChanged}
-            />
-            ${localize("editor.battery_trend_graph_label")}
-          </label>
-          <div class="helper">
-            ${localize("editor.battery_trend_graph_helper")}
-          </div>
+          <fieldset class="radio-group">
+            <legend>${localize("editor.battery_tile_feature_label")}</legend>
+            ${BATTERY_TILE_FEATURES.map(
+              (option) => html`
+                <label>
+                  <input
+                    type="radio"
+                    name="battery-tile-feature"
+                    value=${option}
+                    .checked=${batteryTileFeature === option}
+                    @change=${this._nativeBatteryTileFeatureChanged}
+                  />
+                  ${localize(`editor.battery_tile_feature_option_${option}`)}
+                </label>
+              `,
+            )}
+            <div class="helper">
+              ${localize("editor.battery_tile_feature_helper")}
+            </div>
+          </fieldset>
         </div>
       `;
     }
@@ -323,7 +338,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         .data=${{
           battery_attention_threshold: threshold,
           show_attention_batteries_in_areas: showAttentionBatteriesInAreas,
-          battery_trend_graph_enabled: batteryTrendGraphEnabled,
+          battery_tile_feature: batteryTileFeature,
         }}
         .schema=${[
           {
@@ -344,9 +359,17 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
             },
           },
           {
-            name: "battery_trend_graph_enabled",
+            name: "battery_tile_feature",
             selector: {
-              boolean: {},
+              select: {
+                mode: "list",
+                options: BATTERY_TILE_FEATURES.map((option) => ({
+                  value: option,
+                  label: localize(
+                    `editor.battery_tile_feature_option_${option}`,
+                  ),
+                })),
+              },
             },
           },
         ]}
@@ -418,9 +441,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       show_attention_batteries_in_areas: localize(
         "editor.show_attention_in_areas_label",
       ),
-      battery_trend_graph_enabled: localize(
-        "editor.battery_trend_graph_label",
-      ),
+      battery_tile_feature: localize("editor.battery_tile_feature_label"),
       availability_safe_list_device_ids: localize(
         "editor.availability_safe_list_label",
       ),
@@ -441,9 +462,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       show_attention_batteries_in_areas: localize(
         "editor.show_attention_in_areas_helper",
       ),
-      battery_trend_graph_enabled: localize(
-        "editor.battery_trend_graph_helper",
-      ),
+      battery_tile_feature: localize("editor.battery_tile_feature_helper"),
       availability_safe_list_device_ids: localize(
         "editor.availability_safe_list_helper",
       ),
@@ -483,7 +502,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     ev: HaFormValueChangedEvent<{
       battery_attention_threshold?: number;
       show_attention_batteries_in_areas?: boolean;
-      battery_trend_graph_enabled?: boolean;
+      battery_tile_feature?: BatteryTileFeature;
     }>,
   ): void {
     if (!this._config) {
@@ -495,8 +514,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     const threshold = ev.detail.value.battery_attention_threshold;
     const showAttentionBatteriesInAreas =
       ev.detail.value.show_attention_batteries_in_areas;
-    const batteryTrendGraphEnabled =
-      ev.detail.value.battery_trend_graph_enabled;
+    const batteryTileFeature = ev.detail.value.battery_tile_feature;
     this._emitConfigUpdate({
       battery_attention_threshold:
         threshold === DEFAULT_BATTERY_ATTENTION_THRESHOLD
@@ -507,10 +525,10 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS
           ? undefined
           : showAttentionBatteriesInAreas,
-      battery_trend_graph_enabled:
-        batteryTrendGraphEnabled === DEFAULT_BATTERY_TREND_GRAPH_ENABLED
+      battery_tile_feature:
+        batteryTileFeature === DEFAULT_BATTERY_TILE_FEATURE
           ? undefined
-          : batteryTrendGraphEnabled,
+          : batteryTileFeature,
     });
   }
 
@@ -598,17 +616,22 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     });
   }
 
-  private _nativeTrendGraphChanged(ev: Event): void {
+  private _nativeBatteryTileFeatureChanged(ev: Event): void {
     if (!(ev.currentTarget instanceof HTMLInputElement)) {
       return;
     }
+    if (!ev.currentTarget.checked) {
+      return;
+    }
 
-    const batteryTrendGraphEnabled = ev.currentTarget.checked;
+    const value = ev.currentTarget.value;
+    if (!isBatteryTileFeature(value)) {
+      return;
+    }
+
     this._emitConfigUpdate({
-      battery_trend_graph_enabled:
-        batteryTrendGraphEnabled === DEFAULT_BATTERY_TREND_GRAPH_ENABLED
-          ? undefined
-          : batteryTrendGraphEnabled,
+      battery_tile_feature:
+        value === DEFAULT_BATTERY_TILE_FEATURE ? undefined : value,
     });
   }
 

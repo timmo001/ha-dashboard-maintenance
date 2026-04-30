@@ -153,9 +153,12 @@ const en = {
     "Devices below this battery level, or with unknown/unavailable battery state, are marked as needing attention.",
   "editor.show_attention_in_areas_helper":
     "When enabled, low-battery devices appear in the top attention section and again in their area sections.",
-  "editor.battery_trend_graph_label": "Show battery trend graph",
-  "editor.battery_trend_graph_helper":
-    "Adds a trend graph feature to each battery tile to visualise recent battery level history.",
+  "editor.battery_tile_feature_label": "Battery tile feature",
+  "editor.battery_tile_feature_helper":
+    "Choose which feature to render on each battery tile.",
+  "editor.battery_tile_feature_option_none": "None",
+  "editor.battery_tile_feature_option_bar": "Bar gauge",
+  "editor.battery_tile_feature_option_trend": "Trend graph",
   "editor.repairs_header": "Repairs",
   "editor.updates_header": "Updates",
   "editor.availability_header": "Availability",

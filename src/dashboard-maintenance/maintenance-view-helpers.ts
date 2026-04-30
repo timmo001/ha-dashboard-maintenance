@@ -20,12 +20,14 @@ import type { MaintenanceUpdateEntity } from "./update-data";
 import { updateCanInstall } from "./update-data";
 import type {
   AreaRegistryEntry,
+  BatteryTileFeature,
   ConfigEntry,
   FloorRegistryEntry,
   HomeAssistant,
   MaintenanceViewMode,
   MaintenanceViewStrategyConfig,
 } from "./types";
+import { DEFAULT_BATTERY_TILE_FEATURE } from "./types";
 
 export type LovelaceCardConfig = Record<string, unknown>;
 export type LovelaceViewConfig = Record<string, unknown>;
@@ -271,18 +273,18 @@ const makeTileCard = (
 // ---------------------------------------------------------------------------
 
 export interface BatteryCardOptions extends NameOnlyTileOptions {
-  includeTrendGraph?: boolean;
+  feature?: BatteryTileFeature;
 }
 
 export const makeBatteryCard = (
   device: MaintenanceBatteryDevice,
   options?: BatteryCardOptions,
 ): LovelaceCardConfig => {
+  const feature = options?.feature ?? DEFAULT_BATTERY_TILE_FEATURE;
   const features: unknown[] = [];
-  if (device.level !== null) {
+  if (feature === "bar" && device.level !== null) {
     features.push({ type: "bar-gauge", min: 0, max: 100 });
-  }
-  if (options?.includeTrendGraph) {
+  } else if (feature === "trend") {
     features.push({ type: "trend-graph" });
   }
   return makeTileCard(

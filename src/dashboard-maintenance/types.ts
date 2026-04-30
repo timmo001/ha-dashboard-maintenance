@@ -80,6 +80,11 @@ export interface HomeAssistant {
   states: Record<string, HassEntity>;
 }
 
+export const BATTERY_TILE_FEATURES = ["none", "bar", "trend"] as const;
+export type BatteryTileFeature = (typeof BATTERY_TILE_FEATURES)[number];
+
+export const DEFAULT_BATTERY_TILE_FEATURE: BatteryTileFeature = "bar";
+
 export type MaintenanceModuleId =
   | "batteries"
   | "repairs"
@@ -93,7 +98,7 @@ export interface MaintenanceStrategyConfig {
   batteries_enabled?: boolean;
   battery_attention_threshold?: number;
   show_attention_batteries_in_areas?: boolean;
-  battery_trend_graph_enabled?: boolean;
+  battery_tile_feature?: BatteryTileFeature;
   repairs_enabled?: boolean;
   updates_enabled?: boolean;
   availability_enabled?: boolean;

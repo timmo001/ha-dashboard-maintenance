@@ -10,17 +10,20 @@ import {
   makeHierarchySections,
   makeSection,
 } from "./maintenance-view-helpers";
-import type {
-  HomeAssistant,
-  MaintenanceViewStrategyConfig,
+import {
+  DEFAULT_BATTERY_TILE_FEATURE,
+  type BatteryTileFeature,
+  type HomeAssistant,
+  type MaintenanceViewStrategyConfig,
 } from "./types";
 
 export const buildBatteryAreaShowMorePath = (areaId: string): string =>
   `batteries-area-${areaId}`;
 
-const isBatteryTrendGraphEnabled = (
-  config: Pick<MaintenanceViewStrategyConfig, "battery_trend_graph_enabled">,
-): boolean => config.battery_trend_graph_enabled !== false;
+const resolveBatteryFeature = (
+  config: Pick<MaintenanceViewStrategyConfig, "battery_tile_feature">,
+): BatteryTileFeature =>
+  config.battery_tile_feature ?? DEFAULT_BATTERY_TILE_FEATURE;
 
 export const makeBatteryAttentionSection = (
   localize: LocalizeFunc,
@@ -37,7 +40,7 @@ export const makeBatteryAttentionSection = (
     return null;
   }
 
-  const includeTrendGraph = isBatteryTrendGraphEnabled(config);
+  const feature = resolveBatteryFeature(config);
 
   return makeSection(
     localize("battery.heading_needing_attention"),
@@ -48,7 +51,7 @@ export const makeBatteryAttentionSection = (
       (device) =>
         makeBatteryCard(device, {
           name: batteryAttentionTileName(device),
-          includeTrendGraph,
+          feature,
         }),
       options,
     ),
@@ -61,13 +64,13 @@ export const makeBatterySections = async (
   localize: LocalizeFunc,
   hass: HomeAssistant,
   batteryDevices: MaintenanceBatteryDevice[],
-  config: Pick<MaintenanceViewStrategyConfig, "battery_trend_graph_enabled">,
+  config: Pick<MaintenanceViewStrategyConfig, "battery_tile_feature">,
   options?: {
     limit?: number;
     showMorePath?: string;
   },
 ): Promise<LovelaceSectionConfig[]> => {
-  const includeTrendGraph = isBatteryTrendGraphEnabled(config);
+  const feature = resolveBatteryFeature(config);
   return makeHierarchySections(
     localize,
     hass,
@@ -76,7 +79,7 @@ export const makeBatterySections = async (
       makeCard: (device) =>
         makeBatteryCard(device, {
           name: batteryAreaTileName(device),
-          includeTrendGraph,
+          feature,
         }),
       buildAreaShowMorePath: buildBatteryAreaShowMorePath,
       heading: localize("battery.heading_devices"),
