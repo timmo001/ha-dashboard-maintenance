@@ -270,20 +270,30 @@ const makeTileCard = (
 // Entity-type card builders (thin wrappers around makeTileCard)
 // ---------------------------------------------------------------------------
 
+export interface BatteryCardOptions extends NameOnlyTileOptions {
+  includeTrendGraph?: boolean;
+}
+
 export const makeBatteryCard = (
   device: MaintenanceBatteryDevice,
-  options?: NameOnlyTileOptions,
-): LovelaceCardConfig =>
-  makeTileCard(
+  options?: BatteryCardOptions,
+): LovelaceCardConfig => {
+  const features: unknown[] = [];
+  if (device.level !== null) {
+    features.push({ type: "bar-gauge", min: 0, max: 100 });
+  }
+  if (options?.includeTrendGraph) {
+    features.push({ type: "trend-graph" });
+  }
+  return makeTileCard(
     { entityId: device.entityId, deviceId: device.deviceId, displayName: device.deviceName },
     device.needsAttention ? "mdi:battery-alert-variant-outline" : undefined,
     {
-      ...options,
-      ...(device.level !== null
-        ? { features: [{ type: "bar-gauge", min: 0, max: 100 }] }
-        : {}),
+      name: options?.name,
+      ...(features.length > 0 ? { features } : {}),
     },
   );
+};
 
 export const makeUpdateCard = (
   update: MaintenanceUpdateEntity,

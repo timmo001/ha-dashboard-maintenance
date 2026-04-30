@@ -93,6 +93,7 @@ export interface MaintenanceStrategyConfig {
   batteries_enabled?: boolean;
   battery_attention_threshold?: number;
   show_attention_batteries_in_areas?: boolean;
+  battery_trend_graph_enabled?: boolean;
   repairs_enabled?: boolean;
   updates_enabled?: boolean;
   availability_enabled?: boolean;

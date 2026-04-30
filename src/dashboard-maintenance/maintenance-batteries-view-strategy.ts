@@ -71,6 +71,7 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
         localize,
         hass,
         areaSectionDevices,
+        config,
         limitOpts,
       )),
     );
