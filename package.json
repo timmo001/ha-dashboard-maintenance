@@ -18,7 +18,7 @@
     "lit": "^3.3.2"
   },
   "devDependencies": {
-    "rolldown": "1.0.0-rc.17",
+    "rolldown": "1.0.0-rc.18",
     "simple-git-hooks": "^2.13.1",
     "typescript": "^6.0.3"
   }
