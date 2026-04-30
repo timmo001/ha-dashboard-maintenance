@@ -5,8 +5,8 @@ import {
   isEntityRegistryVisible,
   isAvailabilityIssue,
   isDefined,
-  isStateVisible,
   parseTimestamp,
+  resolveStateContext,
 } from "./entity-helpers";
 import {
   fetchDeviceRegistry,
@@ -89,17 +89,16 @@ export const getMaintenanceStaleEntities = async (
       !isAvailabilityIssue(stateObj),
     )
     .map<MaintenanceStaleEntity | undefined>((stateObj) => {
-      if (!isStateVisible(stateObj)) {
+      const ctx = resolveStateContext(
+        stateObj,
+        entities,
+        devices,
+        hasEntityRegistry,
+      );
+      if (!ctx) {
         return undefined;
       }
-
-      const entry = entities[stateObj.entity_id];
-      if (hasEntityRegistry && !entry) {
-        return undefined;
-      }
-
-      const deviceId = entry?.device_id || undefined;
-      const device = deviceId ? devices[deviceId] : undefined;
+      const { entry, deviceId, device } = ctx;
 
       if ((entry && !isEntityRegistryVisible(entry)) || device?.disabled_by) {
         return undefined;

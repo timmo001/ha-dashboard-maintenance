@@ -125,6 +125,39 @@ export const isEntityRegistryVisible = (
   return entry.hidden !== true && !entry.hidden_by && !entry.disabled_by;
 };
 
+export interface ResolvedStateContext {
+  entry: EntityRegistryEntry | undefined;
+  deviceId: string | undefined;
+  device: DeviceRegistryEntry | undefined;
+}
+
+/**
+ * Resolve the registry context for a `stateObj` shared by maintenance pipelines.
+ * Returns `undefined` when the state should be skipped: hidden by attributes, or
+ * absent from a populated entity registry. Otherwise returns the entity entry,
+ * its device id, and the device entry.
+ */
+export const resolveStateContext = (
+  stateObj: HassEntity,
+  entities: Record<string, EntityRegistryEntry>,
+  devices: Record<string, DeviceRegistryEntry>,
+  hasEntityRegistry: boolean,
+): ResolvedStateContext | undefined => {
+  if (!isStateVisible(stateObj)) {
+    return undefined;
+  }
+
+  const entry = entities[stateObj.entity_id];
+  if (hasEntityRegistry && !entry) {
+    return undefined;
+  }
+
+  const deviceId = entry?.device_id || undefined;
+  const device = deviceId ? devices[deviceId] : undefined;
+
+  return { entry, deviceId, device };
+};
+
 /** Filter items by area ID. Works with any entity/device that has an areaId field. */
 export const filterItemsByArea = <T extends { areaId?: string | null }>(
   items: T[],

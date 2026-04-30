@@ -6,8 +6,8 @@ import {
   isEntityRegistryVisible,
   isAvailabilityIssue,
   isDefined,
-  isStateVisible,
   parseTimestamp,
+  resolveStateContext,
 } from "./entity-helpers";
 import {
   fetchConfigEntries,
@@ -86,17 +86,16 @@ export const getMaintenanceAvailabilityEntities = async (
   return Object.values(hass.states)
     .filter(isRelevantAvailabilityIssue)
     .map<MaintenanceAvailabilityEntity | undefined>((stateObj) => {
-      if (!isStateVisible(stateObj)) {
+      const ctx = resolveStateContext(
+        stateObj,
+        entities,
+        devices,
+        hasEntityRegistry,
+      );
+      if (!ctx) {
         return undefined;
       }
-
-      const entry = entities[stateObj.entity_id];
-      if (hasEntityRegistry && !entry) {
-        return undefined;
-      }
-
-      const deviceId = entry?.device_id || undefined;
-      const device = deviceId ? devices[deviceId] : undefined;
+      const { entry, deviceId, device } = ctx;
       const relatedConfigEntryIds = new Set<string>(
         [
           entry?.config_entry_id,
