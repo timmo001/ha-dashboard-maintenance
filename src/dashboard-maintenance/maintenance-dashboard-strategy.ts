@@ -1,7 +1,7 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import "./editor";
-import { setupLocalize } from "./localize";
+import { setupLocalize, type LocalizeFunc } from "./localize";
 import { getMaintenanceAreas } from "./maintenance-data";
 import { buildBatteryAreaShowMorePath } from "./maintenance-battery-sections";
 import { MaintenanceBatteriesViewStrategy } from "./maintenance-batteries-view-strategy";
@@ -25,6 +25,246 @@ type LovelaceConfig = Record<string, unknown>;
 const compareAreas = (left: AreaRegistryEntry, right: AreaRegistryEntry): number =>
   left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
 
+const buildSummaryView = (
+  config: MaintenanceDashboardStrategyConfig,
+  localize: LocalizeFunc,
+  hass: HomeAssistant,
+): Promise<LovelaceConfig> =>
+  MaintenanceSummaryViewStrategy.generate(
+    {
+      ...config,
+      view: "summary",
+      title: localize("view.summary"),
+      path: "summary",
+      icon: "mdi:home-heart",
+      heading_navigation_path: "batteries",
+    },
+    hass,
+  );
+
+const buildBatteriesViews = async (
+  config: MaintenanceDashboardStrategyConfig,
+  localize: LocalizeFunc,
+  areas: AreaRegistryEntry[],
+  hass: HomeAssistant,
+): Promise<LovelaceConfig[]> => {
+  const icon = "mdi:battery-heart-variant";
+  return [
+    await MaintenanceBatteriesViewStrategy.generate(
+      {
+        ...config,
+        view: "batteries",
+        title: localize("view.batteries"),
+        path: "batteries",
+        icon,
+      },
+      hass,
+    ),
+    await MaintenanceBatteriesViewStrategy.generate(
+      {
+        ...config,
+        view: "batteries",
+        title: localize("view.all_batteries"),
+        path: "batteries-all",
+        icon,
+        subview: true,
+      },
+      hass,
+    ),
+    ...(await Promise.all(
+      areas.map((area) =>
+        MaintenanceBatteriesViewStrategy.generate(
+          {
+            ...config,
+            area_id: area.area_id,
+            view: "batteries",
+            title: area.name,
+            path: buildBatteryAreaShowMorePath(area.area_id),
+            icon,
+            subview: true,
+          },
+          hass,
+        ),
+      ),
+    )),
+  ];
+};
+
+const buildRepairsViews = async (
+  config: MaintenanceDashboardStrategyConfig,
+  localize: LocalizeFunc,
+  hass: HomeAssistant,
+): Promise<LovelaceConfig[]> => {
+  const icon = "mdi:wrench";
+  return [
+    await MaintenanceRepairsViewStrategy.generate(
+      {
+        ...config,
+        view: "repairs",
+        title: localize("view.repairs"),
+        path: "repairs",
+        icon,
+      },
+      hass,
+    ),
+    await MaintenanceRepairsViewStrategy.generate(
+      {
+        ...config,
+        view: "repairs",
+        title: localize("view.all_repairs"),
+        path: "repairs-all",
+        icon,
+        subview: true,
+      },
+      hass,
+    ),
+  ];
+};
+
+const buildUpdatesViews = async (
+  config: MaintenanceDashboardStrategyConfig,
+  localize: LocalizeFunc,
+  hass: HomeAssistant,
+): Promise<LovelaceConfig[]> => {
+  const icon = "mdi:package-up";
+  return [
+    await MaintenanceUpdatesViewStrategy.generate(
+      {
+        ...config,
+        view: "updates",
+        title: localize("view.updates"),
+        path: "updates",
+        icon,
+      },
+      hass,
+    ),
+    await MaintenanceUpdatesViewStrategy.generate(
+      {
+        ...config,
+        view: "updates",
+        title: localize("view.all_updates"),
+        path: "updates-all",
+        icon,
+        subview: true,
+      },
+      hass,
+    ),
+  ];
+};
+
+const buildAvailabilityViews = async (
+  config: MaintenanceDashboardStrategyConfig,
+  localize: LocalizeFunc,
+  areas: AreaRegistryEntry[],
+  hass: HomeAssistant,
+): Promise<LovelaceConfig[]> => {
+  const icon = "mdi:help-circle-outline";
+  return [
+    await MaintenanceAvailabilityViewStrategy.generate(
+      {
+        ...config,
+        view: "availability",
+        title: localize("view.availability"),
+        path: "availability",
+        icon,
+      },
+      hass,
+    ),
+    await MaintenanceAvailabilityViewStrategy.generate(
+      {
+        ...config,
+        view: "availability",
+        title: localize("view.all_availability"),
+        path: "availability-all",
+        icon,
+        subview: true,
+      },
+      hass,
+    ),
+    ...(await Promise.all(
+      areas.map((area) =>
+        MaintenanceAvailabilityViewStrategy.generate(
+          {
+            ...config,
+            area_id: area.area_id,
+            view: "availability",
+            title: localize("view.availability_area", { area: area.name }),
+            path: buildAvailabilityAreaShowMorePath(area.area_id),
+            icon,
+            subview: true,
+          },
+          hass,
+        ),
+      ),
+    )),
+  ];
+};
+
+const buildIntegrationsViews = async (
+  config: MaintenanceDashboardStrategyConfig,
+  localize: LocalizeFunc,
+  hass: HomeAssistant,
+): Promise<LovelaceConfig[]> => [
+  await MaintenanceIntegrationsViewStrategy.generate(
+    {
+      ...config,
+      view: "integrations",
+      title: localize("view.integrations"),
+      path: "integrations",
+      icon: "mdi:puzzle",
+    },
+    hass,
+  ),
+];
+
+const buildStaleViews = async (
+  config: MaintenanceDashboardStrategyConfig,
+  localize: LocalizeFunc,
+  areas: AreaRegistryEntry[],
+  hass: HomeAssistant,
+): Promise<LovelaceConfig[]> => {
+  const icon = "mdi:clock-alert-outline";
+  return [
+    await MaintenanceStaleViewStrategy.generate(
+      {
+        ...config,
+        view: "stale",
+        title: localize("view.stale"),
+        path: "stale",
+        icon,
+      },
+      hass,
+    ),
+    await MaintenanceStaleViewStrategy.generate(
+      {
+        ...config,
+        view: "stale",
+        title: localize("view.all_stale"),
+        path: "stale-all",
+        icon,
+        subview: true,
+      },
+      hass,
+    ),
+    ...(await Promise.all(
+      areas.map((area) =>
+        MaintenanceStaleViewStrategy.generate(
+          {
+            ...config,
+            area_id: area.area_id,
+            view: "stale",
+            title: localize("view.stale_area", { area: area.name }),
+            path: buildStaleAreaShowMorePath(area.area_id),
+            icon,
+            subview: true,
+          },
+          hass,
+        ),
+      ),
+    )),
+  ];
+};
+
 @customElement("ll-strategy-dashboard-maintenance")
 class MaintenanceDashboardStrategy extends ReactiveElement {
   public static async generate(
@@ -34,220 +274,32 @@ class MaintenanceDashboardStrategy extends ReactiveElement {
     const localize = setupLocalize(hass);
     const areas = Object.values(await getMaintenanceAreas(hass)).sort(compareAreas);
 
-    const views: Record<string, unknown>[] = [];
+    const views: LovelaceConfig[] = [
+      await buildSummaryView(config, localize, hass),
+    ];
 
-    /* --- Summary (always present) --- */
-    views.push(
-      await MaintenanceSummaryViewStrategy.generate(
-        {
-          ...config,
-          view: "summary",
-          title: localize("view.summary"),
-          path: "summary",
-          icon: "mdi:home-heart",
-          heading_navigation_path: "batteries",
-        },
-        hass,
-      ),
-    );
-
-    /* --- Batteries --- */
     if (isModuleEnabled(config, "batteries")) {
-      views.push(
-        await MaintenanceBatteriesViewStrategy.generate(
-          {
-            ...config,
-            view: "batteries",
-            title: localize("view.batteries"),
-            path: "batteries",
-            icon: "mdi:battery-heart-variant",
-          },
-          hass,
-        ),
-        await MaintenanceBatteriesViewStrategy.generate(
-          {
-            ...config,
-            view: "batteries",
-            title: localize("view.all_batteries"),
-            path: "batteries-all",
-            icon: "mdi:battery-heart-variant",
-            subview: true,
-          },
-          hass,
-        ),
-        ...(await Promise.all(
-          areas.map((area) =>
-            MaintenanceBatteriesViewStrategy.generate(
-              {
-                ...config,
-                area_id: area.area_id,
-                view: "batteries",
-                title: area.name,
-                path: buildBatteryAreaShowMorePath(area.area_id),
-                icon: "mdi:battery-heart-variant",
-                subview: true,
-              },
-              hass,
-            ),
-          ),
-        )),
-      );
+      views.push(...(await buildBatteriesViews(config, localize, areas, hass)));
     }
 
-    /* --- Repairs --- */
     if (isModuleEnabled(config, "repairs")) {
-      views.push(
-        await MaintenanceRepairsViewStrategy.generate(
-          {
-            ...config,
-            view: "repairs",
-            title: localize("view.repairs"),
-            path: "repairs",
-            icon: "mdi:wrench",
-          },
-          hass,
-        ),
-        await MaintenanceRepairsViewStrategy.generate(
-          {
-            ...config,
-            view: "repairs",
-            title: localize("view.all_repairs"),
-            path: "repairs-all",
-            icon: "mdi:wrench",
-            subview: true,
-          },
-          hass,
-        ),
-      );
+      views.push(...(await buildRepairsViews(config, localize, hass)));
     }
 
-    /* --- Updates --- */
     if (isModuleEnabled(config, "updates")) {
-      views.push(
-        await MaintenanceUpdatesViewStrategy.generate(
-          {
-            ...config,
-            view: "updates",
-            title: localize("view.updates"),
-            path: "updates",
-            icon: "mdi:package-up",
-          },
-          hass,
-        ),
-        await MaintenanceUpdatesViewStrategy.generate(
-          {
-            ...config,
-            view: "updates",
-            title: localize("view.all_updates"),
-            path: "updates-all",
-            icon: "mdi:package-up",
-            subview: true,
-          },
-          hass,
-        ),
-      );
+      views.push(...(await buildUpdatesViews(config, localize, hass)));
     }
 
-    /* --- Availability --- */
     if (isModuleEnabled(config, "availability")) {
-      views.push(
-        await MaintenanceAvailabilityViewStrategy.generate(
-          {
-            ...config,
-            view: "availability",
-            title: localize("view.availability"),
-            path: "availability",
-            icon: "mdi:help-circle-outline",
-          },
-          hass,
-        ),
-        await MaintenanceAvailabilityViewStrategy.generate(
-          {
-            ...config,
-            view: "availability",
-            title: localize("view.all_availability"),
-            path: "availability-all",
-            icon: "mdi:help-circle-outline",
-            subview: true,
-          },
-          hass,
-        ),
-        ...(await Promise.all(
-          areas.map((area) =>
-            MaintenanceAvailabilityViewStrategy.generate(
-              {
-                ...config,
-                area_id: area.area_id,
-                view: "availability",
-                title: localize("view.availability_area", { area: area.name }),
-                path: buildAvailabilityAreaShowMorePath(area.area_id),
-                icon: "mdi:help-circle-outline",
-                subview: true,
-              },
-              hass,
-            ),
-          ),
-        )),
-      );
+      views.push(...(await buildAvailabilityViews(config, localize, areas, hass)));
     }
 
-    /* --- Integrations --- */
     if (isModuleEnabled(config, "integrations")) {
-      views.push(
-        await MaintenanceIntegrationsViewStrategy.generate(
-          {
-            ...config,
-            view: "integrations",
-            title: localize("view.integrations"),
-            path: "integrations",
-            icon: "mdi:puzzle",
-          },
-          hass,
-        ),
-      );
+      views.push(...(await buildIntegrationsViews(config, localize, hass)));
     }
 
-    /* --- Stale --- */
     if (isModuleEnabled(config, "stale")) {
-      views.push(
-        await MaintenanceStaleViewStrategy.generate(
-          {
-            ...config,
-            view: "stale",
-            title: localize("view.stale"),
-            path: "stale",
-            icon: "mdi:clock-alert-outline",
-          },
-          hass,
-        ),
-        await MaintenanceStaleViewStrategy.generate(
-          {
-            ...config,
-            view: "stale",
-            title: localize("view.all_stale"),
-            path: "stale-all",
-            icon: "mdi:clock-alert-outline",
-            subview: true,
-          },
-          hass,
-        ),
-        ...(await Promise.all(
-          areas.map((area) =>
-            MaintenanceStaleViewStrategy.generate(
-              {
-                ...config,
-                area_id: area.area_id,
-                view: "stale",
-                title: localize("view.stale_area", { area: area.name }),
-                path: buildStaleAreaShowMorePath(area.area_id),
-                icon: "mdi:clock-alert-outline",
-                subview: true,
-              },
-              hass,
-            ),
-          ),
-        )),
-      );
+      views.push(...(await buildStaleViews(config, localize, areas, hass)));
     }
 
     return { views };
