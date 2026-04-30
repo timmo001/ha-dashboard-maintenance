@@ -83,7 +83,7 @@ export interface HomeAssistant {
 export const BATTERY_TILE_FEATURES = ["none", "bar", "trend"] as const;
 export type BatteryTileFeature = (typeof BATTERY_TILE_FEATURES)[number];
 
-export const DEFAULT_BATTERY_TILE_FEATURE: BatteryTileFeature = "bar";
+export const DEFAULT_BATTERY_TILE_FEATURE: BatteryTileFeature = "trend";
 
 export type MaintenanceModuleId =
   | "batteries"
