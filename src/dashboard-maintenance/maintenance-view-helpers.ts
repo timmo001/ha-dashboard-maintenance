@@ -564,14 +564,13 @@ export interface HierarchySectionsConfig<T> {
   unassignedFallbackLabel: TranslationKey;
 }
 
-const makeFloorSection = <T extends AreaScopedItem>(
+const makeAreaSection = <T extends AreaScopedItem>(
   localize: LocalizeFunc,
   hass: HomeAssistant,
   config: HierarchySectionsConfig<T>,
-  floor: FloorRegistryEntry,
   areaIds: string[],
   areas: Record<string, AreaRegistryEntry>,
-  floorCount: number,
+  headingCard: LovelaceCardConfig,
   limit?: number,
 ): LovelaceSectionConfig | null => {
   const areaCards = makeAreaCards(
@@ -589,50 +588,7 @@ const makeFloorSection = <T extends AreaScopedItem>(
     return null;
   }
 
-  return makeGridSection(
-    [
-      makeHeadingCard(floorCount > 1 ? floor.name : localize("common.areas"), {
-        icon: floorHeadingIcon(floor),
-      }),
-      ...areaCards,
-    ],
-    MAINTENANCE_COLUMN_SPAN,
-  );
-};
-
-const makeTopLevelAreasSection = <T extends AreaScopedItem>(
-  localize: LocalizeFunc,
-  hass: HomeAssistant,
-  config: HierarchySectionsConfig<T>,
-  areaIds: string[],
-  areas: Record<string, AreaRegistryEntry>,
-  floorCount: number,
-  limit?: number,
-): LovelaceSectionConfig | null => {
-  const areaCards = makeAreaCards(
-    localize,
-    areaIds,
-    areas,
-    hass,
-    config.items,
-    config.makeCard,
-    config.buildAreaShowMorePath,
-    { limit },
-  );
-
-  if (areaCards.length === 0) {
-    return null;
-  }
-
-  return makeGridSection(
-    [
-      makeHeadingCard(
-        floorCount > 1 ? localize("common.other_areas") : localize("common.areas"),
-      ),
-      ...areaCards,
-    ],
-    MAINTENANCE_COLUMN_SPAN,
-  );
+  return makeGridSection([headingCard, ...areaCards], MAINTENANCE_COLUMN_SPAN);
 };
 
 const makeUnassignedSection = <T extends AreaScopedItem>(
@@ -714,14 +670,15 @@ export const makeHierarchySections = async <T extends AreaScopedItem>(
       continue;
     }
 
-    const floorSection = makeFloorSection(
+    const floorSection = makeAreaSection(
       localize,
       hass,
       config,
-      floor,
       floorStructure.areas,
       areas,
-      floorCount,
+      makeHeadingCard(floorCount > 1 ? floor.name : localize("common.areas"), {
+        icon: floorHeadingIcon(floor),
+      }),
       options?.limit,
     );
 
@@ -731,13 +688,15 @@ export const makeHierarchySections = async <T extends AreaScopedItem>(
   }
 
   if (hierarchy.areas.length > 0) {
-    const topLevelAreasSection = makeTopLevelAreasSection(
+    const topLevelAreasSection = makeAreaSection(
       localize,
       hass,
       config,
       hierarchy.areas,
       areas,
-      floorCount,
+      makeHeadingCard(
+        floorCount > 1 ? localize("common.other_areas") : localize("common.areas"),
+      ),
       options?.limit,
     );
 
