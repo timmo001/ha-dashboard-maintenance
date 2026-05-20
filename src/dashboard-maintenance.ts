@@ -1,4 +1,5 @@
 import "./dashboard-maintenance/dm-maintenance-summary-card";
+import "./dashboard-maintenance/dm-system-metric-card";
 import "./dashboard-maintenance/editor";
 import "./dashboard-maintenance/maintenance-availability-view-strategy";
 import "./dashboard-maintenance/maintenance-batteries-view-strategy";
@@ -6,6 +7,7 @@ import "./dashboard-maintenance/maintenance-dashboard-strategy";
 import "./dashboard-maintenance/maintenance-repairs-view-strategy";
 import "./dashboard-maintenance/maintenance-stale-view-strategy";
 import "./dashboard-maintenance/maintenance-summary-view-strategy";
+import "./dashboard-maintenance/maintenance-system-view-strategy";
 import "./dashboard-maintenance/maintenance-integrations-view-strategy";
 import "./dashboard-maintenance/maintenance-updates-view-strategy";
 import { MAINTENANCE_DASHBOARD_IMAGES } from "./dashboard-maintenance/strategy-images";

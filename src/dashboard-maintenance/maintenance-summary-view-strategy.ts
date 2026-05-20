@@ -13,6 +13,7 @@ import { makeStaleSummarySection } from "./maintenance-stale-sections";
 import { getMaintenanceStaleEntities } from "./stale-data";
 import { getGroupedIntegrationErrors } from "./integrations-data";
 import { makeIntegrationsSummarySection } from "./maintenance-integrations-sections";
+import { makeSystemSummarySection } from "./maintenance-system-sections";
 import {
   makeEmptyStateSection,
   makeViewConfig,
@@ -34,6 +35,15 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
     const localize = setupLocalize(hass);
 
     const rawSections: (LovelaceSectionConfig | null)[] = [];
+
+    if (isModuleEnabled(config, "system")) {
+      rawSections.push(
+        await makeSystemSummarySection(localize, hass, {
+          limit: SUMMARY_ITEM_LIMIT,
+          showMorePath: "system",
+        }),
+      );
+    }
 
     if (isModuleEnabled(config, "batteries")) {
       const batteryDevices = await getMaintenanceBatteryDevices(

@@ -13,6 +13,8 @@ import { buildStaleAreaShowMorePath } from "./maintenance-stale-sections";
 import { MaintenanceStaleViewStrategy } from "./maintenance-stale-view-strategy";
 import { MaintenanceSummaryViewStrategy } from "./maintenance-summary-view-strategy";
 import { MaintenanceIntegrationsViewStrategy } from "./maintenance-integrations-view-strategy";
+import { MaintenanceSystemViewStrategy } from "./maintenance-system-view-strategy";
+import { hasSystemData } from "./system-data";
 import type {
   AreaRegistryEntry,
   HomeAssistant,
@@ -41,6 +43,26 @@ const buildSummaryView = (
     },
     hass,
   );
+
+const buildSystemView = async (
+  config: MaintenanceDashboardStrategyConfig,
+  localize: LocalizeFunc,
+  hass: HomeAssistant,
+): Promise<LovelaceConfig[]> => {
+  const icon = "mdi:server";
+  return [
+    await MaintenanceSystemViewStrategy.generate(
+      {
+        ...config,
+        view: "system",
+        title: localize("view.system"),
+        path: "system",
+        icon,
+      },
+      hass,
+    ),
+  ];
+};
 
 const buildBatteriesViews = async (
   config: MaintenanceDashboardStrategyConfig,
@@ -277,6 +299,10 @@ class MaintenanceDashboardStrategy extends ReactiveElement {
     const views: LovelaceConfig[] = [
       await buildSummaryView(config, localize, hass),
     ];
+
+    if (isModuleEnabled(config, "system") && await hasSystemData(hass)) {
+      views.push(...(await buildSystemView(config, localize, hass)));
+    }
 
     if (isModuleEnabled(config, "batteries")) {
       views.push(...(await buildBatteriesViews(config, localize, areas, hass)));

@@ -4,6 +4,7 @@ const en = {
 
   // View titles
   "view.summary": "Summary",
+  "view.system": "System",
   "view.batteries": "Batteries",
   "view.all_batteries": "All batteries",
   "view.repairs": "Repairs",
@@ -17,6 +18,14 @@ const en = {
   "view.all_stale": "All stale",
   "view.stale_area": "Stale - {area}",
   "view.integrations": "Integrations",
+
+  // System sections
+  "system.heading": "System",
+  "system.heading_hardware": "Hardware",
+  "system.heading_sensors": "Sensors",
+  "system.empty_title": "No system data available",
+  "system.empty_content":
+    "System APIs are not available. This typically requires Home Assistant OS or a Supervisor installation.",
 
   // Integration sections
   "integration.heading": "Integrations",
@@ -145,6 +154,7 @@ const en = {
   "common.show_count_more": "Show {count} more",
 
   // Editor
+  "editor.system_header": "System",
   "editor.batteries_header": "Batteries",
   "editor.battery_threshold_label": "Battery attention threshold",
   "editor.show_attention_in_areas_label":

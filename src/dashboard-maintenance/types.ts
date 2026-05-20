@@ -86,6 +86,7 @@ export type BatteryTileFeature = (typeof BATTERY_TILE_FEATURES)[number];
 export const DEFAULT_BATTERY_TILE_FEATURE: BatteryTileFeature = "trend";
 
 export type MaintenanceModuleId =
+  | "system"
   | "batteries"
   | "repairs"
   | "updates"
@@ -95,6 +96,7 @@ export type MaintenanceModuleId =
 
 export interface MaintenanceStrategyConfig {
   type: "custom:maintenance";
+  system_enabled?: boolean;
   batteries_enabled?: boolean;
   battery_attention_threshold?: number;
   show_attention_batteries_in_areas?: boolean;
@@ -110,6 +112,7 @@ export interface MaintenanceStrategyConfig {
 
 export type MaintenanceViewMode =
   | "summary"
+  | "system"
   | "batteries"
   | "repairs"
   | "updates"

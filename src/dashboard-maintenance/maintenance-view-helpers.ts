@@ -129,6 +129,12 @@ const VIEW_DEFAULTS: Record<
     path: "summary",
     icon: "mdi:home-heart",
   },
+  system: {
+    columnSpan: MAINTENANCE_COLUMN_SPAN,
+    titleKey: "view.system",
+    path: "system",
+    icon: "mdi:server",
+  },
   batteries: {
     columnSpan: MAINTENANCE_COLUMN_SPAN,
     titleKey: "view.batteries",

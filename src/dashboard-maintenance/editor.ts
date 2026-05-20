@@ -25,6 +25,7 @@ interface ModuleDescriptor {
   id: MaintenanceModuleId;
   icon: string;
   headerKey:
+    | "editor.system_header"
     | "editor.batteries_header"
     | "editor.updates_header"
     | "editor.repairs_header"
@@ -32,6 +33,7 @@ interface ModuleDescriptor {
     | "editor.availability_header"
     | "editor.integrations_header";
   enabledKey:
+    | "system_enabled"
     | "batteries_enabled"
     | "updates_enabled"
     | "repairs_enabled"
@@ -41,6 +43,12 @@ interface ModuleDescriptor {
 }
 
 const MODULES = [
+  {
+    id: "system",
+    icon: "mdi:server",
+    headerKey: "editor.system_header",
+    enabledKey: "system_enabled",
+  },
   {
     id: "batteries",
     icon: "mdi:battery-heart-variant",
