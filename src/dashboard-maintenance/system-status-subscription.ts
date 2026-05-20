@@ -276,3 +276,79 @@ export const probeSupervisorAvailable = async (
   const info = await fetchHostInfo(hass);
   return info !== null;
 };
+
+// ---------------------------------------------------------------------------
+// Integration setup time (integration/setup_info)
+// ---------------------------------------------------------------------------
+
+export interface IntegrationSetupData {
+  /** Setup time of the slowest integration (seconds) — the actual startup bottleneck. */
+  slowestSeconds: number;
+  /** Domain of the slowest integration. */
+  slowestDomain: string;
+}
+
+let setupInfoCache: {
+  data: IntegrationSetupData;
+  fetchedAt: number;
+} | null = null;
+
+let setupInfoFetchPromise: Promise<IntegrationSetupData | null> | null = null;
+
+const SETUP_INFO_CACHE_TTL_MS = 60_000;
+
+/**
+ * Fetch integration setup times. Caches for 60 seconds.
+ * Returns `null` if the API is unavailable.
+ */
+export const fetchIntegrationSetupInfo = async (
+  hass: HomeAssistant,
+): Promise<IntegrationSetupData | null> => {
+  if (
+    setupInfoCache &&
+    Date.now() - setupInfoCache.fetchedAt < SETUP_INFO_CACHE_TTL_MS
+  ) {
+    return setupInfoCache.data;
+  }
+
+  if (setupInfoFetchPromise) {
+    return setupInfoFetchPromise;
+  }
+
+  if (!hass.connection) {
+    return null;
+  }
+
+  setupInfoFetchPromise = (async (): Promise<IntegrationSetupData | null> => {
+    try {
+      const response = await hass.connection!.sendMessagePromise<
+        Array<{ domain: string; seconds?: number }>
+      >({ type: "integration/setup_info" });
+
+      if (!Array.isArray(response) || response.length === 0) {
+        return null;
+      }
+
+      let slowestDomain = "";
+      let slowestSeconds = 0;
+
+      for (const entry of response) {
+        const s = entry.seconds ?? 0;
+        if (s > slowestSeconds) {
+          slowestSeconds = s;
+          slowestDomain = entry.domain;
+        }
+      }
+
+      const data: IntegrationSetupData = { slowestDomain, slowestSeconds };
+      setupInfoCache = { data, fetchedAt: Date.now() };
+      return data;
+    } catch {
+      return null;
+    } finally {
+      setupInfoFetchPromise = null;
+    }
+  })();
+
+  return setupInfoFetchPromise;
+};

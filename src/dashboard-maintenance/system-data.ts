@@ -107,6 +107,9 @@ export const getAvailableSystemMetrics = async (
     metrics.push({ metric: "uptime" });
   }
 
+  // Integration startup time is always available (core WebSocket API)
+  metrics.push({ metric: "integration_startup" });
+
   return metrics;
 };
 

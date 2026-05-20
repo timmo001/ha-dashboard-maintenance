@@ -3,8 +3,10 @@ import type { PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import {
   fetchHostInfo,
+  fetchIntegrationSetupInfo,
   subscribeSystemStatus,
   type HostInfoData,
+  type IntegrationSetupData,
   type SystemStatusData,
 } from "./system-status-subscription";
 import type { HomeAssistant } from "./types";
@@ -20,7 +22,8 @@ export type SystemMetricType =
   | "disk_percent"
   | "disk_free"
   | "disk_health"
-  | "uptime";
+  | "uptime"
+  | "integration_startup";
 
 export interface DmSystemMetricCardConfig {
   type: string;
@@ -42,6 +45,7 @@ const METRIC_ICONS: Record<SystemMetricType, string> = {
   disk_free: "mdi:harddisk",
   disk_health: "mdi:harddisk",
   uptime: "mdi:clock-check-outline",
+  integration_startup: "mdi:puzzle-outline",
 };
 
 const METRIC_LABELS: Record<SystemMetricType, string> = {
@@ -52,6 +56,7 @@ const METRIC_LABELS: Record<SystemMetricType, string> = {
   disk_free: "Disk free",
   disk_health: "Drive health",
   uptime: "Uptime",
+  integration_startup: "Integration startup",
 };
 
 const METRIC_COLORS: Record<SystemMetricType, string> = {
@@ -62,6 +67,7 @@ const METRIC_COLORS: Record<SystemMetricType, string> = {
   disk_free: "var(--info-color)",
   disk_health: "var(--success-color)",
   uptime: "var(--success-color)",
+  integration_startup: "var(--info-color)",
 };
 
 const HOST_INFO_REFRESH_MS = 60_000;
@@ -73,6 +79,7 @@ const METRIC_NAV_PATH: Partial<Record<SystemMetricType, string>> = {
   disk_percent: "/config/storage",
   disk_free: "/config/storage",
   disk_health: "/config/storage",
+  integration_startup: "/config/repairs",
 };
 
 const SYSTEM_METRIC_TYPES = new Set<string>([
@@ -83,6 +90,7 @@ const SYSTEM_METRIC_TYPES = new Set<string>([
   "disk_free",
   "disk_health",
   "uptime",
+  "integration_startup",
 ]);
 
 // ---------------------------------------------------------------------------
@@ -97,6 +105,15 @@ const isStreamMetric = (metric: SystemMetricType): boolean =>
 
 const needsBothSources = (metric: SystemMetricType): boolean =>
   metric === "memory_percent" || metric === "disk_percent";
+
+const isHostMetric = (metric: SystemMetricType): boolean =>
+  metric === "disk_percent" ||
+  metric === "disk_free" ||
+  metric === "disk_health" ||
+  metric === "uptime";
+
+const isSetupInfoMetric = (metric: SystemMetricType): boolean =>
+  metric === "integration_startup";
 
 const formatPercent = (value: number): string => `${value.toFixed(1)}%`;
 
@@ -215,6 +232,19 @@ const formatHostSecondary = (
   }
 };
 
+const formatSetupInfoValue = (data: IntegrationSetupData): string => {
+  const s = data.slowestSeconds;
+  if (s >= 60) {
+    const min = Math.floor(s / 60);
+    const sec = Math.round(s % 60);
+    return sec > 0 ? `${min}m ${sec}s` : `${min}m`;
+  }
+  return `${s.toFixed(1)}s`;
+};
+
+const formatSetupInfoSecondary = (data: IntegrationSetupData): string =>
+  data.slowestDomain || "";
+
 // ---------------------------------------------------------------------------
 // Card element
 // ---------------------------------------------------------------------------
@@ -247,8 +277,11 @@ class DmSystemMetricCard extends LitElement {
   @state() private _streamSecondary = "";
   @state() private _hostValue = "";
   @state() private _hostSecondary = "";
+  @state() private _setupInfoValue = "";
+  @state() private _setupInfoSecondary = "";
   @state() private _streamReady = false;
   @state() private _hostReady = false;
+  @state() private _setupInfoReady = false;
 
   private _unsubStream: (() => void) | null = null;
   private _hostRefreshTimer?: number;
@@ -313,8 +346,12 @@ class DmSystemMetricCard extends LitElement {
       this._setupStream();
     }
 
-    if (!isStreamMetric(metric) || needsBothSources(metric)) {
+    if (isHostMetric(metric) || needsBothSources(metric)) {
       this._setupHostInfo();
+    }
+
+    if (isSetupInfoMetric(metric)) {
+      void this._refreshSetupInfo();
     }
   }
 
@@ -356,6 +393,19 @@ class DmSystemMetricCard extends LitElement {
     }
   }
 
+  private async _refreshSetupInfo(): Promise<void> {
+    if (!this.hass) {
+      return;
+    }
+
+    const data = await fetchIntegrationSetupInfo(this.hass);
+    if (data) {
+      this._setupInfoReady = true;
+      this._setupInfoValue = formatSetupInfoValue(data);
+      this._setupInfoSecondary = formatSetupInfoSecondary(data);
+    }
+  }
+
   private _startHostRefreshTimer(): void {
     if (this._hostRefreshTimer !== undefined) {
       return;
@@ -379,10 +429,13 @@ class DmSystemMetricCard extends LitElement {
 
     this._streamReady = false;
     this._hostReady = false;
+    this._setupInfoReady = false;
     this._streamValue = "";
     this._streamSecondary = "";
     this._hostValue = "";
     this._hostSecondary = "";
+    this._setupInfoValue = "";
+    this._setupInfoSecondary = "";
   }
 
   // ---------------------------------------------------------------------------
@@ -413,7 +466,8 @@ class DmSystemMetricCard extends LitElement {
   /**
    * Whether the card has all data needed for its metric.
    * Stream-only metrics need the stream; host-only need host info;
-   * mixed metrics (memory_percent, disk_percent) need both.
+   * mixed metrics (memory_percent, disk_percent) need both;
+   * setup info metrics need the integration/setup_info response.
    */
   private _isLoaded(): boolean {
     if (!this._config) {
@@ -421,12 +475,16 @@ class DmSystemMetricCard extends LitElement {
     }
     const metric = this._config.metric;
     const needsStream = isStreamMetric(metric);
-    const needsHost = !isStreamMetric(metric) || needsBothSources(metric);
+    const needsHost = isHostMetric(metric) || needsBothSources(metric);
+    const needsSetupInfo = isSetupInfoMetric(metric);
 
     if (needsStream && !this._streamReady) {
       return false;
     }
     if (needsHost && !this._hostReady) {
+      return false;
+    }
+    if (needsSetupInfo && !this._setupInfoReady) {
       return false;
     }
     return true;
@@ -443,12 +501,19 @@ class DmSystemMetricCard extends LitElement {
     const color = this._config.color || METRIC_COLORS[metric];
     const loaded = this._isLoaded();
     const interactive = metric in METRIC_NAV_PATH;
-    const value = isStreamMetric(metric)
-      ? this._streamValue
-      : this._hostValue;
-    const secondary = isStreamMetric(metric)
-      ? this._streamSecondary
-      : this._hostSecondary;
+
+    let value: string;
+    let secondary: string;
+    if (isStreamMetric(metric)) {
+      value = this._streamValue;
+      secondary = this._streamSecondary;
+    } else if (isSetupInfoMetric(metric)) {
+      value = this._setupInfoValue;
+      secondary = this._setupInfoSecondary;
+    } else {
+      value = this._hostValue;
+      secondary = this._hostSecondary;
+    }
 
     return html`
       <ha-card style="--tile-color: ${color}">
