@@ -238,7 +238,8 @@ class DmSystemMetricCard extends LitElement {
   @state() private _streamSecondary = "";
   @state() private _hostValue = "";
   @state() private _hostSecondary = "";
-  @state() private _available = false;
+  @state() private _streamReady = false;
+  @state() private _hostReady = false;
 
   private _unsubStream: (() => void) | null = null;
   private _hostRefreshTimer?: number;
@@ -275,7 +276,7 @@ class DmSystemMetricCard extends LitElement {
   }
 
   protected willUpdate(changedProps: PropertyValues<this>): void {
-    if (changedProps.has("hass") && this.hass && !this._available) {
+    if (changedProps.has("hass") && this.hass && !this._isLoaded()) {
       this._setup();
     }
   }
@@ -314,7 +315,7 @@ class DmSystemMetricCard extends LitElement {
     }
 
     this._unsubStream = subscribeSystemStatus(this.hass, (data) => {
-      this._available = true;
+      this._streamReady = true;
       this._streamValue = formatStreamValue(this._config!.metric, data);
       this._streamSecondary = formatStreamSecondary(this._config!.metric, data);
     });
@@ -336,7 +337,7 @@ class DmSystemMetricCard extends LitElement {
 
     const data = await fetchHostInfo(this.hass);
     if (data) {
-      this._available = true;
+      this._hostReady = true;
       const metric = this._config.metric;
       const language = this.hass.locale?.language ?? "en";
       if (!isStreamMetric(metric)) {
@@ -367,7 +368,8 @@ class DmSystemMetricCard extends LitElement {
       this._hostRefreshTimer = undefined;
     }
 
-    this._available = false;
+    this._streamReady = false;
+    this._hostReady = false;
     this._streamValue = "";
     this._streamSecondary = "";
     this._hostValue = "";
@@ -378,6 +380,28 @@ class DmSystemMetricCard extends LitElement {
   // Render
   // ---------------------------------------------------------------------------
 
+  /**
+   * Whether the card has all data needed for its metric.
+   * Stream-only metrics need the stream; host-only need host info;
+   * mixed metrics (memory_percent, disk_percent) need both.
+   */
+  private _isLoaded(): boolean {
+    if (!this._config) {
+      return false;
+    }
+    const metric = this._config.metric;
+    const needsStream = isStreamMetric(metric);
+    const needsHost = !isStreamMetric(metric) || needsBothSources(metric);
+
+    if (needsStream && !this._streamReady) {
+      return false;
+    }
+    if (needsHost && !this._hostReady) {
+      return false;
+    }
+    return true;
+  }
+
   protected render() {
     if (!this._config) {
       return nothing;
@@ -387,9 +411,10 @@ class DmSystemMetricCard extends LitElement {
     const icon = this._config.icon || METRIC_ICONS[metric];
     const label = this._config.label || METRIC_LABELS[metric];
     const color = this._config.color || METRIC_COLORS[metric];
-    const value = this._available
-      ? (isStreamMetric(metric) ? this._streamValue : this._hostValue)
-      : "—";
+    const loaded = this._isLoaded();
+    const value = isStreamMetric(metric)
+      ? this._streamValue
+      : this._hostValue;
     const secondary = isStreamMetric(metric)
       ? this._streamSecondary
       : this._hostSecondary;
@@ -398,9 +423,16 @@ class DmSystemMetricCard extends LitElement {
       <ha-card style="--tile-color: ${color}">
         <ha-tile-container>
           <ha-tile-icon slot="icon" .icon=${icon}></ha-tile-icon>
-          <ha-tile-info slot="info">
-            <span slot="primary">${label}</span>
-            <span slot="secondary">${value}${secondary ? html` <span class="detail">${secondary}</span>` : nothing}</span>
+          <ha-tile-info
+            slot="info"
+            .primary=${label}
+            .secondaryLoading=${!loaded}
+          >
+            <span slot="secondary"
+              >${value}${secondary
+                ? html`<span class="detail">${secondary}</span>`
+                : nothing}</span
+            >
           </ha-tile-info>
         </ha-tile-container>
       </ha-card>
