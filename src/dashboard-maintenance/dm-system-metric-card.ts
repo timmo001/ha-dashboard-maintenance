@@ -66,6 +66,15 @@ const METRIC_COLORS: Record<SystemMetricType, string> = {
 
 const HOST_INFO_REFRESH_MS = 60_000;
 
+const METRIC_NAV_PATH: Partial<Record<SystemMetricType, string>> = {
+  cpu: "/config/hardware",
+  memory_percent: "/config/hardware",
+  memory_used: "/config/hardware",
+  disk_percent: "/config/storage",
+  disk_free: "/config/storage",
+  disk_health: "/config/storage",
+};
+
 const SYSTEM_METRIC_TYPES = new Set<string>([
   "cpu",
   "memory_percent",
@@ -377,6 +386,27 @@ class DmSystemMetricCard extends LitElement {
   }
 
   // ---------------------------------------------------------------------------
+  // Navigation
+  // ---------------------------------------------------------------------------
+
+  private _handleTap(): void {
+    if (!this._config) {
+      return;
+    }
+    const path = METRIC_NAV_PATH[this._config.metric];
+    if (path) {
+      history.pushState(null, "", path);
+      this.dispatchEvent(
+        new CustomEvent("location-changed", {
+          bubbles: true,
+          composed: true,
+          detail: { replace: false },
+        }),
+      );
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
@@ -412,6 +442,7 @@ class DmSystemMetricCard extends LitElement {
     const label = this._config.label || METRIC_LABELS[metric];
     const color = this._config.color || METRIC_COLORS[metric];
     const loaded = this._isLoaded();
+    const interactive = metric in METRIC_NAV_PATH;
     const value = isStreamMetric(metric)
       ? this._streamValue
       : this._hostValue;
@@ -421,7 +452,10 @@ class DmSystemMetricCard extends LitElement {
 
     return html`
       <ha-card style="--tile-color: ${color}">
-        <ha-tile-container>
+        <ha-tile-container
+          .interactive=${interactive}
+          @action=${this._handleTap}
+        >
           <ha-tile-icon slot="icon" .icon=${icon}></ha-tile-icon>
           <ha-tile-info
             slot="info"
