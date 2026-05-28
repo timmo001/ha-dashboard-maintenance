@@ -1,0 +1,14 @@
+---
+name: Build
+
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: timmo001/workflows/.github/workflows/ha-card-build.yml@master

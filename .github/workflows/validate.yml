@@ -1,0 +1,14 @@
+---
+name: HACS Validate
+
+# yamllint disable-line rule:truthy
+on:
+  pull_request:
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  validate:
+    uses: timmo001/workflows/.github/workflows/ha-card-validate.yml@master

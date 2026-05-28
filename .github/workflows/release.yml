@@ -1,26 +1,20 @@
 ---
-name: "Release"
+name: Release
 
+# yamllint disable-line rule:truthy
 on:
   release:
     types:
       - published
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   release:
-    name: "🚀 Release - Dashboard Maintenance"
-    runs-on: ubuntu-latest
-    steps:
-      - name: "⬇️ Checkout the repository"
-        uses: actions/checkout@v6
-      - name: Setup pnpm
-        uses: ./.github/actions/setup-pnpm
-      - name: "🏗 Build frontend assets"
-        run: pnpm run build
-      - name: "⬆ Upload dashboard bundle to release"
-        uses: softprops/action-gh-release@v3
-        with:
-          files: dist/ha-dashboard-maintenance.js
+    uses: timmo001/workflows/.github/workflows/ha-card-release.yml@master
+    with:
+      dist-glob: "dist/ha-dashboard-maintenance.js"
+    permissions:
+      contents: write
