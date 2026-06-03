@@ -80,6 +80,25 @@ export interface HomeAssistant {
   states: Record<string, HassEntity>;
 }
 
+export interface CustomCardSuggestion<
+  T extends { type: string } = { type: string },
+> {
+  label?: string;
+  config: T;
+}
+
+export interface CustomCardEntry {
+  type: string;
+  name: string;
+  description?: string;
+  documentationURL?: string;
+  preview?: boolean;
+  getEntitySuggestion?: (
+    hass: HomeAssistant,
+    entityId: string,
+  ) => CustomCardSuggestion | CustomCardSuggestion[] | null;
+}
+
 export const BATTERY_TILE_FEATURES = ["none", "bar", "trend"] as const;
 export type BatteryTileFeature = (typeof BATTERY_TILE_FEATURES)[number];
 

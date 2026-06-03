@@ -9,7 +9,7 @@ import {
   type IntegrationSetupData,
   type SystemStatusData,
 } from "./system-status-subscription";
-import type { HomeAssistant } from "./types";
+import type { CustomCardEntry, HomeAssistant } from "./types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -575,13 +575,7 @@ if (!window.customCards.some((card) => card.type === "dm-system-metric-card")) {
 
 declare global {
   interface Window {
-    customCards?: Array<{
-      type: string;
-      name: string;
-      description?: string;
-      documentationURL?: string;
-      preview?: boolean;
-    }>;
+    customCards?: CustomCardEntry[];
   }
 
   interface HTMLElementTagNameMap {

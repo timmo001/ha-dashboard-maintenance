@@ -3,6 +3,7 @@ import type { PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
 import { styleMap } from "lit/directives/style-map.js";
+import { computeDomain } from "./entity-helpers";
 import {
   getMaintenanceAvailabilityEntities,
   groupAvailabilityByDevice,
@@ -16,7 +17,12 @@ import {
 import { getMaintenanceBatteryDevices } from "./maintenance-data";
 import { getMaintenanceRepairIssues } from "./repairs-data";
 import { getMaintenanceStaleEntities } from "./stale-data";
-import type { HomeAssistant, MaintenanceStrategyConfig } from "./types";
+import type {
+  CustomCardEntry,
+  CustomCardSuggestion,
+  HomeAssistant,
+  MaintenanceStrategyConfig,
+} from "./types";
 import { getMaintenanceUpdates, updateCanInstall } from "./update-data";
 
 export type SummaryMetric =
@@ -129,6 +135,37 @@ const resolveMetric = (config?: DmMaintenanceSummaryCardConfig): SummaryMetric =
 
 const hasAction = (action?: SummaryTapAction): boolean =>
   action !== undefined && action.action !== "none";
+
+const getEntitySuggestion = (
+  hass: HomeAssistant,
+  entityId: string,
+): CustomCardSuggestion<DmMaintenanceSummaryCardConfig> | null => {
+  const domain = computeDomain(entityId);
+
+  if (domain === "update") {
+    return {
+      config: {
+        type: "custom:dm-maintenance-summary-card",
+        summary: "updates",
+      },
+    };
+  }
+
+  if (domain !== "sensor") {
+    return null;
+  }
+
+  if (hass.states[entityId]?.attributes.device_class === "battery") {
+    return {
+      config: {
+        type: "custom:dm-maintenance-summary-card",
+        summary: "batteries",
+      },
+    };
+  }
+
+  return null;
+};
 
 const tileCardStyle = css`
   ha-card:has(ha-tile-container[focused]) {
@@ -577,18 +614,13 @@ if (!window.customCards.some((card) => card.type === "dm-maintenance-summary-car
     description:
       "Home-style maintenance summary tile with configurable tap and hold actions.",
     preview: true,
+    getEntitySuggestion,
   });
 }
 
 declare global {
   interface Window {
-    customCards?: Array<{
-      type: string;
-      name: string;
-      description?: string;
-      documentationURL?: string;
-      preview?: boolean;
-    }>;
+    customCards?: CustomCardEntry[];
   }
 
   interface HTMLElementTagNameMap {
