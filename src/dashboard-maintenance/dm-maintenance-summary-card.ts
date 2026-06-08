@@ -14,7 +14,10 @@ import {
   buildDashboardSummaryPath,
   findLovelaceDashboardConfig,
 } from "./lovelace-dashboard";
-import { getMaintenanceBatteryDevices } from "./maintenance-data";
+import {
+  getMaintenanceBatteryDevices,
+  isBatteryAttentionPanelDevice,
+} from "./maintenance-data";
 import { getMaintenanceRepairIssues } from "./repairs-data";
 import { getMaintenanceStaleEntities } from "./stale-data";
 import type {
@@ -479,7 +482,7 @@ class DmMaintenanceSummaryCard extends LitElement {
       hass,
       this._resolvedMaintenanceStrategy?.battery_attention_threshold,
     );
-    return devices.filter((device) => device.needsAttention).length;
+    return devices.filter(isBatteryAttentionPanelDevice).length;
   }
 
   private async _computeUpdatesCount(hass: HomeAssistant): Promise<number> {

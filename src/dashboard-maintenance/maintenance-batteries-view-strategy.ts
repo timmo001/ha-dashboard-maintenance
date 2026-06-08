@@ -2,7 +2,10 @@ import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { filterItemsByArea } from "./entity-helpers";
 import { setupLocalize } from "./localize";
-import { getMaintenanceBatteryDevices } from "./maintenance-data";
+import {
+  getMaintenanceBatteryDevices,
+  isBatteryAttentionPanelDevice,
+} from "./maintenance-data";
 import {
   makeBatteryAttentionSection,
   makeBatterySections,
@@ -28,12 +31,12 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
       config.battery_attention_threshold,
     );
     const batteryDevices = filterItemsByArea(allBatteryDevices, config.area_id);
-    const attentionDevices = batteryDevices.filter((device) => device.needsAttention);
+    const attentionDevices = batteryDevices.filter(isBatteryAttentionPanelDevice);
     const showAttentionBatteriesInAreas =
       config.show_attention_batteries_in_areas ?? true;
     const areaSectionDevices = showAttentionBatteriesInAreas
       ? batteryDevices
-      : batteryDevices.filter((device) => !device.needsAttention);
+      : batteryDevices.filter((device) => !isBatteryAttentionPanelDevice(device));
     const limitOpts = viewLimitOptions(config, "batteries-all");
 
     if (batteryDevices.length === 0) {

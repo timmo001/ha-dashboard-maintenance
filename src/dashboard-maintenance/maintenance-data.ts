@@ -24,6 +24,7 @@ export interface MaintenanceBatteryDevice {
   deviceName: string;
   entityId: string;
   level: number | null;
+  isCharging: boolean;
   needsAttention: boolean;
 }
 
@@ -45,6 +46,9 @@ const isBatterySensorEntity = (stateObj: HassEntity): boolean => {
 
   return stateObj.attributes.device_class === "battery";
 };
+
+const isBatteryChargingState = (stateObj: HassEntity): boolean =>
+  stateObj.attributes.device_class === "battery_charging" && stateObj.state === "on";
 
 const batteryStateLevel = (stateObj: HassEntity): number | null => {
   if (!isBatterySensorEntity(stateObj)) {
@@ -93,6 +97,10 @@ const sortDevices = (
   Number(right.needsAttention) - Number(left.needsAttention) ||
   (left.level ?? -1) - (right.level ?? -1) ||
   compareText(left.deviceName, right.deviceName);
+
+export const isBatteryAttentionPanelDevice = (
+  device: MaintenanceBatteryDevice,
+): boolean => device.needsAttention && !device.isCharging;
 
 export const fetchEntityRegistry = async (
   hass: HomeAssistant,
@@ -246,6 +254,7 @@ const fallbackDevicesFromStates = (
         entityId: stateObj.entity_id,
         deviceName: computeStateName(stateObj),
         level,
+        isCharging: false,
         needsAttention: level === null || level < attentionThreshold,
       };
     })
@@ -267,18 +276,20 @@ export const getMaintenanceBatteryDevices = async (
   }
 
   const batteryEntitiesByDevice: Record<string, HassEntity[]> = {};
+  const chargingDeviceIds = new Set<string>();
 
   for (const entry of Object.values(entities)) {
-    if (
-      !entry.device_id ||
-      !isEntityRegistryVisible(entry) ||
-      !(entry.entity_id in hass.states)
-    ) {
+    if (!entry.device_id || !(entry.entity_id in hass.states)) {
       continue;
     }
 
     const stateObj = hass.states[entry.entity_id];
+    if (isBatteryChargingState(stateObj)) {
+      chargingDeviceIds.add(entry.device_id);
+    }
+
     if (
+      !isEntityRegistryVisible(entry) ||
       !isMaintenanceBatteryState(stateObj) ||
       !isStateVisible(stateObj) ||
       devices[entry.device_id]?.disabled_by
@@ -318,6 +329,7 @@ export const getMaintenanceBatteryDevices = async (
         ),
         entityId: selectedBatteryState.entity_id,
         level,
+        isCharging: chargingDeviceIds.has(deviceId),
         needsAttention: level === null || level < normalizedThreshold,
       };
     })

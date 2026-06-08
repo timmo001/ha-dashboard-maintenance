@@ -1,5 +1,8 @@
 import type { LocalizeFunc } from "./localize";
-import type { MaintenanceBatteryDevice } from "./maintenance-data";
+import {
+  isBatteryAttentionPanelDevice,
+  type MaintenanceBatteryDevice,
+} from "./maintenance-data";
 import {
   batteryAreaTileName,
   batteryAttentionTileName,
@@ -34,7 +37,7 @@ export const makeBatteryAttentionSection = (
     showMorePath?: string;
   },
 ): LovelaceSectionConfig | null => {
-  const attentionDevices = batteryDevices.filter((device) => device.needsAttention);
+  const attentionDevices = batteryDevices.filter(isBatteryAttentionPanelDevice);
 
   if (batteryDevices.length === 0 || attentionDevices.length === 0) {
     return null;
