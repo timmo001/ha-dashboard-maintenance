@@ -20,6 +20,6 @@
   "devDependencies": {
     "rolldown": "1.2.0",
     "simple-git-hooks": "^2.13.1",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.0"
   }
 }
