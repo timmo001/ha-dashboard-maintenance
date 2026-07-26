@@ -2,7 +2,7 @@
   "name": "dashboard-maintenance",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@10.34.5+sha512.a4ee05f2f73658255bd6a89859c065a45c28a57daefae2c893a168ee2b73168c37b91e83e57ea67654ad03f03031746430e8bce38e362e042605fb8abc80192e",
+  "packageManager": "pnpm@11.17.0+sha512.cca3cea332ad254bb84145f966d19f4879615210346fc92c79a047f23a0d7b3cca3c3792f0076ba1f1831d277efbcf0a9119b31a9a60eca7fb3d6231f331ef72",
   "scripts": {
     "build": "tsc --noEmit && rolldown -c",
     "lint": "pnpm run build && node --check dist/ha-dashboard-maintenance.js",
