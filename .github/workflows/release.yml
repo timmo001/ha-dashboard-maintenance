@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   release:
-    uses: timmo001/workflows/.github/workflows/ha-card-release.yml@a64b87386f559bbf21c9d659266ce1ea23ead8f1 # master
+    uses: timmo001/workflows/.github/workflows/ha-card-release.yml@95bc0605822adb7ca5a189e8a5c493cbb223b810 # master
     with:
       dist-glob: "dist/ha-dashboard-maintenance.js"
     permissions:
