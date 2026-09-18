@@ -93,15 +93,17 @@ type HaFormValueChangedEvent<T extends Record<string, unknown>> = CustomEvent<{
   value: T;
 }>;
 
-const MODULE_ENABLED_KEYS = new Set<string>(
-  MODULES.map((mod) => mod.enabledKey),
-);
+interface HaFormSchema {
+  name: string;
+  selector: Record<string, unknown>;
+  hidden?: {
+    field: ModuleEnabledKey;
+    value: false;
+  };
+}
 
 const isMaintenanceModuleId = (value: string): value is MaintenanceModuleId =>
   MODULES.some((mod) => mod.id === value);
-
-const isModuleEnabledKey = (value: string): value is ModuleEnabledKey =>
-  MODULE_ENABLED_KEYS.has(value);
 
 const isBatteryTileFeature = (value: string): value is BatteryTileFeature =>
   (BATTERY_TILE_FEATURES as readonly string[]).includes(value);
@@ -145,10 +147,18 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       </ha-tab-group>
 
       <div class="panel-content">
-        ${this._renderEnableToggle(localize, activeModule, enabled)}
-        ${enabled
-          ? this._renderModuleSettings(localize, activeModule, this._config)
-          : nothing}
+        ${customElements.get("ha-form")
+          ? this._renderModuleForm(localize, activeModule, enabled, this._config)
+          : html`
+              ${this._renderEnableToggle(localize, activeModule, enabled)}
+              ${enabled
+                ? this._renderModuleSettings(
+                    localize,
+                    activeModule,
+                    this._config,
+                  )
+                : nothing}
+            `}
       </div>
     `;
   }
@@ -172,36 +182,116 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     mod: ModuleDescriptor,
     enabled: boolean,
   ) {
-    if (!customElements.get("ha-form")) {
-      return html`
-        <div class="fallback-editor">
-          <label>
-            <input
-              type="checkbox"
-              .checked=${enabled}
-              data-module=${mod.id}
-              @change=${this._nativeModuleEnabledChanged}
-            />
-            ${localize("editor.module_enabled_label")}
-          </label>
-          <div class="helper">${localize("editor.module_enabled_helper")}</div>
-        </div>
-      `;
+    return html`
+      <div class="fallback-editor">
+        <label>
+          <input
+            type="checkbox"
+            .checked=${enabled}
+            data-module=${mod.id}
+            @change=${this._nativeModuleEnabledChanged}
+          />
+          ${localize("editor.module_enabled_label")}
+        </label>
+        <div class="helper">${localize("editor.module_enabled_helper")}</div>
+      </div>
+    `;
+  }
+
+  private _renderModuleForm(
+    localize: ReturnType<typeof setupLocalize>,
+    mod: ModuleDescriptor,
+    enabled: boolean,
+    config: MaintenanceDashboardStrategyConfig,
+  ) {
+    const data: Record<string, unknown> = { [mod.enabledKey]: enabled };
+    const schema: HaFormSchema[] = [
+      { name: mod.enabledKey, selector: { boolean: {} } },
+    ];
+    const hidden = { field: mod.enabledKey, value: false } as const;
+
+    switch (mod.id) {
+      case "batteries":
+        Object.assign(data, {
+          battery_attention_threshold:
+            config.battery_attention_threshold ??
+            DEFAULT_BATTERY_ATTENTION_THRESHOLD,
+          show_attention_batteries_in_areas:
+            config.show_attention_batteries_in_areas ??
+            DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS,
+          battery_tile_feature:
+            config.battery_tile_feature ?? DEFAULT_BATTERY_TILE_FEATURE,
+        });
+        schema.push(
+          {
+            name: "battery_attention_threshold",
+            selector: {
+              number: {
+                min: 0,
+                max: 100,
+                mode: "slider",
+                slider_ticks: true,
+              },
+            },
+            hidden,
+          },
+          {
+            name: "show_attention_batteries_in_areas",
+            selector: { boolean: {} },
+            hidden,
+          },
+          {
+            name: "battery_tile_feature",
+            selector: {
+              select: {
+                mode: "list",
+                options: BATTERY_TILE_FEATURES.map((option) => ({
+                  value: option,
+                  label: localize(
+                    `editor.battery_tile_feature_option_${option}`,
+                  ),
+                })),
+              },
+            },
+            hidden,
+          },
+        );
+        break;
+      case "stale":
+        data.stale_threshold_hours =
+          config.stale_threshold_hours ?? DEFAULT_STALE_THRESHOLD_HOURS;
+        schema.push({
+          name: "stale_threshold_hours",
+          selector: {
+            number: {
+              min: MIN_STALE_THRESHOLD_HOURS,
+              max: MAX_STALE_THRESHOLD_HOURS,
+              mode: "slider",
+              unit_of_measurement: "h",
+            },
+          },
+          hidden,
+        });
+        break;
+      case "availability":
+        data.availability_safe_list_device_ids =
+          config.availability_safe_list_device_ids ?? [];
+        schema.push({
+          name: "availability_safe_list_device_ids",
+          selector: { device: { multiple: true } },
+          hidden,
+        });
+        break;
     }
 
     return html`
       <ha-form
         .hass=${this.hass}
-        .data=${{ [`${mod.id}_enabled`]: enabled }}
-        .schema=${[
-          {
-            name: `${mod.id}_enabled`,
-            selector: { boolean: {} },
-          },
-        ]}
+        .data=${data}
+        .schema=${schema}
         .computeLabel=${this._computeLabel}
         .computeHelper=${this._computeHelper}
-        @value-changed=${this._moduleEnabledChanged}
+        @value-changed=${this._formValueChanged}
       ></ha-form>
     `;
   }
@@ -230,8 +320,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     const safeListDeviceIds =
       config.availability_safe_list_device_ids ?? [];
 
-    if (!customElements.get("ha-form")) {
-      return html`
+    return html`
         <div class="fallback-editor">
           <label for="availability-safe-list">
             ${localize("editor.availability_safe_list_label")}
@@ -247,29 +336,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           </div>
         </div>
       `;
-    }
-
-    return html`
-      <ha-form
-        .hass=${this.hass}
-        .data=${{
-          availability_safe_list_device_ids: safeListDeviceIds,
-        }}
-        .schema=${[
-          {
-            name: "availability_safe_list_device_ids",
-            selector: {
-              device: {
-                multiple: true,
-              },
-            },
-          },
-        ]}
-        .computeLabel=${this._computeLabel}
-        .computeHelper=${this._computeHelper}
-        @value-changed=${this._availabilityValueChanged}
-      ></ha-form>
-    `;
   }
 
   private _renderBatterySettings(
@@ -285,8 +351,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     const batteryTileFeature =
       config.battery_tile_feature ?? DEFAULT_BATTERY_TILE_FEATURE;
 
-    if (!customElements.get("ha-form")) {
-      return html`
+    return html`
         <div class="fallback-editor">
           <label for="battery-threshold">
             ${localize("editor.battery_threshold_label")}
@@ -338,54 +403,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           </fieldset>
         </div>
       `;
-    }
-
-    return html`
-      <ha-form
-        .hass=${this.hass}
-        .data=${{
-          battery_attention_threshold: threshold,
-          show_attention_batteries_in_areas: showAttentionBatteriesInAreas,
-          battery_tile_feature: batteryTileFeature,
-        }}
-        .schema=${[
-          {
-            name: "battery_attention_threshold",
-            selector: {
-              number: {
-                min: 0,
-                max: 100,
-                mode: "slider",
-                slider_ticks: true,
-              },
-            },
-          },
-          {
-            name: "show_attention_batteries_in_areas",
-            selector: {
-              boolean: {},
-            },
-          },
-          {
-            name: "battery_tile_feature",
-            selector: {
-              select: {
-                mode: "list",
-                options: BATTERY_TILE_FEATURES.map((option) => ({
-                  value: option,
-                  label: localize(
-                    `editor.battery_tile_feature_option_${option}`,
-                  ),
-                })),
-              },
-            },
-          },
-        ]}
-        .computeLabel=${this._computeLabel}
-        .computeHelper=${this._computeHelper}
-        @value-changed=${this._valueChanged}
-      ></ha-form>
-    `;
   }
 
   private _renderStaleSettings(
@@ -395,8 +412,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     const staleThreshold =
       config.stale_threshold_hours ?? DEFAULT_STALE_THRESHOLD_HOURS;
 
-    if (!customElements.get("ha-form")) {
-      return html`
+    return html`
         <div class="fallback-editor">
           <label for="stale-threshold">
             ${localize("editor.stale_threshold_label")}
@@ -414,32 +430,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           <div class="value">${staleThreshold}h</div>
         </div>
       `;
-    }
-
-    return html`
-      <ha-form
-        .hass=${this.hass}
-        .data=${{
-          stale_threshold_hours: staleThreshold,
-        }}
-        .schema=${[
-          {
-            name: "stale_threshold_hours",
-            selector: {
-              number: {
-                min: MIN_STALE_THRESHOLD_HOURS,
-                max: MAX_STALE_THRESHOLD_HOURS,
-                mode: "slider",
-                unit_of_measurement: "h",
-              },
-            },
-          },
-        ]}
-        .computeLabel=${this._computeLabel}
-        .computeHelper=${this._computeHelper}
-        @value-changed=${this._staleValueChanged}
-      ></ha-form>
-    `;
   }
 
   private _computeLabel = (schema: { name: string }): string => {
@@ -486,8 +476,8 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   /* ---- ha-form value-changed handlers ---- */
 
-  private _moduleEnabledChanged(
-    ev: HaFormValueChangedEvent<Partial<Record<ModuleEnabledKey, boolean>>>,
+  private _formValueChanged(
+    ev: HaFormValueChangedEvent<Record<string, unknown>>,
   ): void {
     if (!this._config) {
       return;
@@ -497,83 +487,55 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     const data = ev.detail.value;
     const updates: Partial<MaintenanceDashboardStrategyConfig> = {};
 
-    for (const key of Object.keys(data)) {
-      if (isModuleEnabledKey(key)) {
-        updates[key] = data[key] === true ? undefined : false;
-      }
+    const activeModule =
+      MODULES.find((mod) => mod.id === this._activeModule) ?? MODULES[0];
+    const enabled = data[activeModule.enabledKey];
+    if (typeof enabled === "boolean") {
+      updates[activeModule.enabledKey] = enabled ? undefined : false;
+    }
+
+    if (activeModule.id === "batteries") {
+      const threshold = data.battery_attention_threshold;
+      const showAttentionBatteriesInAreas =
+        data.show_attention_batteries_in_areas;
+      const batteryTileFeature = data.battery_tile_feature;
+      updates.battery_attention_threshold =
+        typeof threshold !== "number" ||
+        threshold === DEFAULT_BATTERY_ATTENTION_THRESHOLD
+          ? undefined
+          : threshold;
+      updates.show_attention_batteries_in_areas =
+        typeof showAttentionBatteriesInAreas !== "boolean" ||
+        showAttentionBatteriesInAreas ===
+          DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS
+          ? undefined
+          : showAttentionBatteriesInAreas;
+      updates.battery_tile_feature =
+        typeof batteryTileFeature !== "string" ||
+        !isBatteryTileFeature(batteryTileFeature) ||
+        batteryTileFeature === DEFAULT_BATTERY_TILE_FEATURE
+          ? undefined
+          : batteryTileFeature;
+    } else if (activeModule.id === "stale") {
+      const staleThreshold = data.stale_threshold_hours;
+      updates.stale_threshold_hours =
+        typeof staleThreshold !== "number" ||
+        staleThreshold === DEFAULT_STALE_THRESHOLD_HOURS
+          ? undefined
+          : staleThreshold;
+    } else if (activeModule.id === "availability") {
+      const safeListDeviceIds = normalizeAvailabilitySafeListDeviceIds(
+        Array.isArray(data.availability_safe_list_device_ids)
+          ? data.availability_safe_list_device_ids.filter(
+              (value): value is string => typeof value === "string",
+            )
+          : undefined,
+      );
+      updates.availability_safe_list_device_ids =
+        safeListDeviceIds.length > 0 ? safeListDeviceIds : undefined;
     }
 
     this._emitConfigUpdate(updates);
-  }
-
-  private _valueChanged(
-    ev: HaFormValueChangedEvent<{
-      battery_attention_threshold?: number;
-      show_attention_batteries_in_areas?: boolean;
-      battery_tile_feature?: BatteryTileFeature;
-    }>,
-  ): void {
-    if (!this._config) {
-      return;
-    }
-
-    ev.stopPropagation();
-
-    const threshold = ev.detail.value.battery_attention_threshold;
-    const showAttentionBatteriesInAreas =
-      ev.detail.value.show_attention_batteries_in_areas;
-    const batteryTileFeature = ev.detail.value.battery_tile_feature;
-    this._emitConfigUpdate({
-      battery_attention_threshold:
-        threshold === DEFAULT_BATTERY_ATTENTION_THRESHOLD
-          ? undefined
-          : threshold,
-      show_attention_batteries_in_areas:
-        showAttentionBatteriesInAreas ===
-        DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS
-          ? undefined
-          : showAttentionBatteriesInAreas,
-      battery_tile_feature:
-        batteryTileFeature === DEFAULT_BATTERY_TILE_FEATURE
-          ? undefined
-          : batteryTileFeature,
-    });
-  }
-
-  private _staleValueChanged(
-    ev: HaFormValueChangedEvent<{ stale_threshold_hours?: number }>,
-  ): void {
-    if (!this._config) {
-      return;
-    }
-
-    ev.stopPropagation();
-
-    const staleThreshold = ev.detail.value.stale_threshold_hours;
-    this._emitConfigUpdate({
-      stale_threshold_hours:
-        staleThreshold === DEFAULT_STALE_THRESHOLD_HOURS
-          ? undefined
-          : staleThreshold,
-    });
-  }
-
-  private _availabilityValueChanged(
-    ev: HaFormValueChangedEvent<{ availability_safe_list_device_ids?: string[] }>,
-  ): void {
-    if (!this._config) {
-      return;
-    }
-
-    ev.stopPropagation();
-
-    const safeListDeviceIds = normalizeAvailabilitySafeListDeviceIds(
-      ev.detail.value.availability_safe_list_device_ids,
-    );
-    this._emitConfigUpdate({
-      availability_safe_list_device_ids:
-        safeListDeviceIds.length > 0 ? safeListDeviceIds : undefined,
-    });
   }
 
   /* ---- Native fallback handlers ---- */
