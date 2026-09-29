@@ -247,10 +247,11 @@ strategy:
 ```bash
 pnpm install
 pnpm run build
-node --check dist/ha-dashboard-maintenance.js
+pnpm run lint
+pnpm run check
 ```
 
-Git commits also run `pnpm run lint` through a `pre-commit` hook, which rebuilds the bundle and checks the generated JavaScript syntax.
+`pnpm run lint` runs Oxlint. `pnpm run check` rebuilds the bundle and checks the generated JavaScript syntax. Git commits run both through a `pre-commit` hook.
 
 ## Release layout
 

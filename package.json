@@ -5,19 +5,24 @@
   "packageManager": "pnpm@12.6.0",
   "scripts": {
     "build": "tsc --noEmit && rolldown -c",
-    "lint": "pnpm run build && node --check dist/ha-dashboard-maintenance.js",
+    "check": "pnpm run build && node --check dist/ha-dashboard-maintenance.js",
+    "lint": "oxlint",
     "prepare": "simple-git-hooks",
     "publish-to-local": "bash ./scripts/publish-to-local.sh",
     "start": "rolldown -c --watch",
     "typecheck": "tsc --noEmit"
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm run lint"
+    "pre-commit": "pnpm run lint && pnpm run check"
   },
   "dependencies": {
     "lit": "^3.3.3"
   },
   "devDependencies": {
+    "@oxlint/plugins": "1.86.0",
+    "@timmo001/oxlint-rules": "0.4.0",
+    "oxlint": "1.86.0",
+    "oxlint-tsgolint": "7.0.2003",
     "rolldown": "1.2.11",
     "simple-git-hooks": "^2.13.1",
     "typescript": "^7.0.0"
