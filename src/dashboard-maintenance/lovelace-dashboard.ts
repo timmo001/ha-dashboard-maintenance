@@ -1,4 +1,11 @@
-import type { HomeAssistantConnection } from "./types";
+import type {
+  HomeAssistantConnection,
+  MaintenanceStrategyConfig,
+} from "./types";
+
+export interface LovelaceDashboardConfig {
+  strategy?: MaintenanceStrategyConfig | { type?: string };
+}
 
 interface LovelaceDashboardListEntry {
   url_path?: string | null;
@@ -15,6 +22,7 @@ const fetchLovelaceDashboardUrlPaths = async (
   >({ type: "lovelace/dashboards/list" });
 
   const urlPaths = new Set<string | null>([null]);
+
   for (const dashboard of dashboards) {
     urlPaths.add(dashboard.url_path ?? null);
   }
@@ -24,18 +32,20 @@ const fetchLovelaceDashboardUrlPaths = async (
 
 export const findLovelaceDashboardConfig = async <T>(
   connection: HomeAssistantConnection,
-  getMatch: (config: unknown) => T | undefined,
+  getMatch: (config: LovelaceDashboardConfig | null) => T | undefined,
 ): Promise<{ urlPath: string | null; match: T } | undefined> => {
   const urlPaths = await fetchLovelaceDashboardUrlPaths(connection);
 
   for (const urlPath of urlPaths) {
     try {
-      const config = await connection.sendMessagePromise({
+      const config = await connection.sendMessagePromise<LovelaceDashboardConfig | null>({
         type: "lovelace/config",
         url_path: urlPath,
         force: false,
       });
+
       const match = getMatch(config);
+
       if (match !== undefined) {
         return { urlPath, match };
       }

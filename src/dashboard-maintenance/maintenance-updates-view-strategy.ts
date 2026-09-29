@@ -18,6 +18,7 @@ export class MaintenanceUpdatesViewStrategy extends ReactiveElement {
   ): Promise<LovelaceViewConfig> {
     const localize = setupLocalize(hass);
     const updates = await getMaintenanceUpdates(hass);
+
     const sections = makeUpdatesSections(
       localize,
       updates,

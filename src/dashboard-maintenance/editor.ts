@@ -43,8 +43,10 @@ const BATTERY_ENTITY_FILTER = { domain: "sensor", device_class: "battery" };
 
 const MDI_DELETE_PATH =
   "M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z";
+
 const MDI_PENCIL_PATH =
   "M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z";
+
 const MDI_PLUS_PATH = "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z";
 
 interface BatteryThresholdOverrideDraft {
@@ -139,13 +141,41 @@ const MODULES = [
 
 type ModuleEnabledKey = ModuleDescriptor["enabledKey"];
 
-type HaFormValueChangedEvent<T extends Record<string, unknown>> = CustomEvent<{
-  value: T;
+interface ModuleFormData extends Partial<Record<ModuleEnabledKey, boolean>> {
+  battery_attention_threshold?: number;
+  show_attention_batteries_in_areas?: boolean;
+  battery_tile_feature?: string;
+  stale_threshold_hours?: number;
+}
+
+type HaFormValueChangedEvent = CustomEvent<{
+  value: ModuleFormData;
 }>;
+
+type PickerValueEvent = CustomEvent<{ value?: string }> & {
+  currentTarget: (HTMLElement & { value?: string }) | null;
+};
+
+type DialogElement = HTMLElement & { width?: string };
+
+interface HaFormSelector {
+  boolean?: Record<string, never>;
+  number?: {
+    min: number;
+    max: number;
+    mode: "slider";
+    slider_ticks?: boolean;
+    unit_of_measurement?: string;
+  };
+  select?: {
+    mode: "list";
+    options: { value: string; label: string }[];
+  };
+}
 
 interface HaFormSchema {
   name: string;
-  selector: Record<string, unknown>;
+  selector: HaFormSelector;
   hidden?: {
     field: ModuleEnabledKey;
     value: false;
@@ -156,7 +186,7 @@ const isMaintenanceModuleId = (value: string): value is MaintenanceModuleId =>
   MODULES.some((mod) => mod.id === value);
 
 const isBatteryTileFeature = (value: string): value is BatteryTileFeature =>
-  (BATTERY_TILE_FEATURES as readonly string[]).includes(value);
+  BATTERY_TILE_FEATURES.some((feature) => feature === value);
 
 @customElement("dashboard-maintenance-strategy-editor")
 class DashboardMaintenanceStrategyEditor extends LitElement {
@@ -174,7 +204,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   private _previewCard?: { key: string; config: LovelaceCardConfig };
 
-  private _dialog?: { element: HTMLElement & { width?: string }; width?: string };
+  private _dialog?: { element: DialogElement; width?: string };
 
   private _scrollTop?: number;
 
@@ -186,19 +216,22 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   connectedCallback(): void {
     super.connectedCallback();
+
     for (const tag of ["ha-entity-picker", "ha-device-picker"]) {
       if (!customElements.get(tag)) {
-        customElements.whenDefined(tag).then(() => this.requestUpdate());
+        void customElements.whenDefined(tag).then(() => this.requestUpdate());
       }
     }
 
     // The strategy editor dialog is large; use the default dialog width instead.
-    let node: Node | null = this;
+    let node: Node | null = this.parentNode;
+
     while (node && !(node instanceof HTMLElement && node.localName === "ha-dialog")) {
       node = node.parentNode ?? (node instanceof ShadowRoot ? node.host : null);
     }
-    if (node) {
-      const element = node as HTMLElement & { width?: string };
+
+    if (node instanceof HTMLElement) {
+      const element: DialogElement = node;
       this._dialog = { element, width: element.width };
       element.width = "medium";
     }
@@ -206,6 +239,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   disconnectedCallback(): void {
     super.disconnectedCallback();
+
     if (this._dialog) {
       this._dialog.element.width = this._dialog.width;
       this._dialog = undefined;
@@ -227,7 +261,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       this._config?.availability_enabled !== false
     ) {
       this._configEntries = {};
-      fetchConfigEntries(this.hass).then((entries) => {
+      void fetchConfigEntries(this.hass).then((entries) => {
         this._configEntries = entries;
       });
     }
@@ -239,6 +273,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       !changedProps.get("_overrideDraft") !== !this._overrideDraft
     ) {
       const body = this._dialogBody();
+
       if (body) {
         const scrollTop = this._overrideDraft ? 0 : (this._scrollTop ?? 0);
         body.scrollTop = scrollTop;
@@ -250,16 +285,22 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     // ha-device-picker does not forward add-button, so set it on its inner picker.
-    const devicePicker = this.shadowRoot?.querySelector("ha-device-picker");
+    const devicePicker = this.shadowRoot?.querySelector<
+      HTMLElement & { updateComplete?: Promise<unknown> }
+    >("ha-device-picker");
+
     if (!devicePicker) {
       return;
     }
-    await (devicePicker as { updateComplete?: Promise<unknown> })
-      .updateComplete;
-    const innerPicker = devicePicker.shadowRoot?.querySelector(
-      "ha-generic-picker",
-    ) as { addButtonLabel?: string } | null | undefined;
+
+    await devicePicker.updateComplete;
+
+    const innerPicker = devicePicker.shadowRoot?.querySelector<
+      HTMLElement & { addButtonLabel?: string }
+    >("ha-generic-picker");
+
     const label = setupLocalize(this.hass)("editor.availability_safe_list_add");
+
     if (innerPicker && innerPicker.addButtonLabel !== label) {
       innerPicker.addButtonLabel = label;
     }
@@ -341,10 +382,13 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     enabled: boolean,
     config: MaintenanceDashboardStrategyConfig,
   ) {
-    const data: Record<string, unknown> = { [mod.enabledKey]: enabled };
+    const data: ModuleFormData = {};
+    data[mod.enabledKey] = enabled;
+
     const schema: HaFormSchema[] = [
       { name: mod.enabledKey, selector: { boolean: {} } },
     ];
+
     const hidden = { field: mod.enabledKey, value: false } as const;
 
     switch (mod.id) {
@@ -437,7 +481,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   private _renderForm(
     mod: ModuleDescriptor,
-    data: Record<string, unknown>,
+    data: ModuleFormData,
     schema: HaFormSchema[],
   ) {
     return html`
@@ -465,6 +509,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       onExpandedChanged: this._overridesExpandedChanged,
       rows: overrides.map((override, index) => {
         const stateObj = this.hass?.states[override.entity_id];
+
         const name =
           (this.hass &&
             getBatteryPreviewDevice(
@@ -547,6 +592,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       rows: deviceIds.map((deviceId, index) => {
         const device = devices[deviceId];
         const areaId = device?.area_id;
+
         const domain = device?.primary_config_entry
           ? this._configEntries?.[device.primary_config_entry]?.domain
           : undefined;
@@ -666,9 +712,11 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     feature: BatteryTileFeature | undefined,
   ): LovelaceCardConfig {
     const key = JSON.stringify([device, feature]);
+
     if (this._previewCard?.key !== key) {
       this._previewCard = { key, config: makeBatteryCard(device, { feature }) };
     }
+
     return this._previewCard.config;
   }
 
@@ -721,9 +769,11 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     const threshold =
       config.battery_attention_threshold ??
       DEFAULT_BATTERY_ATTENTION_THRESHOLD;
+
     const showAttentionBatteriesInAreas =
       config.show_attention_batteries_in_areas ??
       DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS;
+
     const batteryTileFeature =
       config.battery_tile_feature ?? DEFAULT_BATTERY_TILE_FEATURE;
 
@@ -824,55 +874,62 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   private _computeLabel = (schema: { name: string }): string => {
     const localize = setupLocalize(this.hass);
-    const labelMap: Record<string, ReturnType<typeof localize>> = {
-      battery_attention_threshold: localize("editor.battery_threshold_label"),
-      show_attention_batteries_in_areas: localize(
-        "editor.show_attention_in_areas_label",
-      ),
-      battery_tile_feature: localize("editor.battery_tile_feature_label"),
-      stale_threshold_hours: localize("editor.stale_threshold_label"),
-    };
 
     if (schema.name.endsWith("_enabled")) {
       return localize("editor.module_enabled_label");
     }
 
-    return labelMap[schema.name] ?? "";
+    switch (schema.name) {
+      case "battery_attention_threshold":
+        return localize("editor.battery_threshold_label");
+      case "show_attention_batteries_in_areas":
+        return localize("editor.show_attention_in_areas_label");
+      case "battery_tile_feature":
+        return localize("editor.battery_tile_feature_label");
+      case "stale_threshold_hours":
+        return localize("editor.stale_threshold_label");
+      default:
+        return "";
+    }
   };
 
   private _computeHelper = (schema: { name: string }): string => {
     const localize = setupLocalize(this.hass);
-    const helperMap: Record<string, ReturnType<typeof localize>> = {
-      battery_attention_threshold: localize("editor.battery_threshold_helper"),
-      show_attention_batteries_in_areas: localize(
-        "editor.show_attention_in_areas_helper",
-      ),
-      battery_tile_feature: localize("editor.battery_tile_feature_helper"),
-      stale_threshold_hours: localize("editor.stale_threshold_helper"),
-    };
 
     if (schema.name.endsWith("_enabled")) {
       return localize("editor.module_enabled_helper");
     }
 
-    return helperMap[schema.name] ?? "";
+    switch (schema.name) {
+      case "battery_attention_threshold":
+        return localize("editor.battery_threshold_helper");
+      case "show_attention_batteries_in_areas":
+        return localize("editor.show_attention_in_areas_helper");
+      case "battery_tile_feature":
+        return localize("editor.battery_tile_feature_helper");
+      case "stale_threshold_hours":
+        return localize("editor.stale_threshold_helper");
+      default:
+        return "";
+    }
   };
 
   /* ---- ha-form value-changed handlers ---- */
 
-  private _formValueChanged(
-    ev: HaFormValueChangedEvent<Record<string, unknown>>,
-  ): void {
+  private _formValueChanged = (ev: HaFormValueChangedEvent): void => {
     if (!this._config) {
       return;
     }
+
     ev.stopPropagation();
 
     const moduleId =
       ev.currentTarget instanceof HTMLElement
         ? ev.currentTarget.dataset.module
         : undefined;
+
     const activeModule = MODULES.find((mod) => mod.id === moduleId);
+
     if (!activeModule) {
       return;
     }
@@ -881,28 +938,31 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     const updates: Partial<MaintenanceDashboardStrategyConfig> = {};
 
     const enabled = data[activeModule.enabledKey];
-    if (typeof enabled === "boolean") {
+
+    if (enabled !== undefined) {
       updates[activeModule.enabledKey] = enabled ? undefined : false;
     }
 
     if (activeModule.id === "batteries") {
       const threshold = data.battery_attention_threshold;
+
       const showAttentionBatteriesInAreas =
         data.show_attention_batteries_in_areas;
+
       const batteryTileFeature = data.battery_tile_feature;
       updates.battery_attention_threshold =
-        typeof threshold !== "number" ||
+        threshold === undefined ||
         threshold === DEFAULT_BATTERY_ATTENTION_THRESHOLD
           ? undefined
           : threshold;
       updates.show_attention_batteries_in_areas =
-        typeof showAttentionBatteriesInAreas !== "boolean" ||
+        showAttentionBatteriesInAreas === undefined ||
         showAttentionBatteriesInAreas ===
           DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS
           ? undefined
           : showAttentionBatteriesInAreas;
       updates.battery_tile_feature =
-        typeof batteryTileFeature !== "string" ||
+        batteryTileFeature === undefined ||
         !isBatteryTileFeature(batteryTileFeature) ||
         batteryTileFeature === DEFAULT_BATTERY_TILE_FEATURE
           ? undefined
@@ -910,14 +970,14 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     } else if (activeModule.id === "stale") {
       const staleThreshold = data.stale_threshold_hours;
       updates.stale_threshold_hours =
-        typeof staleThreshold !== "number" ||
+        staleThreshold === undefined ||
         staleThreshold === DEFAULT_STALE_THRESHOLD_HOURS
           ? undefined
           : staleThreshold;
     }
 
     this._emitConfigUpdate(updates);
-  }
+  };
 
   /* ---- Battery threshold override handlers ---- */
 
@@ -927,6 +987,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     const index = Number(ev.currentTarget.dataset.index);
+
     return Number.isInteger(index) ? index : undefined;
   }
 
@@ -936,26 +997,27 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     });
   }
 
-  private _overridesExpandedChanged(
+  private _overridesExpandedChanged = (
     ev: CustomEvent<{ expanded: boolean }>,
-  ): void {
+  ): void => {
     ev.stopPropagation();
     this._overridesExpanded = ev.detail.expanded;
-  }
+  };
 
-  private _addOverride(): void {
+  private _addOverride = (): void => {
     this._overrideDraft = {
       index: this._config?.battery_threshold_overrides?.length ?? 0,
       threshold:
         this._config?.battery_attention_threshold ??
         DEFAULT_BATTERY_ATTENTION_THRESHOLD,
     };
-  }
+  };
 
-  private _addOverridePicked(ev: CustomEvent<{ value?: unknown }>): void {
+  private _addOverridePicked = (ev: CustomEvent<{ value?: string }>): void => {
     ev.stopPropagation();
     const entityId = ev.detail.value;
-    if (typeof entityId !== "string" || !entityId) {
+
+    if (!entityId) {
       return;
     }
 
@@ -966,23 +1028,26 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         this._config?.battery_attention_threshold ??
         DEFAULT_BATTERY_ATTENTION_THRESHOLD,
     });
-  }
+  };
 
-  private _editOverride(ev: Event): void {
+  private _editOverride = (ev: Event): void => {
     const index = this._rowIndex(ev);
+
     const override =
       index === undefined
         ? undefined
         : this._config?.battery_threshold_overrides?.[index];
+
     if (index === undefined || !override) {
       return;
     }
 
     this._overrideDraft = { index, ...override };
-  }
+  };
 
-  private _removeOverride(ev: Event): void {
+  private _removeOverride = (ev: Event): void => {
     const index = this._rowIndex(ev);
+
     if (index === undefined) {
       return;
     }
@@ -992,11 +1057,11 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         (_override, overrideIndex) => overrideIndex !== index,
       ),
     );
-  }
+  };
 
-  private _closeOverrideEditor(): void {
+  private _closeOverrideEditor = (): void => {
     this._overrideDraft = undefined;
-  }
+  };
 
   /* ---- Availability safe list handlers ---- */
 
@@ -1008,21 +1073,22 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     });
   }
 
-  private _safeListExpandedChanged(
+  private _safeListExpandedChanged = (
     ev: CustomEvent<{ expanded: boolean }>,
-  ): void {
+  ): void => {
     ev.stopPropagation();
     this._safeListExpanded = ev.detail.expanded;
-  }
+  };
 
-  private _addSafeListDevice(ev: CustomEvent<{ value?: unknown }>): void {
+  private _addSafeListDevice = (ev: PickerValueEvent): void => {
     ev.stopPropagation();
     const deviceId = ev.detail.value;
-    const picker = ev.currentTarget as { value?: string } | null;
-    if (picker) {
-      picker.value = undefined;
+
+    if (ev.currentTarget) {
+      ev.currentTarget.value = undefined;
     }
-    if (typeof deviceId !== "string" || !deviceId) {
+
+    if (!deviceId) {
       return;
     }
 
@@ -1030,10 +1096,11 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       ...(this._config?.availability_safe_list_device_ids ?? []),
       deviceId,
     ]);
-  }
+  };
 
-  private _removeSafeListDevice(ev: Event): void {
+  private _removeSafeListDevice = (ev: Event): void => {
     const index = this._rowIndex(ev);
+
     if (index === undefined) {
       return;
     }
@@ -1043,28 +1110,30 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         (_deviceId, deviceIndex) => deviceIndex !== index,
       ),
     );
-  }
+  };
 
-  private _overrideDraftEntityChanged(
-    ev: CustomEvent<{ value?: unknown }>,
-  ): void {
+  private _overrideDraftEntityChanged = (
+    ev: CustomEvent<{ value?: string }>,
+  ): void => {
     ev.stopPropagation();
     const entityId = ev.detail.value;
-    if (!this._overrideDraft || typeof entityId !== "string" || !entityId) {
+
+    if (!this._overrideDraft || !entityId) {
       return;
     }
 
     this._setOverrideDraft({ ...this._overrideDraft, entity_id: entityId });
-  }
+  };
 
-  private _overrideDraftThresholdChanged(
-    ev: CustomEvent<{ value?: unknown }>,
-  ): void {
+  private _overrideDraftThresholdChanged = (
+    ev: CustomEvent<{ value?: number }>,
+  ): void => {
     ev.stopPropagation();
     const threshold = ev.detail.value;
+
     if (
       !this._overrideDraft ||
-      typeof threshold !== "number" ||
+      threshold === undefined ||
       Number.isNaN(threshold)
     ) {
       return;
@@ -1074,10 +1143,11 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       ...this._overrideDraft,
       threshold: toBatteryThreshold(threshold),
     });
-  }
+  };
 
   private _setOverrideDraft(draft: BatteryThresholdOverrideDraft): void {
     this._overrideDraft = draft;
+
     if (!draft.entity_id) {
       return;
     }
@@ -1092,13 +1162,14 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   /* ---- Native fallback handlers ---- */
 
-  private _nativeModuleEnabledChanged(ev: Event): void {
+  private _nativeModuleEnabledChanged = (ev: Event): void => {
     if (!(ev.currentTarget instanceof HTMLInputElement)) {
       return;
     }
 
     const input = ev.currentTarget;
     const moduleId = input.dataset.module;
+
     if (!moduleId || !isMaintenanceModuleId(moduleId)) {
       return;
     }
@@ -1107,9 +1178,9 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     this._emitConfigUpdate({
       [`${moduleId}_enabled`]: enabled ? undefined : false,
     });
-  }
+  };
 
-  private _nativeValueChanged(ev: Event): void {
+  private _nativeValueChanged = (ev: Event): void => {
     if (!(ev.currentTarget instanceof HTMLInputElement)) {
       return;
     }
@@ -1121,9 +1192,9 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           ? undefined
           : threshold,
     });
-  }
+  };
 
-  private _nativeBooleanChanged(ev: Event): void {
+  private _nativeBooleanChanged = (ev: Event): void => {
     if (!(ev.currentTarget instanceof HTMLInputElement)) {
       return;
     }
@@ -1136,17 +1207,19 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           ? undefined
           : showAttentionBatteriesInAreas,
     });
-  }
+  };
 
-  private _nativeBatteryTileFeatureChanged(ev: Event): void {
+  private _nativeBatteryTileFeatureChanged = (ev: Event): void => {
     if (!(ev.currentTarget instanceof HTMLInputElement)) {
       return;
     }
+
     if (!ev.currentTarget.checked) {
       return;
     }
 
     const value = ev.currentTarget.value;
+
     if (!isBatteryTileFeature(value)) {
       return;
     }
@@ -1155,17 +1228,19 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       battery_tile_feature:
         value === DEFAULT_BATTERY_TILE_FEATURE ? undefined : value,
     });
-  }
+  };
 
-  private _nativeBatteryOverridesChanged(ev: Event): void {
+  private _nativeBatteryOverridesChanged = (ev: Event): void => {
     if (!(ev.currentTarget instanceof HTMLTextAreaElement)) {
       return;
     }
 
     const overrides = new Map<string, number>();
+
     for (const line of ev.currentTarget.value.split("\n")) {
       const [entityId, rawThreshold] = line.split(":").map((part) => part.trim());
       const threshold = Number(rawThreshold);
+
       if (entityId && rawThreshold && Number.isFinite(threshold)) {
         overrides.set(entityId, toBatteryThreshold(threshold));
       }
@@ -1177,9 +1252,9 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         threshold,
       })),
     );
-  }
+  };
 
-  private _nativeStaleValueChanged(ev: Event): void {
+  private _nativeStaleValueChanged = (ev: Event): void => {
     if (!(ev.currentTarget instanceof HTMLInputElement)) {
       return;
     }
@@ -1191,9 +1266,9 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           ? undefined
           : staleThreshold,
     });
-  }
+  };
 
-  private _nativeAvailabilitySafeListChanged(ev: Event): void {
+  private _nativeAvailabilitySafeListChanged = (ev: Event): void => {
     if (!(ev.currentTarget instanceof HTMLTextAreaElement)) {
       return;
     }
@@ -1203,11 +1278,12 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         .split(/[\n,]/)
         .map((value) => value.trim()),
     );
+
     this._emitConfigUpdate({
       availability_safe_list_device_ids:
         safeListDeviceIds.length > 0 ? safeListDeviceIds : undefined,
     });
-  }
+  };
 
   /* ---- Config emit ---- */
 

@@ -23,14 +23,19 @@ const SUMMARY_OPTIONS: SummaryMetric[] = [
   "stale",
 ];
 
-type HaFormValueChangedEvent<T extends Record<string, unknown>> = CustomEvent<{
-  value: T;
+interface SummaryFormData {
+  summary?: string;
+  title?: string;
+  icon?: string;
+  tap_action?: SummaryTapAction;
+  hold_action?: SummaryTapAction;
+}
+
+type HaFormValueChangedEvent = CustomEvent<{
+  value: SummaryFormData;
 }>;
 
 const SUMMARY_OPTION_VALUES = new Set<string>(SUMMARY_OPTIONS);
-
-const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
 
 const SUMMARY_LABEL_KEY: Record<
   SummaryMetric,
@@ -47,19 +52,16 @@ const SUMMARY_LABEL_KEY: Record<
   stale: "summary_card.metric.stale",
 };
 
-const cleanText = (value: unknown): string | undefined => {
-  if (typeof value !== "string") {
-    return undefined;
-  }
+const cleanText = (value?: string): string | undefined => {
+  const normalized = value?.trim();
 
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : undefined;
+  return normalized ? normalized : undefined;
 };
 
-const isSummaryMetric = (value: unknown): value is SummaryMetric =>
-  typeof value === "string" && SUMMARY_OPTION_VALUES.has(value);
+const isSummaryMetric = (value?: string): value is SummaryMetric =>
+  value !== undefined && SUMMARY_OPTION_VALUES.has(value);
 
-const normalizeSummary = (value: unknown): SummaryMetric =>
+const normalizeSummary = (value?: string): SummaryMetric =>
   isSummaryMetric(value) ? value : DEFAULT_SUMMARY;
 
 const isDefaultNavigateAction = (action?: SummaryTapAction): boolean =>
@@ -67,8 +69,8 @@ const isDefaultNavigateAction = (action?: SummaryTapAction): boolean =>
   action.action === undefined ||
   (action.action === "navigate" && !cleanText(action.navigation_path));
 
-const normalizeTapAction = (value: unknown): SummaryTapAction | undefined => {
-  if (!isObjectRecord(value)) {
+const normalizeTapAction = (value?: SummaryTapAction): SummaryTapAction | undefined => {
+  if (!value) {
     return undefined;
   }
 
@@ -78,32 +80,22 @@ const normalizeTapAction = (value: unknown): SummaryTapAction | undefined => {
 
   if (value.action === "navigate") {
     const path = cleanText(value.navigation_path);
+
     return path ? { action: "navigate", navigation_path: path } : { action: "navigate" };
   }
 
   return undefined;
 };
 
-const normalizeHoldAction = (value: unknown): SummaryTapAction | undefined => {
+const normalizeHoldAction = (value?: SummaryTapAction): SummaryTapAction | undefined => {
   const action = normalizeTapAction(value);
+
   if (!action || action.action === "none") {
     return undefined;
   }
+
   return action;
 };
-
-interface LovelaceDashboardConfig {
-  strategy?: {
-    type?: string;
-  };
-}
-
-const isMaintenanceDashboardConfig = (
-  config: unknown,
-): config is LovelaceDashboardConfig =>
-  isObjectRecord(config) &&
-  isObjectRecord(config.strategy) &&
-  config.strategy.type === "custom:maintenance";
 
 const DISCOVERY_RETRY_INTERVAL_MS = 15_000;
 
@@ -168,7 +160,8 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
     try {
       const result = await findLovelaceDashboardConfig(
         this.hass.connection,
-        (config) => (isMaintenanceDashboardConfig(config) ? config : undefined),
+        (config) =>
+          config?.strategy?.type === "custom:maintenance" ? config : undefined,
       );
 
       if (result) {
@@ -183,8 +176,10 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
 
   private _buildFormData(config: DmMaintenanceSummaryCardConfig) {
     const summary = normalizeSummary(config.summary ?? config.metric);
+
     const defaultNavigationPath =
       config.navigation_path || this._resolvedMaintenanceSummaryPath || "summary";
+
     return {
       summary,
       title: config.title ?? "",
@@ -251,29 +246,39 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
 
   private _computeLabel = (schema: { name: string }): string => {
     const localize = setupLocalize(this.hass);
-    const labels: Record<string, string> = {
-      summary: localize("summary_card.editor.summary_label"),
-      title: localize("summary_card.editor.title_label"),
-      icon: localize("summary_card.editor.icon_label"),
-      tap_action: localize("summary_card.editor.tap_action_label"),
-      hold_action: localize("summary_card.editor.hold_action_label"),
-    };
 
-    return labels[schema.name] ?? "";
+    switch (schema.name) {
+      case "summary":
+        return localize("summary_card.editor.summary_label");
+      case "title":
+        return localize("summary_card.editor.title_label");
+      case "icon":
+        return localize("summary_card.editor.icon_label");
+      case "tap_action":
+        return localize("summary_card.editor.tap_action_label");
+      case "hold_action":
+        return localize("summary_card.editor.hold_action_label");
+      default:
+        return "";
+    }
   };
 
   private _computeHelper = (schema: { name: string }): string => {
     const localize = setupLocalize(this.hass);
-    const helpers: Record<string, string> = {
-      summary: localize("summary_card.editor.summary_helper"),
-      tap_action: localize("summary_card.editor.tap_action_helper"),
-      hold_action: localize("summary_card.editor.hold_action_helper"),
-    };
 
-    return helpers[schema.name] ?? "";
+    switch (schema.name) {
+      case "summary":
+        return localize("summary_card.editor.summary_helper");
+      case "tap_action":
+        return localize("summary_card.editor.tap_action_helper");
+      case "hold_action":
+        return localize("summary_card.editor.hold_action_helper");
+      default:
+        return "";
+    }
   };
 
-  private _valueChanged(ev: HaFormValueChangedEvent<Record<string, unknown>>): void {
+  private _valueChanged = (ev: HaFormValueChangedEvent): void => {
     if (!this._config) {
       return;
     }
@@ -290,12 +295,27 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
 
     const nextConfig: DmMaintenanceSummaryCardConfig = {
       type: "custom:dm-maintenance-summary-card",
-      ...(summary !== DEFAULT_SUMMARY ? { summary } : {}),
-      ...(title ? { title } : {}),
-      ...(icon ? { icon } : {}),
-      ...(!isDefaultNavigateAction(tapAction) ? { tap_action: tapAction } : {}),
-      ...(holdAction ? { hold_action: holdAction } : {}),
     };
+
+    if (summary !== DEFAULT_SUMMARY) {
+      nextConfig.summary = summary;
+    }
+
+    if (title) {
+      nextConfig.title = title;
+    }
+
+    if (icon) {
+      nextConfig.icon = icon;
+    }
+
+    if (!isDefaultNavigateAction(tapAction)) {
+      nextConfig.tap_action = tapAction;
+    }
+
+    if (holdAction) {
+      nextConfig.hold_action = holdAction;
+    }
 
     this.dispatchEvent(
       new CustomEvent("config-changed", {
@@ -304,7 +324,7 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
         composed: true,
       }),
     );
-  }
+  };
 
   static styles = css`
     :host {

@@ -18,11 +18,14 @@ export class MaintenanceStaleViewStrategy extends ReactiveElement {
     hass: HomeAssistant,
   ): Promise<LovelaceViewConfig> {
     const localize = setupLocalize(hass);
+
     const allEntities = await getMaintenanceStaleEntities(
       hass,
       config.stale_threshold_hours,
     );
+
     const entities = filterItemsByArea(allEntities, config.area_id);
+
     const sections = await makeStaleSections(
       localize,
       hass,

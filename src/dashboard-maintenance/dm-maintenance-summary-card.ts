@@ -13,6 +13,7 @@ import { setupLocalize } from "./localize";
 import {
   buildDashboardSummaryPath,
   findLovelaceDashboardConfig,
+  type LovelaceDashboardConfig,
 } from "./lovelace-dashboard";
 import {
   getMaintenanceBatteryDevices,
@@ -69,9 +70,13 @@ const SUMMARY_METRICS = [
 const SUMMARY_METRIC_VALUES = new Set<string>(SUMMARY_METRICS);
 
 const DEFAULT_METRIC: SummaryMetric = "batteries";
+
 const DEFAULT_NAVIGATION_PATH = "summary";
+
 const DEFAULT_ICON = "mdi:home-heart";
+
 const REFRESH_INTERVAL_MS = 60_000;
+
 const INITIAL_LOAD_RETRY_MS = 1_500;
 
 const METRIC_COLOR: Record<SummaryMetric, string> = {
@@ -121,19 +126,17 @@ const COUNT_LABEL_KEY: Record<
   },
 };
 
-const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
-
-const isSummaryMetric = (value: unknown): value is SummaryMetric =>
-  typeof value === "string" && SUMMARY_METRIC_VALUES.has(value);
+const isSummaryMetric = (value?: string): value is SummaryMetric =>
+  value !== undefined && SUMMARY_METRIC_VALUES.has(value);
 
 const isMaintenanceStrategyConfig = (
-  value: unknown,
+  value: LovelaceDashboardConfig["strategy"],
 ): value is MaintenanceStrategyConfig =>
-  isObjectRecord(value) && value.type === "custom:maintenance";
+  value?.type === "custom:maintenance";
 
 const resolveMetric = (config?: DmMaintenanceSummaryCardConfig): SummaryMetric => {
   const selected = config?.summary ?? config?.metric;
+
   return isSummaryMetric(selected) ? selected : DEFAULT_METRIC;
 };
 
@@ -197,6 +200,7 @@ class DmMaintenanceSummaryCard extends LitElement {
 
   public static async getConfigElement(): Promise<HTMLElement> {
     await import("./dm-maintenance-summary-card-editor.js");
+
     return document.createElement("dm-maintenance-summary-card-editor");
   }
 
@@ -248,6 +252,7 @@ class DmMaintenanceSummaryCard extends LitElement {
 
   private _countLabel(metric: SummaryMetric): string {
     const localize = setupLocalize(this.hass);
+
     if (this._dashboardNotFound) {
       return localize("summary_card.error_dashboard_not_found");
     }
@@ -257,6 +262,7 @@ class DmMaintenanceSummaryCard extends LitElement {
     }
 
     const keys = COUNT_LABEL_KEY[metric];
+
     return localize(this._count === 1 ? keys.one : keys.other, { count: this._count });
   }
 
@@ -292,13 +298,11 @@ class DmMaintenanceSummaryCard extends LitElement {
   }
 
   private _maintenanceStrategyFromConfig(
-    config: unknown,
+    config: LovelaceDashboardConfig | null,
   ): MaintenanceStrategyConfig | undefined {
-    if (!isObjectRecord(config) || !isMaintenanceStrategyConfig(config.strategy)) {
-      return undefined;
-    }
+    const strategy = config?.strategy;
 
-    return config.strategy;
+    return isMaintenanceStrategyConfig(strategy) ? strategy : undefined;
   }
 
   private async _discoverMaintenanceSummaryPath(): Promise<void> {
@@ -334,6 +338,7 @@ class DmMaintenanceSummaryCard extends LitElement {
     } finally {
       this._discoveryInFlight = false;
       this._dashboardNotFound = !found;
+
       if (this._dashboardNotFound) {
         this._hasError = true;
       } else {
@@ -353,8 +358,9 @@ class DmMaintenanceSummaryCard extends LitElement {
     );
   }
 
-  private _handleAction(ev: ActionHandlerEvent): void {
+  private _handleAction = (ev: ActionHandlerEvent): void => {
     const actionType = ev.detail.action;
+
     if (!actionType) {
       return;
     }
@@ -368,12 +374,14 @@ class DmMaintenanceSummaryCard extends LitElement {
 
     if (actionConfig.action === "navigate") {
       const navigationPath = this._resolveActionPath(actionConfig);
+
       if (!navigationPath) {
         return;
       }
+
       this._navigate(navigationPath);
     }
-  }
+  };
 
   private _startRefreshTimer(): void {
     if (this._refreshTimer !== undefined) {
@@ -418,17 +426,22 @@ class DmMaintenanceSummaryCard extends LitElement {
     if (this._resolvedMaintenanceStrategy) {
       return true;
     }
+
     if (this._dashboardNotFound) {
       this._hasError = true;
+
       return false;
     }
+
     await this._discoverMaintenanceSummaryPath();
+
     return Boolean(this._resolvedMaintenanceStrategy);
   }
 
   private _commitCount(count: number): void {
     const isReliableInitialCount = count > 0 || this._hasLoadedStateData();
     this._count = count;
+
     if (!this._countLoaded && !isReliableInitialCount) {
       this._countLoaded = false;
       this._scheduleInitialLoadRetry();
@@ -454,6 +467,7 @@ class DmMaintenanceSummaryCard extends LitElement {
       if (!(await this._ensureMaintenanceStrategyResolved())) {
         return;
       }
+
       this._commitCount(await this._computeCount());
       this._hasError = false;
     } catch {
@@ -468,11 +482,13 @@ class DmMaintenanceSummaryCard extends LitElement {
       hass,
       this._resolvedMaintenanceStrategy,
     );
+
     return devices.filter(isBatteryAttentionPanelDevice).length;
   }
 
   private async _computeUpdatesCount(hass: HomeAssistant): Promise<number> {
     const updates = await getMaintenanceUpdates(hass);
+
     return updates.filter(
       (update) =>
         update.inProgress || update.skippedCurrentVersion || updateCanInstall(update),
@@ -484,7 +500,9 @@ class DmMaintenanceSummaryCard extends LitElement {
       hass,
       this._resolvedMaintenanceStrategy?.availability_safe_list_device_ids,
     );
+
     const grouped = await groupAvailabilityByDevice(hass, entities);
+
     return grouped.devices.length + grouped.ungrouped.length;
   }
 
@@ -493,16 +511,19 @@ class DmMaintenanceSummaryCard extends LitElement {
       hass,
       this._resolvedMaintenanceStrategy?.stale_threshold_hours,
     );
+
     return entities.length;
   }
 
   private async _computeCount(): Promise<number> {
     const hass = this.hass;
+
     if (!hass || !this._config) {
       return 0;
     }
 
     const metric = resolveMetric(this._config);
+
     switch (metric) {
       case "batteries":
         return this._computeBatteryCount(hass);
@@ -523,12 +544,15 @@ class DmMaintenanceSummaryCard extends LitElement {
     const localize = setupLocalize(this.hass);
     const metric = resolveMetric(config);
     const secondary = this._countLabel(metric);
+
     const secondaryLoading =
       !this._countLoaded && !this._hasError && !this._dashboardNotFound;
+
     const tapAction = this._tapAction();
     const holdAction = this._holdAction();
     const hasTap = hasAction(tapAction);
     const hasHold = hasAction(holdAction);
+
     return {
       metric,
       icon: config.icon || DEFAULT_ICON,
@@ -596,6 +620,7 @@ class DmMaintenanceSummaryCard extends LitElement {
 }
 
 window.customCards = window.customCards || [];
+
 if (!window.customCards.some((card) => card.type === "dm-maintenance-summary-card")) {
   window.customCards.push({
     type: "dm-maintenance-summary-card",

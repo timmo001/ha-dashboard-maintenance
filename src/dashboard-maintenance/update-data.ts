@@ -11,17 +11,10 @@ import type { HassEntity, HomeAssistant } from "./types";
 const UPDATE_FEATURE_INSTALL = 1;
 
 const HOME_ASSISTANT_CORE_TITLE = "Home Assistant Core";
-const HOME_ASSISTANT_OS_TITLE = "Home Assistant Operating System";
-const HOME_ASSISTANT_SUPERVISOR_TITLE = "Home Assistant Supervisor";
 
-interface UpdateAttributes {
-  friendly_name?: string;
-  in_progress?: boolean;
-  latest_version?: string | null;
-  skipped_version?: string | null;
-  supported_features?: number;
-  title?: string | null;
-}
+const HOME_ASSISTANT_OS_TITLE = "Home Assistant Operating System";
+
+const HOME_ASSISTANT_SUPERVISOR_TITLE = "Home Assistant Supervisor";
 
 export interface MaintenanceUpdateEntity {
   entityId: string;
@@ -33,17 +26,11 @@ export interface MaintenanceUpdateEntity {
   title: string;
 }
 
-const asUpdateAttributes = (stateObj: HassEntity): UpdateAttributes =>
-  stateObj.attributes as UpdateAttributes;
-
-const updateAvailable = (stateObj: HassEntity, showSkipped = false): boolean => {
-  const attributes = asUpdateAttributes(stateObj);
-
-  return stateObj.state === "on" || (showSkipped && !!attributes.skipped_version);
-};
+const updateAvailable = (stateObj: HassEntity, showSkipped = false): boolean =>
+  stateObj.state === "on" || (showSkipped && !!stateObj.attributes.skipped_version);
 
 const supportsInstall = (stateObj: HassEntity): boolean => {
-  const supportedFeatures = Number(asUpdateAttributes(stateObj).supported_features) || 0;
+  const supportedFeatures = Number(stateObj.attributes.supported_features) || 0;
 
   return (supportedFeatures & UPDATE_FEATURE_INSTALL) !== 0;
 };
@@ -85,9 +72,11 @@ export const getMaintenanceUpdates = async (
           isVisibleUpdateEntity(stateObj.entity_id, entities, hasEntityRegistry),
       )
       .map((stateObj) => {
-        const attributes = asUpdateAttributes(stateObj);
+        const attributes = stateObj.attributes;
+
         const title =
           attributes.title || attributes.friendly_name || stateObj.entity_id;
+
         const skippedCurrentVersion = !!(
           attributes.latest_version &&
           attributes.skipped_version === attributes.latest_version

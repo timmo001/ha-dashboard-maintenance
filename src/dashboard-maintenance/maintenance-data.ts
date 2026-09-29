@@ -57,6 +57,7 @@ const batteryStateLevel = (stateObj: HassEntity): number | null => {
   }
 
   const level = Number(stateObj.state);
+
   if (Number.isFinite(level) && level >= 0 && level <= 100) {
     return level;
   }
@@ -89,8 +90,8 @@ export type BatteryThresholdConfig = Pick<
   "battery_attention_threshold" | "battery_threshold_overrides"
 >;
 
-const normalizeBatteryThreshold = (threshold: unknown): number | undefined =>
-  typeof threshold === "number" && !Number.isNaN(threshold)
+const normalizeBatteryThreshold = (threshold?: number): number | undefined =>
+  threshold !== undefined && !Number.isNaN(threshold)
     ? clamp(Math.round(threshold), 0, 100)
     : undefined;
 
@@ -100,11 +101,13 @@ const createBatteryThresholdResolver = (
   const defaultThreshold =
     normalizeBatteryThreshold(config?.battery_attention_threshold) ??
     DEFAULT_BATTERY_ATTENTION_THRESHOLD;
+
   const overrides = new Map<string, number>();
 
   for (const override of config?.battery_threshold_overrides ?? []) {
     const threshold = normalizeBatteryThreshold(override?.threshold);
-    if (typeof override?.entity_id === "string" && threshold !== undefined) {
+
+    if (override?.entity_id !== undefined && threshold !== undefined) {
       overrides.set(override.entity_id, threshold);
     }
   }
@@ -117,6 +120,7 @@ const batteryNeedsAttention = (
   threshold: number,
 ): boolean => {
   const level = batteryStateLevel(stateObj);
+
   return level === null || level < threshold;
 };
 
@@ -149,6 +153,7 @@ export const fetchEntityRegistry = async (
     const entries = await hass.connection.sendMessagePromise<EntityRegistryEntry[]>({
       type: "config/entity_registry/list",
     });
+
     return Object.fromEntries(entries.map((entry) => [entry.entity_id, entry]));
   } catch {
     return {};
@@ -170,6 +175,7 @@ export const fetchDeviceRegistry = async (
     const entries = await hass.connection.sendMessagePromise<DeviceRegistryEntry[]>({
       type: "config/device_registry/list",
     });
+
     return Object.fromEntries(entries.map((entry) => [entry.id, entry]));
   } catch {
     return {};
@@ -220,6 +226,7 @@ export const getMaintenanceAreas = async (
     const entries = await hass.connection.sendMessagePromise<AreaRegistryEntry[]>({
       type: "config/area_registry/list",
     });
+
     return Object.fromEntries(entries.map((entry) => [entry.area_id, entry]));
   } catch {
     return {};
@@ -241,6 +248,7 @@ export const getMaintenanceFloors = async (
     const entries = await hass.connection.sendMessagePromise<FloorRegistryEntry[]>({
       type: "config/floor_registry/list",
     });
+
     return Object.fromEntries(entries.map((entry) => [entry.floor_id, entry]));
   } catch {
     return {};
@@ -264,6 +272,7 @@ export const fetchConfigEntries = async (
     const entries = await hass.connection.sendMessagePromise<ConfigEntry[]>({
       type: "config_entries/get",
     });
+
     return Object.fromEntries(entries.map((entry) => [entry.entry_id, entry]));
   } catch {
     return {};
@@ -294,6 +303,7 @@ export const getMaintenanceBatteryDevices = async (
   thresholdConfig?: BatteryThresholdConfig,
 ): Promise<MaintenanceBatteryDevice[]> => {
   const thresholdFor = createBatteryThresholdResolver(thresholdConfig);
+
   const [entities, devices] = await Promise.all([
     fetchEntityRegistry(hass),
     fetchDeviceRegistry(hass),
@@ -312,6 +322,7 @@ export const getMaintenanceBatteryDevices = async (
     }
 
     const stateObj = hass.states[entry.entity_id];
+
     if (isBatteryChargingState(stateObj)) {
       chargingDeviceIds.add(entry.device_id);
     }
@@ -340,6 +351,7 @@ export const getMaintenanceBatteryDevices = async (
           batteryNeedsAttention(stateObj, thresholdFor(stateObj.entity_id)),
         ]),
       );
+
       const selectedBatteryState = batteryStates.sort(
         (left, right) =>
           batteryStatePriority(left) - batteryStatePriority(right) ||
@@ -351,6 +363,7 @@ export const getMaintenanceBatteryDevices = async (
       )[0];
 
       const level = batteryStateLevel(selectedBatteryState);
+
       const areaId =
         devices[deviceId]?.area_id ||
         entities[selectedBatteryState.entity_id]?.area_id;
@@ -379,6 +392,7 @@ export const getBatteryPreviewDevice = (
   threshold: number,
 ): MaintenanceBatteryDevice | undefined => {
   const stateObj = hass.states[entityId];
+
   if (!stateObj) {
     return undefined;
   }

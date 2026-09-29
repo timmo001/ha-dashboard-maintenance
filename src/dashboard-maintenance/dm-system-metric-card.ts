@@ -98,8 +98,8 @@ const SYSTEM_METRIC_TYPES = new Set<string>([
 // Helpers
 // ---------------------------------------------------------------------------
 
-const isSystemMetricType = (value: unknown): value is SystemMetricType =>
-  typeof value === "string" && SYSTEM_METRIC_TYPES.has(value);
+const isSystemMetricType = (value: string): value is SystemMetricType =>
+  SYSTEM_METRIC_TYPES.has(value);
 
 const isStreamMetric = (metric: SystemMetricType): boolean =>
   metric === "cpu" || metric === "memory_percent" || metric === "memory_used";
@@ -122,6 +122,7 @@ const formatMemoryMb = (value: number): string => {
   if (value >= 1024) {
     return `${(value / 1024).toFixed(1)} GiB`;
   }
+
   return `${value.toFixed(0)} MiB`;
 };
 
@@ -131,8 +132,10 @@ const formatDiskHealth = (lifeTime: number | null): string => {
   if (lifeTime === null) {
     return "—";
   }
+
   // disk_life_time is percentage used (0-100), health is the inverse
   const health = Math.max(0, 100 - lifeTime);
+
   return `${health.toFixed(0)}%`;
 };
 
@@ -156,12 +159,15 @@ const formatUptime = (bootDate: Date | null, language: string): string => {
   if (days > 0) {
     return fmt(days, "day");
   }
+
   if (hours > 0) {
     return fmt(hours, "hour");
   }
+
   if (minutes > 0) {
     return fmt(minutes, "minute");
   }
+
   return `< ${fmt(1, "minute")}`;
 };
 
@@ -191,9 +197,12 @@ const formatHostValue = (
       if (data.disk_total <= 0) {
         return "—";
       }
+
       const percent = (data.disk_used / data.disk_total) * 100;
+
       return formatPercent(percent);
     }
+
     case "disk_free":
       return formatDiskFreeGb(data.disk_free);
     case "disk_health":
@@ -235,11 +244,14 @@ const formatHostSecondary = (
 
 const formatSetupInfoValue = (data: IntegrationSetupData): string => {
   const s = data.slowestSeconds;
+
   if (s >= 60) {
     const min = Math.floor(s / 60);
     const sec = Math.round(s % 60);
+
     return sec > 0 ? `${min}m ${sec}s` : `${min}m`;
   }
+
   return `${s.toFixed(1)}s`;
 };
 
@@ -364,13 +376,16 @@ class DmSystemMetricCard extends LitElement {
     }
 
     const data = await fetchHostInfo(this.hass);
+
     if (data) {
       this._hostReady = true;
       const metric = this._config.metric;
       const language = this.hass.locale?.language ?? "en";
+
       if (!isStreamMetric(metric)) {
         this._hostValue = formatHostValue(metric, data, language);
       }
+
       this._hostSecondary = formatHostSecondary(metric, data);
     }
   }
@@ -381,6 +396,7 @@ class DmSystemMetricCard extends LitElement {
     }
 
     const data = await fetchIntegrationSetupInfo(this.hass);
+
     if (data) {
       this._setupInfoReady = true;
       this._setupInfoValue = formatSetupInfoValue(data);
@@ -424,11 +440,13 @@ class DmSystemMetricCard extends LitElement {
   // Navigation
   // ---------------------------------------------------------------------------
 
-  private _handleTap(): void {
+  private _handleTap = (): void => {
     if (!this._config) {
       return;
     }
+
     const path = METRIC_NAV_PATH[this._config.metric];
+
     if (path) {
       history.pushState(null, "", path);
       this.dispatchEvent(
@@ -439,7 +457,7 @@ class DmSystemMetricCard extends LitElement {
         }),
       );
     }
-  }
+  };
 
   // ---------------------------------------------------------------------------
   // Render
@@ -455,6 +473,7 @@ class DmSystemMetricCard extends LitElement {
     if (!this._config) {
       return false;
     }
+
     const metric = this._config.metric;
     const needsStream = isStreamMetric(metric);
     const needsHost = isHostMetric(metric) || needsBothSources(metric);
@@ -463,12 +482,15 @@ class DmSystemMetricCard extends LitElement {
     if (needsStream && !this._streamReady) {
       return false;
     }
+
     if (needsHost && !this._hostReady) {
       return false;
     }
+
     if (needsSetupInfo && !this._setupInfoReady) {
       return false;
     }
+
     return true;
   }
 
@@ -486,6 +508,7 @@ class DmSystemMetricCard extends LitElement {
 
     let value: string;
     let secondary: string;
+
     if (isStreamMetric(metric)) {
       value = this._streamValue;
       secondary = this._streamSecondary;
@@ -546,6 +569,7 @@ class DmSystemMetricCard extends LitElement {
 
 // Register as a custom card
 window.customCards = window.customCards || [];
+
 if (!window.customCards.some((card) => card.type === "dm-system-metric-card")) {
   window.customCards.push({
     type: "dm-system-metric-card",

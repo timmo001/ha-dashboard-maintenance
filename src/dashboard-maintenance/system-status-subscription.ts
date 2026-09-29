@@ -41,21 +41,16 @@ const startSubscription = (hass: HomeAssistant): void => {
   }
 
   const sub = activeSubscription;
+  const connection = hass.connection;
   sub.hass = hass;
 
   sub.pending = (async () => {
     try {
-      const connection = hass.connection as unknown as {
-        subscribeMessage: (
-          callback: (msg: SystemStatusData) => void,
-          params: { type: string },
-        ) => Promise<() => void>;
-      };
-
-      const unsubscribe = await connection.subscribeMessage(
-        (message: SystemStatusData) => {
+      const unsubscribe = await connection.subscribeMessage<SystemStatusData>(
+        (message) => {
           if (sub) {
             sub.lastData = message;
+
             for (const cb of sub.subscribers) {
               cb(message);
             }
@@ -119,6 +114,7 @@ export const subscribeSystemStatus = (
       if (activeSubscription.unsub) {
         activeSubscription.unsub();
       }
+
       activeSubscription = null;
     }
   };
@@ -137,36 +133,49 @@ let hostInfoCache: {
 
 let hostInfoFetchPromise: Promise<HostInfoData | null> | null = null;
 
+interface RawHostInfo {
+  disk_free?: number | string;
+  disk_total?: number | string;
+  disk_used?: number | string;
+  disk_life_time?: number | null;
+  boot_timestamp?: number | string;
+  startup_time?: number | string;
+}
+
+interface HostInfoResponse extends RawHostInfo {
+  data?: RawHostInfo;
+}
+
 /**
  * Parse a boot timestamp from the supervisor API into a Date.
  * The supervisor returns `boot_timestamp` as microseconds since epoch.
  * Returns `null` if the value is missing or unparseable.
  */
-const parseBootTimestamp = (value: unknown): Date | null => {
-  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+const parseBootTimestamp = (value?: number | string): Date | null => {
+  if (value === undefined) {
+    return null;
+  }
+
+  if (Number.isFinite(value)) {
     // Supervisor uses microseconds (16-digit integer like 1778095166926904)
-    return new Date(value / 1000);
+    const microseconds = Number(value);
+
+    return microseconds > 0 ? new Date(microseconds / 1000) : null;
   }
-  if (typeof value === "string" && value.length > 0) {
-    const d = new Date(value);
-    if (!Number.isNaN(d.getTime())) {
-      return d;
-    }
-  }
-  return null;
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
 };
 
-const parseHostInfoResponse = (response: unknown): HostInfoData | null => {
-  if (typeof response !== "object" || response === null) {
+const parseHostInfoResponse = (
+  response: HostInfoResponse | null,
+): HostInfoData | null => {
+  if (!response) {
     return null;
   }
 
-  const data = (response as { data?: unknown }).data ?? response;
-  if (typeof data !== "object" || data === null) {
-    return null;
-  }
-
-  const record = data as Record<string, unknown>;
+  const record = response.data ?? response;
   const disk_free = Number(record.disk_free);
   const disk_total = Number(record.disk_total);
   const disk_used = Number(record.disk_used);
@@ -185,8 +194,7 @@ const parseHostInfoResponse = (response: unknown): HostInfoData | null => {
     disk_free,
     disk_total,
     disk_used,
-    disk_life_time:
-      typeof record.disk_life_time === "number" ? record.disk_life_time : null,
+    disk_life_time: record.disk_life_time ?? null,
     boot_timestamp,
     startup_time: Number.isFinite(startup_time) ? startup_time : 0,
   };
@@ -216,16 +224,18 @@ export const fetchHostInfo = async (
 
   hostInfoFetchPromise = (async (): Promise<HostInfoData | null> => {
     try {
-      const response = await hass.connection!.sendMessagePromise<unknown>({
+      const response = await hass.connection!.sendMessagePromise<HostInfoResponse | null>({
         type: "supervisor/api",
         endpoint: "/host/info",
         method: "get",
       });
 
       const parsed = parseHostInfoResponse(response);
+
       if (parsed) {
         hostInfoCache = { data: parsed, fetchedAt: Date.now() };
       }
+
       return parsed;
     } catch {
       return null;
@@ -249,18 +259,13 @@ export const probeHardwareStatusAvailable = async (
   }
 
   try {
-    const connection = hass.connection as unknown as {
-      subscribeMessage: (
-        callback: (msg: unknown) => void,
-        params: { type: string },
-      ) => Promise<() => void>;
-    };
-
-    const unsub = await connection.subscribeMessage(
+    const unsub = await hass.connection.subscribeMessage(
       () => {},
       { type: "hardware/subscribe_system_status" },
     );
+
     unsub();
+
     return true;
   } catch {
     return false;
@@ -274,6 +279,7 @@ export const probeSupervisorAvailable = async (
   hass: HomeAssistant,
 ): Promise<boolean> => {
   const info = await fetchHostInfo(hass);
+
   return info !== null;
 };
 
@@ -334,6 +340,7 @@ export const fetchIntegrationSetupInfo = async (
 
       for (const entry of response) {
         const s = entry.seconds ?? 0;
+
         if (s > slowestSeconds) {
           slowestSeconds = s;
           slowestDomain = entry.domain;
@@ -342,6 +349,7 @@ export const fetchIntegrationSetupInfo = async (
 
       const data: IntegrationSetupData = { slowestDomain, slowestSeconds };
       setupInfoCache = { data, fetchedAt: Date.now() };
+
       return data;
     } catch {
       return null;

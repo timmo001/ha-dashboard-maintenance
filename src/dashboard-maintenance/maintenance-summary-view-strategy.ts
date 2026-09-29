@@ -17,7 +17,6 @@ import { makeSystemSummarySection } from "./maintenance-system-sections";
 import {
   makeEmptyStateSection,
   makeViewConfig,
-  SUMMARY_COLUMN_SPAN,
   type LovelaceSectionConfig,
   type LovelaceViewConfig,
 } from "./maintenance-view-helpers";
@@ -50,6 +49,7 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
         hass,
         config,
       );
+
       rawSections.push(
         makeBatteryAttentionSection(localize, batteryDevices, config, {
           limit: SUMMARY_ITEM_LIMIT,
@@ -83,6 +83,7 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
         hass,
         config.availability_safe_list_device_ids,
       );
+
       rawSections.push(
         await makeAvailabilitySummarySection(localize, hass, availabilityEntities, {
           limit: SUMMARY_ITEM_LIMIT,
@@ -111,6 +112,7 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
         hass,
         config.stale_threshold_hours,
       );
+
       rawSections.push(
         makeStaleSummarySection(localize, staleEntities, {
           limit: SUMMARY_ITEM_LIMIT,

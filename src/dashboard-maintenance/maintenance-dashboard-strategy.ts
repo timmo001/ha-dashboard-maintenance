@@ -14,6 +14,7 @@ import { MaintenanceStaleViewStrategy } from "./maintenance-stale-view-strategy"
 import { MaintenanceSummaryViewStrategy } from "./maintenance-summary-view-strategy";
 import { MaintenanceIntegrationsViewStrategy } from "./maintenance-integrations-view-strategy";
 import { MaintenanceSystemViewStrategy } from "./maintenance-system-view-strategy";
+import type { LovelaceViewConfig } from "./maintenance-view-helpers";
 import { hasSystemData } from "./system-data";
 import type {
   AreaRegistryEntry,
@@ -22,7 +23,9 @@ import type {
 } from "./types";
 import { isModuleEnabled } from "./types";
 
-type LovelaceConfig = Record<string, unknown>;
+interface LovelaceDashboardConfig {
+  views: LovelaceViewConfig[];
+}
 
 const compareAreas = (left: AreaRegistryEntry, right: AreaRegistryEntry): number =>
   left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
@@ -31,7 +34,7 @@ const buildSummaryView = (
   config: MaintenanceDashboardStrategyConfig,
   localize: LocalizeFunc,
   hass: HomeAssistant,
-): Promise<LovelaceConfig> =>
+): Promise<LovelaceViewConfig> =>
   MaintenanceSummaryViewStrategy.generate(
     {
       ...config,
@@ -48,8 +51,9 @@ const buildSystemView = async (
   config: MaintenanceDashboardStrategyConfig,
   localize: LocalizeFunc,
   hass: HomeAssistant,
-): Promise<LovelaceConfig[]> => {
+): Promise<LovelaceViewConfig[]> => {
   const icon = "mdi:server";
+
   return [
     await MaintenanceSystemViewStrategy.generate(
       {
@@ -69,8 +73,9 @@ const buildBatteriesViews = async (
   localize: LocalizeFunc,
   areas: AreaRegistryEntry[],
   hass: HomeAssistant,
-): Promise<LovelaceConfig[]> => {
+): Promise<LovelaceViewConfig[]> => {
   const icon = "mdi:battery-heart-variant";
+
   return [
     await MaintenanceBatteriesViewStrategy.generate(
       {
@@ -116,8 +121,9 @@ const buildRepairsViews = async (
   config: MaintenanceDashboardStrategyConfig,
   localize: LocalizeFunc,
   hass: HomeAssistant,
-): Promise<LovelaceConfig[]> => {
+): Promise<LovelaceViewConfig[]> => {
   const icon = "mdi:wrench";
+
   return [
     await MaintenanceRepairsViewStrategy.generate(
       {
@@ -147,8 +153,9 @@ const buildUpdatesViews = async (
   config: MaintenanceDashboardStrategyConfig,
   localize: LocalizeFunc,
   hass: HomeAssistant,
-): Promise<LovelaceConfig[]> => {
+): Promise<LovelaceViewConfig[]> => {
   const icon = "mdi:package-up";
+
   return [
     await MaintenanceUpdatesViewStrategy.generate(
       {
@@ -179,8 +186,9 @@ const buildAvailabilityViews = async (
   localize: LocalizeFunc,
   areas: AreaRegistryEntry[],
   hass: HomeAssistant,
-): Promise<LovelaceConfig[]> => {
+): Promise<LovelaceViewConfig[]> => {
   const icon = "mdi:help-circle-outline";
+
   return [
     await MaintenanceAvailabilityViewStrategy.generate(
       {
@@ -226,7 +234,7 @@ const buildIntegrationsViews = async (
   config: MaintenanceDashboardStrategyConfig,
   localize: LocalizeFunc,
   hass: HomeAssistant,
-): Promise<LovelaceConfig[]> => [
+): Promise<LovelaceViewConfig[]> => [
   await MaintenanceIntegrationsViewStrategy.generate(
     {
       ...config,
@@ -244,8 +252,9 @@ const buildStaleViews = async (
   localize: LocalizeFunc,
   areas: AreaRegistryEntry[],
   hass: HomeAssistant,
-): Promise<LovelaceConfig[]> => {
+): Promise<LovelaceViewConfig[]> => {
   const icon = "mdi:clock-alert-outline";
+
   return [
     await MaintenanceStaleViewStrategy.generate(
       {
@@ -292,11 +301,11 @@ class MaintenanceDashboardStrategy extends ReactiveElement {
   public static async generate(
     config: MaintenanceDashboardStrategyConfig,
     hass: HomeAssistant,
-  ): Promise<LovelaceConfig> {
+  ): Promise<LovelaceDashboardConfig> {
     const localize = setupLocalize(hass);
     const areas = Object.values(await getMaintenanceAreas(hass)).sort(compareAreas);
 
-    const views: LovelaceConfig[] = [
+    const views: LovelaceViewConfig[] = [
       await buildSummaryView(config, localize, hass),
     ];
 
@@ -335,11 +344,9 @@ class MaintenanceDashboardStrategy extends ReactiveElement {
    * Suggested title/icon when adding a dashboard from the Home Assistant UI
    * (`loadDashboardStrategyWithCreateSuggestions` in the frontend).
    */
-  public static getCreateSuggestions(hass: HomeAssistant): {
-    title: string;
-    icon: string;
-  } {
+  public static getCreateSuggestions(hass: HomeAssistant) {
     const localize = setupLocalize(hass);
+
     return {
       title: localize("dashboard.suggested_title"),
       icon: "mdi:home-heart",

@@ -11,7 +11,7 @@ const computeObjectId = (entityId: string): string =>
   entityId.split(".", 2)[1] || entityId;
 
 /** Map of entity domains to their Material Design icons. */
-const DOMAIN_ICONS: Record<string, string> = {
+const DOMAIN_ICONS = new Map<string, string>(Object.entries({
   alert: "mdi:alert",
   automation: "mdi:robot",
   binary_sensor: "mdi:binary-sensor",
@@ -37,7 +37,7 @@ const DOMAIN_ICONS: Record<string, string> = {
   update: "mdi:package-up",
   vacuum: "mdi:vacuum",
   water_heater: "mdi:water-boiler",
-};
+}));
 
 /**
  * Get the default icon for an entity domain.
@@ -45,7 +45,8 @@ const DOMAIN_ICONS: Record<string, string> = {
  */
 export const computeDomainIcon = (entityId: string): string => {
   const domain = computeDomain(entityId);
-  return DOMAIN_ICONS[domain] || "mdi:exclamation-thick";
+
+  return DOMAIN_ICONS.get(domain) || "mdi:exclamation-thick";
 };
 
 export const compareText = (left: string, right: string, language?: string): number =>
@@ -96,6 +97,7 @@ export const parseTimestamp = (value?: string): number => {
   }
 
   const timestamp = new Date(value).getTime();
+
   return Number.isFinite(timestamp) ? timestamp : 0;
 };
 
@@ -106,7 +108,7 @@ export const isAvailabilityIssue = (
 
 /** Whether an entity is visible from state attributes. */
 export const isStateVisible = (stateObj: HassEntity): boolean => {
-  const attributes = stateObj.attributes as Record<string, unknown>;
+  const attributes = stateObj.attributes;
 
   return attributes.hidden !== true && attributes.visible !== false;
 };
@@ -148,6 +150,7 @@ export const resolveStateContext = (
   }
 
   const entry = entities[stateObj.entity_id];
+
   if (hasEntityRegistry && !entry) {
     return undefined;
   }

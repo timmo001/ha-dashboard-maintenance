@@ -29,7 +29,7 @@ export interface MaintenanceRepairIssue {
   integrationName: string;
 }
 
-const SEVERITY_SORT: Record<string, number> = {
+const SEVERITY_SORT: Record<MaintenanceRepairIssue["severity"], number> = {
   critical: 1,
   error: 2,
   warning: 3,
@@ -42,6 +42,7 @@ const resolveIssueTitle = (
   if (hass.localize) {
     const key = `component.${issue.domain}.issues.${issue.translation_key || issue.issue_id}.title`;
     const translated = hass.localize(key, issue.translation_placeholders || {});
+
     if (translated && translated !== key) {
       return translated;
     }
@@ -57,6 +58,7 @@ const resolveIntegrationName = (
   if (hass.localize) {
     const key = `component.${domain}.title`;
     const translated = hass.localize(key);
+
     if (translated && translated !== key) {
       return translated;
     }
@@ -97,6 +99,7 @@ export const getMaintenanceRepairIssues = async (
         const severityDiff =
           (SEVERITY_SORT[left.severity] || 99) -
           (SEVERITY_SORT[right.severity] || 99);
+
         if (severityDiff !== 0) return severityDiff;
 
         // Newest first within same severity

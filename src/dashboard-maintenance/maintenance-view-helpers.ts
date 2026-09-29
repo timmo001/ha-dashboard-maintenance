@@ -29,12 +29,65 @@ import type {
 } from "./types";
 import { DEFAULT_BATTERY_TILE_FEATURE } from "./types";
 
-export type LovelaceCardConfig = Record<string, unknown>;
-export type LovelaceViewConfig = Record<string, unknown>;
-export type LovelaceSectionConfig = Record<string, unknown>;
 export type EntityNameItem =
   | { type: "entity" | "device" | "area" | "floor" }
   | { type: "text"; text: string };
+
+export interface LovelaceActionConfig {
+  action: "navigate" | "more-info";
+  navigation_path?: string;
+}
+
+export interface LovelaceGridOptions {
+  columns?: number;
+  rows?: number | "auto";
+  min_columns?: number;
+  min_rows?: number;
+}
+
+export interface LovelaceFeatureConfig {
+  type: string;
+  min?: number;
+  max?: number;
+  backup?: string;
+}
+
+export interface LovelaceCardConfig {
+  type: string;
+  content?: string;
+  content_only?: boolean;
+  description?: string;
+  entity?: string;
+  features?: LovelaceFeatureConfig[];
+  grid_options?: LovelaceGridOptions;
+  heading?: string;
+  heading_style?: "title" | "subtitle";
+  hold_action?: LovelaceActionConfig;
+  icon?: string;
+  icon_color?: string;
+  label?: string;
+  metric?: string;
+  name?: string | EntityNameItem[];
+  tap_action?: LovelaceActionConfig;
+  title?: string;
+}
+
+export interface LovelaceSectionConfig {
+  type: "grid";
+  column_span: number;
+  cards: LovelaceCardConfig[];
+}
+
+export interface LovelaceViewConfig {
+  type: "sections";
+  title: string;
+  path: string;
+  icon: string;
+  subview?: boolean;
+  show_icon_and_title: boolean;
+  max_columns: number;
+  sections: LovelaceSectionConfig[];
+}
 
 export interface HeadingCardOptions {
   headingStyle?: "title" | "subtitle";
@@ -44,7 +97,7 @@ export interface HeadingCardOptions {
 
 export interface TileCardOptions {
   name?: string | EntityNameItem[];
-  features?: unknown[];
+  features?: LovelaceFeatureConfig[];
 }
 
 export type NameOnlyTileOptions = Pick<TileCardOptions, "name">;
@@ -66,6 +119,7 @@ interface AreaScopedItem {
 // ---------------------------------------------------------------------------
 
 export const SUMMARY_COLUMN_SPAN = 3;
+
 export const MAINTENANCE_COLUMN_SPAN = 3;
 
 // ---------------------------------------------------------------------------
@@ -97,8 +151,11 @@ const NAME_DEVICE_ENTITY: EntityNameItem[] = [
 // ---------------------------------------------------------------------------
 
 const ATTENTION_BATTERY_NAME = NAME_AREA_DEVICE;
+
 const AREA_BATTERY_NAME = NAME_DEVICE;
+
 const AVAILABILITY_ENTITY_NAME = NAME_AREA_DEVICE_ENTITY;
+
 const STALE_ENTITY_NAME = NAME_DEVICE_ENTITY;
 
 export const batteryAttentionTileName = (
@@ -180,20 +237,26 @@ const VIEW_DEFAULTS: Record<
 export const makeHeadingCard = (
   heading: string,
   options?: HeadingCardOptions,
-): LovelaceCardConfig => ({
-  type: "heading",
-  heading,
-  heading_style: options?.headingStyle || "title",
-  ...(options?.icon ? { icon: options.icon } : {}),
-  ...(options?.navigationPath
-    ? {
-        tap_action: {
-          action: "navigate",
-          navigation_path: options.navigationPath,
-        },
-      }
-    : {}),
-});
+): LovelaceCardConfig => {
+  const card: LovelaceCardConfig = {
+    type: "heading",
+    heading,
+    heading_style: options?.headingStyle || "title",
+  };
+
+  if (options?.icon) {
+    card.icon = options.icon;
+  }
+
+  if (options?.navigationPath) {
+    card.tap_action = {
+      action: "navigate",
+      navigation_path: options.navigationPath,
+    };
+  }
+
+  return card;
+};
 
 const makeEmptyStateCard = (
   title: string,
@@ -257,22 +320,31 @@ const makeTileCard = (
   entity: TileCardEntity,
   icon: string | undefined,
   options?: TileCardOptions,
-): LovelaceCardConfig => ({
-  type: "tile",
-  entity: entity.entityId,
-  name: options?.name || entity.displayName,
-  ...(icon ? { icon } : {}),
-  tap_action: { action: "more-info" },
-  ...(entity.deviceId
-    ? {
-        hold_action: {
-          action: "navigate",
-          navigation_path: `/config/devices/device/${entity.deviceId}`,
-        },
-      }
-    : {}),
-  ...(options?.features ? { features: options.features } : {}),
-});
+): LovelaceCardConfig => {
+  const card: LovelaceCardConfig = {
+    type: "tile",
+    entity: entity.entityId,
+    name: options?.name || entity.displayName,
+    tap_action: { action: "more-info" },
+  };
+
+  if (icon) {
+    card.icon = icon;
+  }
+
+  if (entity.deviceId) {
+    card.hold_action = {
+      action: "navigate",
+      navigation_path: `/config/devices/device/${entity.deviceId}`,
+    };
+  }
+
+  if (options?.features) {
+    card.features = options.features;
+  }
+
+  return card;
+};
 
 // ---------------------------------------------------------------------------
 // Entity-type card builders (thin wrappers around makeTileCard)
@@ -287,19 +359,20 @@ export const makeBatteryCard = (
   options?: BatteryCardOptions,
 ): LovelaceCardConfig => {
   const feature = options?.feature ?? DEFAULT_BATTERY_TILE_FEATURE;
-  const features: unknown[] = [];
+  const features: LovelaceFeatureConfig[] = [];
+
   if (feature === "bar" && device.level !== null) {
     features.push({ type: "bar-gauge", min: 0, max: 100 });
   } else if (feature === "trend") {
     features.push({ type: "trend-graph" });
   }
+
   return makeTileCard(
     { entityId: device.entityId, deviceId: device.deviceId, displayName: device.deviceName },
     device.needsAttention ? "mdi:battery-alert-variant-outline" : undefined,
-    {
-      name: options?.name,
-      ...(features.length > 0 ? { features } : {}),
-    },
+    features.length > 0
+      ? { name: options?.name, features }
+      : { name: options?.name },
   );
 };
 
@@ -327,9 +400,8 @@ export const makeRepairCard = (
   localize: LocalizeFunc,
   issue: MaintenanceRepairIssue,
 ): LovelaceCardConfig => {
-  const severityLabel = localize(
-    `repair.severity_${issue.severity}` as Parameters<LocalizeFunc>[0],
-  );
+  const severityLabel = localize(`repair.severity_${issue.severity}`);
+
   const learnMoreLink = issue.learnMoreUrl
     ? ` [↗](${issue.learnMoreUrl})`
     : "";
@@ -355,18 +427,20 @@ const configEntryNavigationPath = (
   const base = `/config/integrations/integration/${encodeURIComponent(domain)}`;
   const params = new URLSearchParams();
   params.set("config_entry", entryId);
+
   if (subentryId) {
     params.set("subentry", subentryId);
   }
+
   return `${base}#${params.toString()}`;
 };
 
-const INTEGRATION_STATE_LABEL: Partial<Record<string, TranslationKey>> = {
-  setup_error: "integration.state.setup_error",
-  migration_error: "integration.state.migration_error",
-  setup_retry: "integration.state.setup_retry",
-  failed_unload: "integration.state.failed_unload",
-};
+const INTEGRATION_STATE_LABEL = new Map<string, TranslationKey>([
+  ["setup_error", "integration.state.setup_error"],
+  ["migration_error", "integration.state.migration_error"],
+  ["setup_retry", "integration.state.setup_retry"],
+  ["failed_unload", "integration.state.failed_unload"],
+]);
 
 export const makeIntegrationEntryCard = (
   localize: LocalizeFunc,
@@ -378,7 +452,7 @@ export const makeIntegrationEntryCard = (
 ): LovelaceCardConfig => {
   const domain = entry.domain;
   const navPath = configEntryNavigationPath(domain, entry.entry_id, options?.subentryId);
-  const stateKey = entry.state ? INTEGRATION_STATE_LABEL[entry.state] : undefined;
+  const stateKey = entry.state ? INTEGRATION_STATE_LABEL.get(entry.state) : undefined;
   const stateText = stateKey ? localize(stateKey) : (entry.state ?? "");
   const subtitle = entry.reason?.trim() ? `${stateText}: ${entry.reason.trim()}` : stateText;
   const fallbackEntity = options?.representativeEntityId ?? `${domain}.integration`;
@@ -407,10 +481,15 @@ export const makeStaleCard = (
 // Item limiting & show-more helpers
 // ---------------------------------------------------------------------------
 
+interface LimitedItems<T> {
+  hiddenCount: number;
+  items: T[];
+}
+
 export const limitItems = <T,>(
   items: T[],
   limit?: number,
-): { hiddenCount: number; items: T[] } => {
+): LimitedItems<T> => {
   if (limit === undefined || items.length <= limit) {
     return { hiddenCount: 0, items };
   }
@@ -527,16 +606,19 @@ const makeAreaCards = <T extends AreaScopedItem>(
 
   for (const areaId of areaIds) {
     const area = areas[areaId];
+
     if (!area) {
       continue;
     }
 
     const areaItems = groupItemsByArea(areaId, items);
+
     if (areaItems.length === 0) {
       continue;
     }
 
     const shown = limitItems(areaItems, options?.limit);
+
     if (shown.items.length === 0) {
       continue;
     }
@@ -544,6 +626,7 @@ const makeAreaCards = <T extends AreaScopedItem>(
     cards.push(makeAreaHeadingCard(area, hass));
 
     cards.push(...shown.items.map(makeCard));
+
     if (shown.hiddenCount > 0) {
       cards.push(
         makeShowMoreCard(localize, shown.hiddenCount, buildShowMorePath(area.area_id)),
@@ -604,6 +687,7 @@ const makeUnassignedSection = <T extends AreaScopedItem>(
   options?: LimitAndShowMoreOptions,
 ): LovelaceSectionConfig | null => {
   const unassignedItems = config.items.filter((item) => !item.areaId);
+
   if (unassignedItems.length === 0) {
     return null;
   }
@@ -666,12 +750,15 @@ export const makeHierarchySections = async <T extends AreaScopedItem>(
   }
 
   const hierarchy = getAreasFloorHierarchy(areas, floors);
+
   const floorCount =
     hierarchy.floors.length + (hierarchy.areas.length > 0 ? 1 : 0);
+
   const sections: LovelaceSectionConfig[] = [];
 
   for (const floorStructure of hierarchy.floors) {
     const floor = floors[floorStructure.id];
+
     if (!floor) {
       continue;
     }
@@ -712,6 +799,7 @@ export const makeHierarchySections = async <T extends AreaScopedItem>(
   }
 
   const unassignedSection = makeUnassignedSection(localize, config, sections, options);
+
   if (unassignedSection) {
     sections.push(unassignedSection);
   }
@@ -761,14 +849,19 @@ export const makeViewConfig = (
 ): LovelaceViewConfig => {
   const defaults = VIEW_DEFAULTS[view];
 
-  return {
+  const viewConfig: LovelaceViewConfig = {
     type: "sections",
     title: config.title || localize(defaults.titleKey),
     path: config.path || defaults.path,
     icon: config.icon || defaults.icon,
-    ...(config.subview ? { subview: true } : {}),
     show_icon_and_title: true,
     max_columns: options?.maxColumns ?? defaults.columnSpan,
     sections,
   };
+
+  if (config.subview) {
+    viewConfig.subview = true;
+  }
+
+  return viewConfig;
 };

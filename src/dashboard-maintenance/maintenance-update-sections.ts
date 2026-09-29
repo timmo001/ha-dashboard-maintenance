@@ -60,15 +60,18 @@ export const makeUpdatesSections = (
   }
 
   const inProgressUpdates = updates.filter((update) => update.inProgress);
+
   const skippedUpdates = updates.filter(
     (update) => !update.inProgress && update.skippedCurrentVersion,
   );
+
   const availableUpdates = updates.filter(
     (update) =>
       !update.inProgress &&
       !update.skippedCurrentVersion &&
       updateCanInstall(update),
   );
+
   const otherUpdates = updates.filter(
     (update) =>
       !update.inProgress &&

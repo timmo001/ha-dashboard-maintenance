@@ -24,6 +24,7 @@ const groupErroredConfigEntries = (
     }
 
     const state = entry.state;
+
     if (!state) {
       continue;
     }
@@ -57,27 +58,12 @@ export const getGroupedIntegrationErrors = async (
   hass: HomeAssistant,
 ): Promise<GroupedIntegrationErrors> => {
   const entries = await fetchConfigEntries(hass);
+
   return groupErroredConfigEntries(entries, hass.locale?.language);
 };
 
 export const countIntegrationErrors = (grouped: GroupedIntegrationErrors): number =>
   grouped.setupFailed.length + grouped.failedUnload.length + grouped.setupRetry.length;
-
-/** Icon for integration error tiles — same pattern as `availabilityIssueIcon` + explicit `makeTileCard` icon. */
-const integrationIssueIcon = (entry: ConfigEntry): string => {
-  switch (entry.state) {
-    case "migration_error":
-      return "mdi:database-alert";
-    case "setup_error":
-      return "mdi:alert-circle";
-    case "failed_unload":
-      return "mdi:package-variant-closed-remove";
-    case "setup_retry":
-      return "mdi:reload-alert";
-    default:
-      return "mdi:puzzle";
-  }
-};
 
 export interface IntegrationRepresentativeEntity {
   entityId: string;
@@ -101,28 +87,36 @@ export const getRepresentativeEntityContextForConfigEntries = async (
 
   for (const er of Object.values(registry)) {
     const cid = er.config_entry_id;
+
     if (!cid || !configEntryIds.has(cid)) {
       continue;
     }
+
     if (er.hidden_by || er.disabled_by) {
       continue;
     }
+
     const list = candidates.get(cid) ?? [];
     list.push(er.entity_id);
     candidates.set(cid, list);
   }
 
   const out = new Map<string, IntegrationRepresentativeEntity>();
+
   for (const [cid, ids] of candidates) {
     ids.sort((a, b) => compareText(a, b, lang));
     const entityId = ids[0];
+
     if (!entityId) {
       continue;
     }
+
     const reg = registry[entityId];
+
     if (!reg) {
       continue;
     }
+
     out.set(cid, {
       entityId,
       deviceId: reg.device_id,

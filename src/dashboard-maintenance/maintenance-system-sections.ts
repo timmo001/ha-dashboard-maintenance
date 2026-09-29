@@ -5,7 +5,6 @@ import {
   type SystemEntitySensor,
   type SystemMetricDescriptor,
 } from "./system-data";
-import type { SystemMetricType } from "./dm-system-metric-card";
 import {
   limitItems,
   makeGridSection,
@@ -25,13 +24,23 @@ import type { HomeAssistant } from "./types";
 
 const makeSystemMetricCard = (
   descriptor: SystemMetricDescriptor,
-): LovelaceCardConfig => ({
-  type: "custom:dm-system-metric-card",
-  metric: descriptor.metric,
-  ...(descriptor.label ? { label: descriptor.label } : {}),
-  ...(descriptor.icon ? { icon: descriptor.icon } : {}),
-  grid_options: { columns: 6, rows: 1, min_columns: 6, min_rows: 1 },
-});
+): LovelaceCardConfig => {
+  const card: LovelaceCardConfig = {
+    type: "custom:dm-system-metric-card",
+    metric: descriptor.metric,
+    grid_options: { columns: 6, rows: 1, min_columns: 6, min_rows: 1 },
+  };
+
+  if (descriptor.label) {
+    card.label = descriptor.label;
+  }
+
+  if (descriptor.icon) {
+    card.icon = descriptor.icon;
+  }
+
+  return card;
+};
 
 const makeSystemEntityTileCard = (
   sensor: SystemEntitySensor,

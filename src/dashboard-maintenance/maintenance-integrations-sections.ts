@@ -50,6 +50,7 @@ export const makeIntegrationsSections = async (
 
   const cardFor = (entry: ConfigEntry) => {
     const ctx = entityByEntry.get(entry.entry_id);
+
     return makeIntegrationEntryCard(localize, entry, {
       representativeEntityId: ctx?.entityId,
     });
@@ -95,6 +96,7 @@ export const makeIntegrationsSummarySection = async (
   },
 ): Promise<LovelaceSectionConfig | null> => {
   const entries = flattenGroupedIntegrationErrors(grouped);
+
   if (entries.length === 0) {
     return null;
   }
@@ -112,6 +114,7 @@ export const makeIntegrationsSummarySection = async (
       entries,
       (entry) => {
         const ctx = entityByEntry.get(entry.entry_id);
+
         return makeIntegrationEntryCard(localize, entry, {
           representativeEntityId: ctx?.entityId,
         });

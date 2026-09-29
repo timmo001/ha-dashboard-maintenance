@@ -76,6 +76,7 @@ export const getSystemApiAvailability = async (
   ]);
 
   cachedApiAvailability = { hardwareStatus, supervisor };
+
   return cachedApiAvailability;
 };
 
@@ -100,6 +101,7 @@ export const getAvailableSystemMetrics = async (
 
     // Only show drive health if the hardware reports disk_life_time
     const hostInfo = await fetchHostInfo(hass);
+
     if (hostInfo?.disk_life_time !== null && hostInfo?.disk_life_time !== undefined) {
       metrics.push({ metric: "disk_health" });
     }
@@ -132,6 +134,7 @@ export const getSystemEntitySensors = async (
 
   // Find config entry IDs for system domains
   const systemConfigEntryIds = new Set<string>();
+
   for (const entry of Object.values(configEntries)) {
     if (DEFAULT_SYSTEM_DOMAINS.has(entry.domain)) {
       systemConfigEntryIds.add(entry.entry_id);
@@ -161,6 +164,7 @@ export const getSystemEntitySensors = async (
 
     // Must have a state object
     const stateObj = hass.states[entry.entity_id];
+
     if (!stateObj || !isStateVisible(stateObj)) {
       continue;
     }

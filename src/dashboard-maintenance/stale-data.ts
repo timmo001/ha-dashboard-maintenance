@@ -12,13 +12,12 @@ import {
   fetchDeviceRegistry,
   fetchEntityRegistry,
 } from "./maintenance-data";
-import type {
-  HassEntity,
-  HomeAssistant,
-} from "./types";
+import type { HomeAssistant } from "./types";
 
 export const DEFAULT_STALE_THRESHOLD_HOURS = 6;
+
 export const MIN_STALE_THRESHOLD_HOURS = 1;
+
 export const MAX_STALE_THRESHOLD_HOURS = 72;
 
 export interface MaintenanceStaleEntity {
@@ -60,9 +59,10 @@ const isStaleRelevantDomain = (entityId: string): boolean =>
 const normalizeStaleThresholdHours = (
   hours?: number,
 ): number => {
-  if (typeof hours !== "number" || Number.isNaN(hours) || hours <= 0) {
+  if (hours === undefined || Number.isNaN(hours) || hours <= 0) {
     return DEFAULT_STALE_THRESHOLD_HOURS;
   }
+
   return Math.min(
     MAX_STALE_THRESHOLD_HOURS,
     Math.max(MIN_STALE_THRESHOLD_HOURS, Math.round(hours)),
@@ -81,6 +81,7 @@ export const getMaintenanceStaleEntities = async (
     fetchEntityRegistry(hass),
     fetchDeviceRegistry(hass),
   ]);
+
   const hasEntityRegistry = Object.keys(entities).length > 0;
 
   return Object.values(hass.states)
@@ -95,9 +96,11 @@ export const getMaintenanceStaleEntities = async (
         devices,
         hasEntityRegistry,
       );
+
       if (!ctx) {
         return undefined;
       }
+
       const { entry, deviceId, device } = ctx;
 
       if ((entry && !isEntityRegistryVisible(entry)) || device?.disabled_by) {
@@ -141,7 +144,3 @@ export const getMaintenanceStaleEntities = async (
 };
 
 export const staleEntityIcon = (): string => "mdi:clock-alert-outline";
-
-const hasStaleEntities = (
-  entities: MaintenanceStaleEntity[],
-): boolean => entities.length > 0;

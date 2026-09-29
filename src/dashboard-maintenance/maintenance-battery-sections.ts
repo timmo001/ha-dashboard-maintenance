@@ -74,6 +74,7 @@ export const makeBatterySections = async (
   },
 ): Promise<LovelaceSectionConfig[]> => {
   const feature = resolveBatteryFeature(config);
+
   return makeHierarchySections(
     localize,
     hass,

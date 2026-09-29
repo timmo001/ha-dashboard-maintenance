@@ -1,5 +1,4 @@
 import {
-  getMaintenanceAvailabilityEntities,
   groupAvailabilityByDevice,
   type MaintenanceAvailabilityDevice,
   type MaintenanceAvailabilityEntity,
@@ -182,7 +181,3 @@ export const makeAvailabilitySections = async (
 
   return [makeGridSection(cards, MAINTENANCE_COLUMN_SPAN)];
 };
-
-const getAvailabilitySummaryData = async (
-  hass: HomeAssistant,
-): Promise<MaintenanceAvailabilityEntity[]> => getMaintenanceAvailabilityEntities(hass);

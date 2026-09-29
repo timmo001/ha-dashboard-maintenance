@@ -26,7 +26,17 @@ export const normalizeAvailabilitySafeListDeviceIds = (
     return [];
   }
 
-  return [...new Set(deviceIds.map((deviceId) => deviceId.trim()).filter(Boolean))];
+  const normalizedDeviceIds = new Set<string>();
+
+  for (const deviceId of deviceIds) {
+    const trimmedDeviceId = deviceId.trim();
+
+    if (trimmedDeviceId) {
+      normalizedDeviceIds.add(trimmedDeviceId);
+    }
+  }
+
+  return [...normalizedDeviceIds];
 };
 
 export interface MaintenanceAvailabilityEntity {
@@ -72,13 +82,16 @@ export const getMaintenanceAvailabilityEntities = async (
   const safeListDeviceIdSet = new Set(
     normalizeAvailabilitySafeListDeviceIds(safeListDeviceIds),
   );
+
   const [entities, devices, configEntries, mostUsedEntities] = await Promise.all([
     fetchEntityRegistry(hass),
     fetchDeviceRegistry(hass),
     fetchConfigEntries(hass),
     getCommonControlUsagePrediction(hass),
   ]);
+
   const hasEntityRegistry = Object.keys(entities).length > 0;
+
   const mostUsedEntityOrder = new Map(
     mostUsedEntities.map((entityId, index) => [entityId, index]),
   );
@@ -92,10 +105,13 @@ export const getMaintenanceAvailabilityEntities = async (
         devices,
         hasEntityRegistry,
       );
+
       if (!ctx) {
         return undefined;
       }
+
       const { entry, deviceId, device } = ctx;
+
       const relatedConfigEntryIds = new Set<string>(
         [
           entry?.config_entry_id,
@@ -103,6 +119,7 @@ export const getMaintenanceAvailabilityEntities = async (
           ...(device?.config_entries ?? []),
         ].filter((configEntryId): configEntryId is string => Boolean(configEntryId)),
       );
+
       const hasDisabledConfigEntry = [...relatedConfigEntryIds].some(
         (configEntryId) => configEntries[configEntryId]?.disabled_by,
       );
@@ -150,12 +167,6 @@ export const availabilityIssueIcon = (
   entity.state === "unavailable"
     ? "mdi:lan-disconnect"
     : "mdi:help-rhombus-outline";
-
-const availabilityHeadingIcon = (): string => "mdi:lan-disconnect";
-
-const hasAvailabilityIssues = (
-  entities: MaintenanceAvailabilityEntity[],
-): boolean => entities.length > 0;
 
 const isAvailabilityDomainRelevant = (entityId: string): boolean =>
   computeDomain(entityId) !== "group";
@@ -216,8 +227,10 @@ export const groupAvailabilityByDevice = async (
 
     // Prefer the primary config entry, then fall back to the first one.
     let integrationDomain: string | null | undefined;
+
     const configEntryId =
       device?.primary_config_entry || device?.config_entries?.[0];
+
     if (configEntryId) {
       const configEntry = configEntries[configEntryId];
       integrationDomain = configEntry?.domain;

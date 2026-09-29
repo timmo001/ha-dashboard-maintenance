@@ -6,7 +6,13 @@ export interface HassEntity {
   attributes: {
     device_class?: string;
     friendly_name?: string;
-    [key: string]: unknown;
+    hidden?: boolean;
+    in_progress?: boolean;
+    latest_version?: string | null;
+    skipped_version?: string | null;
+    supported_features?: number;
+    title?: string | null;
+    visible?: boolean;
   };
 }
 
@@ -56,8 +62,24 @@ export interface ConfigEntry {
   reason?: string | null;
 }
 
+export interface HomeAssistantMessage {
+  type: string;
+  endpoint?: string;
+  force?: boolean;
+  method?: string;
+  url_path?: string | null;
+}
+
 export interface HomeAssistantConnection {
-  sendMessagePromise<T>(message: unknown): Promise<T>;
+  sendMessagePromise<T>(message: HomeAssistantMessage): Promise<T>;
+  subscribeMessage<T>(
+    callback: (message: T) => void,
+    params: HomeAssistantMessage,
+  ): Promise<() => void>;
+}
+
+export interface HomeAssistantPanel {
+  url_path?: string;
 }
 
 export interface HomeAssistant {
@@ -76,7 +98,7 @@ export interface HomeAssistant {
     key: string,
     variables?: Record<string, string | number>,
   ) => string;
-  panels?: Record<string, unknown>;
+  panels?: Record<string, HomeAssistantPanel>;
   states: Record<string, HassEntity>;
 }
 
@@ -100,6 +122,7 @@ export interface CustomCardEntry {
 }
 
 export const BATTERY_TILE_FEATURES = ["none", "bar", "trend"] as const;
+
 export type BatteryTileFeature = (typeof BATTERY_TILE_FEATURES)[number];
 
 export const DEFAULT_BATTERY_TILE_FEATURE: BatteryTileFeature = "trend";
