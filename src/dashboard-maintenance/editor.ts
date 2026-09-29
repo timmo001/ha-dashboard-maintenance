@@ -2,9 +2,16 @@ import { LitElement, css, html, nothing } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { setupLocalize } from "./localize";
 import { normalizeAvailabilitySafeListDeviceIds } from "./availability-data";
+import {
+  editorItemGroupStyles,
+  renderEditorItemGroup,
+  renderEditorItemRow,
+} from "./editor-item-group";
+import { computeDeviceName } from "./entity-helpers";
 import type {
   BatteryThresholdOverride,
   BatteryTileFeature,
+  ConfigEntry,
   HomeAssistant,
   MaintenanceDashboardStrategyConfig,
   MaintenanceModuleId,
@@ -15,6 +22,7 @@ import {
 } from "./types";
 import {
   DEFAULT_BATTERY_ATTENTION_THRESHOLD,
+  fetchConfigEntries,
   getBatteryPreviewDevice,
   type MaintenanceBatteryDevice,
 } from "./maintenance-data";
@@ -146,14 +154,48 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   @state() private _overridesExpanded = false;
 
+  @state() private _safeListExpanded = true;
+
+  @state() private _configEntries?: Record<string, ConfigEntry>;
+
   private _previewCard?: { key: string; config: LovelaceCardConfig };
 
   connectedCallback(): void {
     super.connectedCallback();
-    if (!customElements.get("ha-entity-picker")) {
-      customElements
-        .whenDefined("ha-entity-picker")
-        .then(() => this.requestUpdate());
+    for (const tag of ["ha-entity-picker", "ha-device-picker"]) {
+      if (!customElements.get(tag)) {
+        customElements.whenDefined(tag).then(() => this.requestUpdate());
+      }
+    }
+  }
+
+  protected willUpdate(): void {
+    if (
+      this.hass &&
+      !this._configEntries &&
+      this._activeModule === "availability"
+    ) {
+      this._configEntries = {};
+      fetchConfigEntries(this.hass).then((entries) => {
+        this._configEntries = entries;
+      });
+    }
+  }
+
+  protected async updated(): Promise<void> {
+    // ha-device-picker does not forward add-button, so set it on its inner picker.
+    const devicePicker = this.shadowRoot?.querySelector("ha-device-picker");
+    if (!devicePicker) {
+      return;
+    }
+    await (devicePicker as { updateComplete?: Promise<unknown> })
+      .updateComplete;
+    const innerPicker = devicePicker.shadowRoot?.querySelector(
+      "ha-generic-picker",
+    ) as { addButtonLabel?: string } | null | undefined;
+    const label = setupLocalize(this.hass)("editor.availability_safe_list_add");
+    if (innerPicker && innerPicker.addButtonLabel !== label) {
+      innerPicker.addButtonLabel = label;
     }
   }
 
@@ -323,15 +365,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           hidden,
         });
         break;
-      case "availability":
-        data.availability_safe_list_device_ids =
-          config.availability_safe_list_device_ids ?? [];
-        schema.push({
-          name: "availability_safe_list_device_ids",
-          selector: { device: { multiple: true } },
-          hidden,
-        });
-        break;
     }
 
     if (mod.id === "batteries" && enabled) {
@@ -340,6 +373,16 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         ${this._renderBatteryThresholdOverrides(
           localize,
           config.battery_threshold_overrides ?? [],
+        )}
+      `;
+    }
+
+    if (mod.id === "availability" && enabled) {
+      return html`
+        ${this._renderForm(data, schema)}
+        ${this._renderAvailabilitySafeList(
+          localize,
+          config.availability_safe_list_device_ids ?? [],
         )}
       `;
     }
@@ -364,98 +407,139 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     localize: ReturnType<typeof setupLocalize>,
     overrides: BatteryThresholdOverride[],
   ) {
-    return html`
-      <ha-expansion-panel
-        outlined
-        .expanded=${this._overridesExpanded}
-        @expanded-changed=${this._overridesExpandedChanged}
-        .header=${localize("editor.battery_overrides_label")}
-        .secondary=${localize("editor.battery_overrides_helper")}
-      >
-        <ha-icon
-          slot="leading-icon"
-          icon="mdi:battery-alert-variant-outline"
-        ></ha-icon>
-        <div class="overrides">
-          ${overrides.map((override, index) => {
-            const stateObj = this.hass?.states[override.entity_id];
-            const name =
-              (this.hass &&
-                getBatteryPreviewDevice(
-                  this.hass,
-                  override.entity_id,
-                  override.threshold,
-                )?.deviceName) ||
-              override.entity_id;
+    return renderEditorItemGroup({
+      header: localize("editor.battery_overrides_label"),
+      secondary: localize("editor.battery_overrides_helper"),
+      icon: "mdi:battery-alert-variant-outline",
+      expanded: this._overridesExpanded,
+      onExpandedChanged: this._overridesExpandedChanged,
+      rows: overrides.map((override, index) => {
+        const stateObj = this.hass?.states[override.entity_id];
+        const name =
+          (this.hass &&
+            getBatteryPreviewDevice(
+              this.hass,
+              override.entity_id,
+              override.threshold,
+            )?.deviceName) ||
+          override.entity_id;
 
-            return html`
-              <div class="override-row">
-                ${stateObj
-                  ? html`
-                      <ha-state-icon
-                        .hass=${this.hass}
-                        .stateObj=${stateObj}
-                      ></ha-state-icon>
-                    `
-                  : html`<ha-icon icon="mdi:battery-unknown"></ha-icon>`}
-                <div class="override-content">
-                  <span class="override-name">${name}</span>
-                  <span class="secondary">
-                    ${localize("editor.battery_override_threshold_value", {
-                      threshold: override.threshold,
-                    })}
-                  </span>
-                </div>
-                <ha-icon-button
-                  .label=${localize("editor.battery_override_edit")}
-                  .path=${MDI_PENCIL_PATH}
-                  data-index=${index}
-                  @click=${this._editOverride}
-                ></ha-icon-button>
-                <ha-icon-button
-                  .label=${localize("editor.battery_override_remove")}
-                  .path=${MDI_DELETE_PATH}
-                  data-index=${index}
-                  @click=${this._removeOverride}
-                ></ha-icon-button>
-              </div>
-            `;
-          })}
-          ${customElements.get("ha-entity-picker")
+        return renderEditorItemRow({
+          icon: stateObj
             ? html`
-                <ha-entity-picker
+                <ha-state-icon
                   .hass=${this.hass}
-                  .includeDomains=${[BATTERY_ENTITY_FILTER.domain]}
-                  .includeDeviceClasses=${[BATTERY_ENTITY_FILTER.device_class]}
-                  .excludeEntities=${overrides.map(
-                    (override) => override.entity_id,
-                  )}
-                  add-button
-                  .addButtonLabel=${localize("editor.battery_override_add")}
-                  @value-changed=${this._addOverridePicked}
-                ></ha-entity-picker>
+                  .stateObj=${stateObj}
+                ></ha-state-icon>
               `
-            : html`
-                <ha-button
-                  appearance="filled"
-                  size="s"
-                  @click=${this._addOverride}
-                >
-                  <ha-svg-icon
-                    .path=${MDI_PLUS_PATH}
-                    slot="start"
-                  ></ha-svg-icon>
-                  ${localize("editor.battery_override_add")}
-                </ha-button>
-                <ha-selector
-                  hidden
+            : html`<ha-icon icon="mdi:battery-unknown"></ha-icon>`,
+          primary: name,
+          secondary: localize("editor.battery_override_threshold_value", {
+            threshold: override.threshold,
+          }),
+          actions: html`
+            <ha-icon-button
+              .label=${localize("editor.battery_override_edit")}
+              .path=${MDI_PENCIL_PATH}
+              data-index=${index}
+              @click=${this._editOverride}
+            ></ha-icon-button>
+            <ha-icon-button
+              .label=${localize("editor.battery_override_remove")}
+              .path=${MDI_DELETE_PATH}
+              data-index=${index}
+              @click=${this._removeOverride}
+            ></ha-icon-button>
+          `,
+        });
+      }),
+      adder: customElements.get("ha-entity-picker")
+        ? html`
+            <ha-entity-picker
+              .hass=${this.hass}
+              .includeDomains=${[BATTERY_ENTITY_FILTER.domain]}
+              .includeDeviceClasses=${[BATTERY_ENTITY_FILTER.device_class]}
+              .excludeEntities=${overrides.map(
+                (override) => override.entity_id,
+              )}
+              add-button
+              .addButtonLabel=${localize("editor.battery_override_add")}
+              @value-changed=${this._addOverridePicked}
+            ></ha-entity-picker>
+          `
+        : html`
+            <ha-button appearance="filled" size="s" @click=${this._addOverride}>
+              <ha-svg-icon .path=${MDI_PLUS_PATH} slot="start"></ha-svg-icon>
+              ${localize("editor.battery_override_add")}
+            </ha-button>
+            <ha-selector
+              hidden
+              .hass=${this.hass}
+              .selector=${{ entity: {} }}
+            ></ha-selector>
+          `,
+    });
+  }
+
+  private _renderAvailabilitySafeList(
+    localize: ReturnType<typeof setupLocalize>,
+    deviceIds: string[],
+  ) {
+    const devices = this.hass?.devices ?? {};
+    const areas = this.hass?.areas ?? {};
+
+    return renderEditorItemGroup({
+      header: localize("editor.availability_safe_list_label"),
+      secondary: localize("editor.availability_safe_list_helper"),
+      icon: "mdi:check-network-outline",
+      expanded: this._safeListExpanded,
+      onExpandedChanged: this._safeListExpandedChanged,
+      rows: deviceIds.map((deviceId, index) => {
+        const device = devices[deviceId];
+        const areaId = device?.area_id;
+        const domain = device?.primary_config_entry
+          ? this._configEntries?.[device.primary_config_entry]?.domain
+          : undefined;
+
+        return renderEditorItemRow({
+          icon: domain && customElements.get("ha-domain-icon")
+            ? html`
+                <ha-domain-icon
                   .hass=${this.hass}
-                  .selector=${{ entity: {} }}
-                ></ha-selector>
-              `}
-        </div>
-      </ha-expansion-panel>
-    `;
+                  .domain=${domain}
+                  brand-fallback
+                ></ha-domain-icon>
+              `
+            : html`<ha-icon icon="mdi:devices"></ha-icon>`,
+          primary: computeDeviceName(device) || deviceId,
+          secondary: areaId ? areas[areaId]?.name : undefined,
+          actions: html`
+            <ha-icon-button
+              .label=${localize("editor.availability_safe_list_remove")}
+              .path=${MDI_DELETE_PATH}
+              data-index=${index}
+              @click=${this._removeSafeListDevice}
+            ></ha-icon-button>
+          `,
+        });
+      }),
+      adder: customElements.get("ha-device-picker")
+        ? html`
+            <ha-device-picker
+              .hass=${this.hass}
+              .label=${localize("editor.availability_safe_list_add")}
+              .excludeDevices=${deviceIds}
+              @value-changed=${this._addSafeListDevice}
+            ></ha-device-picker>
+          `
+        : html`
+            <ha-selector
+              hidden
+              .hass=${this.hass}
+              .selector=${{ device: {} }}
+            ></ha-selector>
+          `,
+    });
   }
 
   private _renderOverrideEditor(
@@ -696,9 +780,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         "editor.show_attention_in_areas_label",
       ),
       battery_tile_feature: localize("editor.battery_tile_feature_label"),
-      availability_safe_list_device_ids: localize(
-        "editor.availability_safe_list_label",
-      ),
       stale_threshold_hours: localize("editor.stale_threshold_label"),
     };
 
@@ -717,9 +798,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         "editor.show_attention_in_areas_helper",
       ),
       battery_tile_feature: localize("editor.battery_tile_feature_helper"),
-      availability_safe_list_device_ids: localize(
-        "editor.availability_safe_list_helper",
-      ),
       stale_threshold_hours: localize("editor.stale_threshold_helper"),
     };
 
@@ -779,16 +857,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         staleThreshold === DEFAULT_STALE_THRESHOLD_HOURS
           ? undefined
           : staleThreshold;
-    } else if (activeModule.id === "availability") {
-      const safeListDeviceIds = normalizeAvailabilitySafeListDeviceIds(
-        Array.isArray(data.availability_safe_list_device_ids)
-          ? data.availability_safe_list_device_ids.filter(
-              (value): value is string => typeof value === "string",
-            )
-          : undefined,
-      );
-      updates.availability_safe_list_device_ids =
-        safeListDeviceIds.length > 0 ? safeListDeviceIds : undefined;
     }
 
     this._emitConfigUpdate(updates);
@@ -796,7 +864,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   /* ---- Battery threshold override handlers ---- */
 
-  private _overrideIndex(ev: Event): number | undefined {
+  private _rowIndex(ev: Event): number | undefined {
     if (!(ev.currentTarget instanceof HTMLElement)) {
       return undefined;
     }
@@ -844,7 +912,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
   }
 
   private _editOverride(ev: Event): void {
-    const index = this._overrideIndex(ev);
+    const index = this._rowIndex(ev);
     const override =
       index === undefined
         ? undefined
@@ -857,7 +925,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
   }
 
   private _removeOverride(ev: Event): void {
-    const index = this._overrideIndex(ev);
+    const index = this._rowIndex(ev);
     if (index === undefined) {
       return;
     }
@@ -871,6 +939,53 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   private _closeOverrideEditor(): void {
     this._overrideDraft = undefined;
+  }
+
+  /* ---- Availability safe list handlers ---- */
+
+  private _updateSafeList(deviceIds: string[]): void {
+    const safeListDeviceIds = normalizeAvailabilitySafeListDeviceIds(deviceIds);
+    this._emitConfigUpdate({
+      availability_safe_list_device_ids:
+        safeListDeviceIds.length > 0 ? safeListDeviceIds : undefined,
+    });
+  }
+
+  private _safeListExpandedChanged(
+    ev: CustomEvent<{ expanded: boolean }>,
+  ): void {
+    ev.stopPropagation();
+    this._safeListExpanded = ev.detail.expanded;
+  }
+
+  private _addSafeListDevice(ev: CustomEvent<{ value?: unknown }>): void {
+    ev.stopPropagation();
+    const deviceId = ev.detail.value;
+    const picker = ev.currentTarget as { value?: string } | null;
+    if (picker) {
+      picker.value = undefined;
+    }
+    if (typeof deviceId !== "string" || !deviceId) {
+      return;
+    }
+
+    this._updateSafeList([
+      ...(this._config?.availability_safe_list_device_ids ?? []),
+      deviceId,
+    ]);
+  }
+
+  private _removeSafeListDevice(ev: Event): void {
+    const index = this._rowIndex(ev);
+    if (index === undefined) {
+      return;
+    }
+
+    this._updateSafeList(
+      (this._config?.availability_safe_list_device_ids ?? []).filter(
+        (_deviceId, deviceIndex) => deviceIndex !== index,
+      ),
+    );
   }
 
   private _overrideDraftEntityChanged(
@@ -1061,6 +1176,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
   }
 
   static styles = [
+    editorItemGroupStyles,
     css`
       :host {
         display: flex;
@@ -1113,62 +1229,9 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         font-size: 0.9rem;
       }
 
-      ha-expansion-panel {
-        display: block;
-        margin-top: var(--ha-space-6, 24px);
-      }
-
-      .overrides {
-        display: flex;
-        flex-direction: column;
-        padding: var(--ha-space-3, 12px);
-      }
-
-      .override-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        min-height: 60px;
-      }
-
-      .override-row ha-state-icon,
-      .override-row ha-icon {
-        color: var(--state-icon-color, var(--secondary-text-color));
-        margin-inline-end: 0;
-        flex-shrink: 0;
-      }
-
-      .override-content {
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-width: 0;
-      }
-
-      .override-name {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
       .secondary {
         color: var(--secondary-text-color);
         font-size: 0.9rem;
-      }
-
-      .override-row ha-icon-button {
-        --ha-icon-button-size: 36px;
-        color: var(--secondary-text-color);
-      }
-
-      .overrides ha-button {
-        align-self: flex-start;
-        margin-top: 8px;
-      }
-
-      .overrides ha-entity-picker {
-        display: block;
-        margin-top: 8px;
       }
 
       .sub-editor-header {

@@ -190,6 +190,8 @@ const en = {
   "editor.availability_safe_list_label": "Known safe offline devices",
   "editor.availability_safe_list_helper":
     "Unavailable devices in this list are hidden from the availability results. You can also click and hold a device icon to add it.",
+  "editor.availability_safe_list_add": "Add device",
+  "editor.availability_safe_list_remove": "Remove device",
   "editor.stale_header": "Stale entities",
   "editor.integrations_header": "Integrations",
   "editor.stale_threshold_label": "Stale threshold (hours)",
