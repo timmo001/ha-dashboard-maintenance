@@ -159,9 +159,9 @@ const en = {
   "editor.batteries_header": "Batteries",
   "editor.batteries_description":
     "Battery levels and devices that need attention",
-  "editor.battery_threshold_label": "Battery attention threshold",
+  "editor.battery_threshold_label": "Attention threshold",
   "editor.show_attention_in_areas_label":
-    "Show batteries needing attention in their area sections",
+    "Show devices needing attention in their area sections",
   "editor.battery_threshold_helper":
     "Devices below this battery level, or with unknown/unavailable battery state, are marked as needing attention.",
   "editor.battery_overrides_label": "Threshold overrides",
@@ -181,9 +181,9 @@ const en = {
   "editor.back": "Back",
   "editor.show_attention_in_areas_helper":
     "When enabled, low-battery devices appear in the top attention section and again in their area sections.",
-  "editor.battery_tile_feature_label": "Battery tile feature",
+  "editor.battery_tile_feature_label": "Tile feature",
   "editor.battery_tile_feature_helper":
-    "Choose which feature to render on each battery tile.",
+    "Choose which feature to render on each tile.",
   "editor.battery_tile_feature_option_none": "None",
   "editor.battery_tile_feature_option_bar": "Bar gauge",
   "editor.battery_tile_feature_option_trend": "Trend graph",
@@ -202,7 +202,7 @@ const en = {
   "editor.stale_description": "Entities that haven't updated recently",
   "editor.integrations_header": "Integrations",
   "editor.integrations_description": "Integrations that failed to load",
-  "editor.stale_threshold_label": "Stale threshold (hours)",
+  "editor.stale_threshold_label": "Threshold (hours)",
   "editor.stale_threshold_helper":
     "Entities that have not reported within this many hours are shown as stale.",
   "editor.module_enabled_label": "Enabled",
