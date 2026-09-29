@@ -152,7 +152,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   @state() private _overrideDraft?: BatteryThresholdOverrideDraft;
 
-  @state() private _overridesExpanded = false;
+  @state() private _overridesExpanded = true;
 
   @state() private _safeListExpanded = true;
 
