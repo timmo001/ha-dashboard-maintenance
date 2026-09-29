@@ -155,7 +155,10 @@ const en = {
 
   // Editor
   "editor.system_header": "System",
+  "editor.system_description": "Resource usage of your Home Assistant host",
   "editor.batteries_header": "Batteries",
+  "editor.batteries_description":
+    "Battery levels and devices that need attention",
   "editor.battery_threshold_label": "Battery attention threshold",
   "editor.show_attention_in_areas_label":
     "Show batteries needing attention in their area sections",
@@ -185,15 +188,20 @@ const en = {
   "editor.battery_tile_feature_option_bar": "Bar gauge",
   "editor.battery_tile_feature_option_trend": "Trend graph",
   "editor.repairs_header": "Repairs",
+  "editor.repairs_description": "Open repair issues",
   "editor.updates_header": "Updates",
+  "editor.updates_description": "Pending software and firmware updates",
   "editor.availability_header": "Availability",
+  "editor.availability_description": "Devices and entities that are unavailable",
   "editor.availability_safe_list_label": "Known safe offline devices",
   "editor.availability_safe_list_helper":
     "Unavailable devices in this list are hidden from the availability results. You can also click and hold a device icon to add it.",
   "editor.availability_safe_list_add": "Add device",
   "editor.availability_safe_list_remove": "Remove device",
   "editor.stale_header": "Stale entities",
+  "editor.stale_description": "Entities that haven't updated recently",
   "editor.integrations_header": "Integrations",
+  "editor.integrations_description": "Integrations that failed to load",
   "editor.stale_threshold_label": "Stale threshold (hours)",
   "editor.stale_threshold_helper":
     "Entities that have not reported within this many hours are shown as stale.",

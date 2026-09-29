@@ -39,7 +39,7 @@ Use `custom:dm-maintenance-summary-card` on any dashboard (for example Home Over
 Shows devices with numeric battery sensors, sorted so low-battery devices appear first. Devices can be browsed by area using per-area subviews.
 
 - Devices below `battery_attention_threshold` (default 30 %) are highlighted in an attention section at the top.
-- Individual batteries can use their own threshold through `battery_threshold_overrides`. In the visual editor, use "Add override" on the Batteries tab to pick a battery and set its threshold.
+- Individual batteries can use their own threshold through `battery_threshold_overrides`. In the visual editor, use "Add override" on the Batteries section to pick a battery and set its threshold.
 - Remaining devices are grouped by floor and area, with unassigned devices in an "Other Devices" section.
 - Per-area subviews let you browse batteries for a single room; an "All Batteries" subview shows every device.
 - When a device has multiple battery sensors the most relevant one is selected automatically.

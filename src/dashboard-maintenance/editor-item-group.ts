@@ -60,6 +60,7 @@ export const editorItemGroupStyles = css`
   ha-expansion-panel.item-group {
     display: block;
     margin-top: var(--ha-space-6, 24px);
+    --expansion-panel-content-padding: 0 8px;
   }
 
   .items {

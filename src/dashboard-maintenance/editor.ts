@@ -66,6 +66,14 @@ interface ModuleDescriptor {
     | "editor.stale_header"
     | "editor.availability_header"
     | "editor.integrations_header";
+  descriptionKey:
+    | "editor.system_description"
+    | "editor.batteries_description"
+    | "editor.updates_description"
+    | "editor.repairs_description"
+    | "editor.stale_description"
+    | "editor.availability_description"
+    | "editor.integrations_description";
   enabledKey:
     | "system_enabled"
     | "batteries_enabled"
@@ -81,42 +89,49 @@ const MODULES = [
     id: "system",
     icon: "mdi:server",
     headerKey: "editor.system_header",
+    descriptionKey: "editor.system_description",
     enabledKey: "system_enabled",
   },
   {
     id: "batteries",
     icon: "mdi:battery-heart-variant",
     headerKey: "editor.batteries_header",
+    descriptionKey: "editor.batteries_description",
     enabledKey: "batteries_enabled",
   },
   {
     id: "repairs",
     icon: "mdi:wrench",
     headerKey: "editor.repairs_header",
+    descriptionKey: "editor.repairs_description",
     enabledKey: "repairs_enabled",
   },
   {
     id: "updates",
     icon: "mdi:package-up",
     headerKey: "editor.updates_header",
+    descriptionKey: "editor.updates_description",
     enabledKey: "updates_enabled",
   },
   {
     id: "availability",
     icon: "mdi:help-circle-outline",
     headerKey: "editor.availability_header",
+    descriptionKey: "editor.availability_description",
     enabledKey: "availability_enabled",
   },
   {
     id: "stale",
     icon: "mdi:clock-alert-outline",
     headerKey: "editor.stale_header",
+    descriptionKey: "editor.stale_description",
     enabledKey: "stale_enabled",
   },
   {
     id: "integrations",
     icon: "mdi:puzzle",
     headerKey: "editor.integrations_header",
+    descriptionKey: "editor.integrations_description",
     enabledKey: "integrations_enabled",
   },
 ] as const satisfies readonly ModuleDescriptor[];
@@ -148,17 +163,17 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   @state() private _config?: MaintenanceDashboardStrategyConfig;
 
-  @state() private _activeModule: MaintenanceModuleId = MODULES[0].id;
-
   @state() private _overrideDraft?: BatteryThresholdOverrideDraft;
 
-  @state() private _overridesExpanded = true;
+  @state() private _overridesExpanded = false;
 
-  @state() private _safeListExpanded = true;
+  @state() private _safeListExpanded = false;
 
   @state() private _configEntries?: Record<string, ConfigEntry>;
 
   private _previewCard?: { key: string; config: LovelaceCardConfig };
+
+  private _dialog?: { element: { width?: string }; width?: string };
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -167,13 +182,32 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         customElements.whenDefined(tag).then(() => this.requestUpdate());
       }
     }
+
+    // The strategy editor dialog is large; use the default dialog width instead.
+    let node: Node | null = this;
+    while (node && !(node instanceof HTMLElement && node.localName === "ha-dialog")) {
+      node = node.parentNode ?? (node instanceof ShadowRoot ? node.host : null);
+    }
+    if (node) {
+      const element = node as { width?: string };
+      this._dialog = { element, width: element.width };
+      element.width = "medium";
+    }
+  }
+
+  disconnectedCallback(): void {
+    super.disconnectedCallback();
+    if (this._dialog) {
+      this._dialog.element.width = this._dialog.width;
+      this._dialog = undefined;
+    }
   }
 
   protected willUpdate(): void {
     if (
       this.hass &&
       !this._configEntries &&
-      this._activeModule === "availability"
+      this._config?.availability_enabled !== false
     ) {
       this._configEntries = {};
       fetchConfigEntries(this.hass).then((entries) => {
@@ -218,55 +252,34 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       );
     }
 
-    const activeModule =
-      MODULES.find((mod) => mod.id === this._activeModule) ?? MODULES[0];
-    const enabled = this._config[activeModule.enabledKey] !== false;
+    const config = this._config;
+    const hasForm = Boolean(customElements.get("ha-form"));
 
-    return html`
-      <ha-tab-group @wa-tab-show=${this._moduleTabChanged}>
-        ${MODULES.map(
-          (mod) => html`
-            <ha-tab-group-tab
-              slot="nav"
-              panel=${mod.id}
-              .active=${activeModule.id === mod.id}
-            >
-              <ha-icon icon=${mod.icon}></ha-icon>
-              ${localize(mod.headerKey)}
-            </ha-tab-group-tab>
-          `,
-        )}
-      </ha-tab-group>
+    return MODULES.map((mod) => {
+      const enabled = config[mod.enabledKey] !== false;
 
-      <div class="panel-content">
-        ${customElements.get("ha-form")
-          ? this._renderModuleForm(localize, activeModule, enabled, this._config)
-          : html`
-              ${this._renderEnableToggle(localize, activeModule, enabled)}
-              ${enabled
-                ? this._renderModuleSettings(
-                    localize,
-                    activeModule,
-                    this._config,
-                  )
-                : nothing}
-            `}
-      </div>
-    `;
-  }
-
-  private _moduleTabChanged(ev: CustomEvent<{ name?: string }>): void {
-    const tabName = ev.detail?.name;
-    if (!tabName || tabName === this._activeModule) {
-      return;
-    }
-
-    const matchedModule = MODULES.find((mod) => mod.id === tabName);
-    if (!matchedModule) {
-      return;
-    }
-
-    this._activeModule = matchedModule.id;
+      return html`
+        <ha-expansion-panel
+          class="module"
+          outlined
+          expanded
+          .header=${localize(mod.headerKey)}
+          .secondary=${localize(mod.descriptionKey)}
+        >
+          <ha-icon slot="leading-icon" icon=${mod.icon}></ha-icon>
+          <div class="expansion-content">
+            ${hasForm
+              ? this._renderModuleForm(localize, mod, enabled, config)
+              : html`
+                  ${this._renderEnableToggle(localize, mod, enabled)}
+                  ${enabled
+                    ? this._renderModuleSettings(localize, mod, config)
+                    : nothing}
+                `}
+          </div>
+        </ha-expansion-panel>
+      `;
+    });
   }
 
   private _renderEnableToggle(
@@ -369,7 +382,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
     if (mod.id === "batteries" && enabled) {
       return html`
-        ${this._renderForm(data, schema)}
+        ${this._renderForm(mod, data, schema)}
         ${this._renderBatteryThresholdOverrides(
           localize,
           config.battery_threshold_overrides ?? [],
@@ -379,7 +392,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
     if (mod.id === "availability" && enabled) {
       return html`
-        ${this._renderForm(data, schema)}
+        ${this._renderForm(mod, data, schema)}
         ${this._renderAvailabilitySafeList(
           localize,
           config.availability_safe_list_device_ids ?? [],
@@ -387,12 +400,17 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       `;
     }
 
-    return this._renderForm(data, schema);
+    return this._renderForm(mod, data, schema);
   }
 
-  private _renderForm(data: Record<string, unknown>, schema: HaFormSchema[]) {
+  private _renderForm(
+    mod: ModuleDescriptor,
+    data: Record<string, unknown>,
+    schema: HaFormSchema[],
+  ) {
     return html`
       <ha-form
+        data-module=${mod.id}
         .hass=${this.hass}
         .data=${data}
         .schema=${schema}
@@ -818,11 +836,18 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
     ev.stopPropagation();
 
+    const moduleId =
+      ev.currentTarget instanceof HTMLElement
+        ? ev.currentTarget.dataset.module
+        : undefined;
+    const activeModule = MODULES.find((mod) => mod.id === moduleId);
+    if (!activeModule) {
+      return;
+    }
+
     const data = ev.detail.value;
     const updates: Partial<MaintenanceDashboardStrategyConfig> = {};
 
-    const activeModule =
-      MODULES.find((mod) => mod.id === this._activeModule) ?? MODULES[0];
     const enabled = data[activeModule.enabledKey];
     if (typeof enabled === "boolean") {
       updates[activeModule.enabledKey] = enabled ? undefined : false;
@@ -1189,25 +1214,18 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         gap: 8px;
       }
 
-      ha-tab-group {
+      ha-expansion-panel.module {
         display: block;
+        --expansion-panel-content-padding: 0;
+        border-radius: var(--ha-border-radius-md, 12px);
+        --ha-card-border-radius: var(--ha-border-radius-md, 12px);
       }
 
-      ha-tab-group-tab {
-        flex: 1;
+      .expansion-content {
+        padding: var(--ha-space-3, 12px);
       }
 
-      ha-tab-group-tab::part(base) {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .panel-content {
-        padding: 12px;
-      }
-
-      ha-tab-group-tab ha-icon,
-      .panel-content ha-icon {
+      .expansion-content ha-icon {
         color: var(--secondary-text-color);
         margin-inline-end: 8px;
       }
