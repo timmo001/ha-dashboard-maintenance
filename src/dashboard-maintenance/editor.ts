@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js";
 import { setupLocalize } from "./localize";
 import { normalizeAvailabilitySafeListDeviceIds } from "./availability-data";
 import type {
+  BatteryThresholdOverride,
   BatteryTileFeature,
   HomeAssistant,
   MaintenanceDashboardStrategyConfig,
@@ -12,7 +13,15 @@ import {
   BATTERY_TILE_FEATURES,
   DEFAULT_BATTERY_TILE_FEATURE,
 } from "./types";
-import { DEFAULT_BATTERY_ATTENTION_THRESHOLD } from "./maintenance-data";
+import {
+  DEFAULT_BATTERY_ATTENTION_THRESHOLD,
+  getBatteryPreviewDevice,
+  type MaintenanceBatteryDevice,
+} from "./maintenance-data";
+import {
+  makeBatteryCard,
+  type LovelaceCardConfig,
+} from "./maintenance-view-helpers";
 import {
   DEFAULT_STALE_THRESHOLD_HOURS,
   MAX_STALE_THRESHOLD_HOURS,
@@ -20,6 +29,23 @@ import {
 } from "./stale-data";
 
 const DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS = true;
+
+const BATTERY_ENTITY_FILTER = { domain: "sensor", device_class: "battery" };
+
+const MDI_DELETE_PATH =
+  "M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z";
+const MDI_PENCIL_PATH =
+  "M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z";
+const MDI_PLUS_PATH = "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z";
+
+interface BatteryThresholdOverrideDraft {
+  index: number;
+  entity_id?: string;
+  threshold: number;
+}
+
+const toBatteryThreshold = (value: number): number =>
+  Math.min(Math.max(Math.round(value), 0), 100);
 
 interface ModuleDescriptor {
   id: MaintenanceModuleId;
@@ -116,6 +142,21 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   @state() private _activeModule: MaintenanceModuleId = MODULES[0].id;
 
+  @state() private _overrideDraft?: BatteryThresholdOverrideDraft;
+
+  @state() private _overridesExpanded = false;
+
+  private _previewCard?: { key: string; config: LovelaceCardConfig };
+
+  connectedCallback(): void {
+    super.connectedCallback();
+    if (!customElements.get("ha-entity-picker")) {
+      customElements
+        .whenDefined("ha-entity-picker")
+        .then(() => this.requestUpdate());
+    }
+  }
+
   public setConfig(config: MaintenanceDashboardStrategyConfig): void {
     this._config = config;
   }
@@ -126,6 +167,15 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     const localize = setupLocalize(this.hass);
+
+    if (this._overrideDraft) {
+      return this._renderOverrideEditor(
+        localize,
+        this._config,
+        this._overrideDraft,
+      );
+    }
+
     const activeModule =
       MODULES.find((mod) => mod.id === this._activeModule) ?? MODULES[0];
     const enabled = this._config[activeModule.enabledKey] !== false;
@@ -224,23 +274,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         });
         schema.push(
           {
-            name: "battery_attention_threshold",
-            selector: {
-              number: {
-                min: 0,
-                max: 100,
-                mode: "slider",
-                slider_ticks: true,
-              },
-            },
-            hidden,
-          },
-          {
-            name: "show_attention_batteries_in_areas",
-            selector: { boolean: {} },
-            hidden,
-          },
-          {
             name: "battery_tile_feature",
             selector: {
               select: {
@@ -251,6 +284,23 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
                     `editor.battery_tile_feature_option_${option}`,
                   ),
                 })),
+              },
+            },
+            hidden,
+          },
+          {
+            name: "show_attention_batteries_in_areas",
+            selector: { boolean: {} },
+            hidden,
+          },
+          {
+            name: "battery_attention_threshold",
+            selector: {
+              number: {
+                min: 0,
+                max: 100,
+                mode: "slider",
+                slider_ticks: true,
               },
             },
             hidden,
@@ -284,6 +334,20 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         break;
     }
 
+    if (mod.id === "batteries" && enabled) {
+      return html`
+        ${this._renderForm(data, schema)}
+        ${this._renderBatteryThresholdOverrides(
+          localize,
+          config.battery_threshold_overrides ?? [],
+        )}
+      `;
+    }
+
+    return this._renderForm(data, schema);
+  }
+
+  private _renderForm(data: Record<string, unknown>, schema: HaFormSchema[]) {
     return html`
       <ha-form
         .hass=${this.hass}
@@ -294,6 +358,184 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
         @value-changed=${this._formValueChanged}
       ></ha-form>
     `;
+  }
+
+  private _renderBatteryThresholdOverrides(
+    localize: ReturnType<typeof setupLocalize>,
+    overrides: BatteryThresholdOverride[],
+  ) {
+    return html`
+      <ha-expansion-panel
+        outlined
+        .expanded=${this._overridesExpanded}
+        @expanded-changed=${this._overridesExpandedChanged}
+        .header=${localize("editor.battery_overrides_label")}
+        .secondary=${localize("editor.battery_overrides_helper")}
+      >
+        <ha-icon
+          slot="leading-icon"
+          icon="mdi:battery-alert-variant-outline"
+        ></ha-icon>
+        <div class="overrides">
+          ${overrides.map((override, index) => {
+            const stateObj = this.hass?.states[override.entity_id];
+            const name =
+              (this.hass &&
+                getBatteryPreviewDevice(
+                  this.hass,
+                  override.entity_id,
+                  override.threshold,
+                )?.deviceName) ||
+              override.entity_id;
+
+            return html`
+              <div class="override-row">
+                ${stateObj
+                  ? html`
+                      <ha-state-icon
+                        .hass=${this.hass}
+                        .stateObj=${stateObj}
+                      ></ha-state-icon>
+                    `
+                  : html`<ha-icon icon="mdi:battery-unknown"></ha-icon>`}
+                <div class="override-content">
+                  <span class="override-name">${name}</span>
+                  <span class="secondary">
+                    ${localize("editor.battery_override_threshold_value", {
+                      threshold: override.threshold,
+                    })}
+                  </span>
+                </div>
+                <ha-icon-button
+                  .label=${localize("editor.battery_override_edit")}
+                  .path=${MDI_PENCIL_PATH}
+                  data-index=${index}
+                  @click=${this._editOverride}
+                ></ha-icon-button>
+                <ha-icon-button
+                  .label=${localize("editor.battery_override_remove")}
+                  .path=${MDI_DELETE_PATH}
+                  data-index=${index}
+                  @click=${this._removeOverride}
+                ></ha-icon-button>
+              </div>
+            `;
+          })}
+          ${customElements.get("ha-entity-picker")
+            ? html`
+                <ha-entity-picker
+                  .hass=${this.hass}
+                  .includeDomains=${[BATTERY_ENTITY_FILTER.domain]}
+                  .includeDeviceClasses=${[BATTERY_ENTITY_FILTER.device_class]}
+                  .excludeEntities=${overrides.map(
+                    (override) => override.entity_id,
+                  )}
+                  add-button
+                  .addButtonLabel=${localize("editor.battery_override_add")}
+                  @value-changed=${this._addOverridePicked}
+                ></ha-entity-picker>
+              `
+            : html`
+                <ha-button
+                  appearance="filled"
+                  size="s"
+                  @click=${this._addOverride}
+                >
+                  <ha-svg-icon
+                    .path=${MDI_PLUS_PATH}
+                    slot="start"
+                  ></ha-svg-icon>
+                  ${localize("editor.battery_override_add")}
+                </ha-button>
+                <ha-selector
+                  hidden
+                  .hass=${this.hass}
+                  .selector=${{ entity: {} }}
+                ></ha-selector>
+              `}
+        </div>
+      </ha-expansion-panel>
+    `;
+  }
+
+  private _renderOverrideEditor(
+    localize: ReturnType<typeof setupLocalize>,
+    config: MaintenanceDashboardStrategyConfig,
+    draft: BatteryThresholdOverrideDraft,
+  ) {
+    const previewDevice =
+      draft.entity_id && this.hass
+        ? getBatteryPreviewDevice(this.hass, draft.entity_id, draft.threshold)
+        : undefined;
+
+    return html`
+      <div class="sub-editor-header">
+        <ha-icon-button-prev
+          .label=${localize("editor.back")}
+          @click=${this._closeOverrideEditor}
+        ></ha-icon-button-prev>
+        <span>${localize("editor.battery_override_title")}</span>
+      </div>
+      <div class="sub-editor-content">
+        <ha-selector
+          .hass=${this.hass}
+          .selector=${{
+            entity: {
+              filter: BATTERY_ENTITY_FILTER,
+              exclude_entities: (config.battery_threshold_overrides ?? [])
+                .filter((_override, index) => index !== draft.index)
+                .map((override) => override.entity_id),
+            },
+          }}
+          .label=${localize("editor.battery_override_entity")}
+          .value=${draft.entity_id}
+          .required=${true}
+          @value-changed=${this._overrideDraftEntityChanged}
+        ></ha-selector>
+        <ha-selector
+          .hass=${this.hass}
+          .selector=${{
+            number: {
+              min: 0,
+              max: 100,
+              mode: "slider",
+              slider_ticks: true,
+              unit_of_measurement: "%",
+            },
+          }}
+          .label=${localize("editor.battery_override_threshold")}
+          .helper=${localize("editor.battery_override_threshold_helper")}
+          .value=${draft.threshold}
+          .disabled=${!draft.entity_id}
+          @value-changed=${this._overrideDraftThresholdChanged}
+        ></ha-selector>
+      </div>
+      ${previewDevice && customElements.get("hui-card")
+        ? html`
+            <div class="element-preview">
+              <hui-card
+                .hass=${this.hass}
+                .config=${this._getPreviewCardConfig(
+                  previewDevice,
+                  config.battery_tile_feature,
+                )}
+                preview
+              ></hui-card>
+            </div>
+          `
+        : nothing}
+    `;
+  }
+
+  private _getPreviewCardConfig(
+    device: MaintenanceBatteryDevice,
+    feature: BatteryTileFeature | undefined,
+  ): LovelaceCardConfig {
+    const key = JSON.stringify([device, feature]);
+    if (this._previewCard?.key !== key) {
+      this._previewCard = { key, config: makeBatteryCard(device, { feature }) };
+    }
+    return this._previewCard.config;
   }
 
   private _renderModuleSettings(
@@ -353,34 +595,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
     return html`
         <div class="fallback-editor">
-          <label for="battery-threshold">
-            ${localize("editor.battery_threshold_label")}
-          </label>
-          <input
-            id="battery-threshold"
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            .value=${String(threshold)}
-            @input=${this._nativeValueChanged}
-          />
-          <div class="helper">
-            ${localize("editor.battery_threshold_helper")}
-          </div>
-          <div class="value">${threshold}%</div>
-          <label for="show-attention-batteries-in-areas">
-            <input
-              id="show-attention-batteries-in-areas"
-              type="checkbox"
-              .checked=${showAttentionBatteriesInAreas}
-              @change=${this._nativeBooleanChanged}
-            />
-            ${localize("editor.show_attention_in_areas_label")}
-          </label>
-          <div class="helper">
-            ${localize("editor.show_attention_in_areas_helper")}
-          </div>
           <fieldset class="radio-group">
             <legend>${localize("editor.battery_tile_feature_label")}</legend>
             ${BATTERY_TILE_FEATURES.map(
@@ -401,6 +615,48 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
               ${localize("editor.battery_tile_feature_helper")}
             </div>
           </fieldset>
+          <label for="show-attention-batteries-in-areas">
+            <input
+              id="show-attention-batteries-in-areas"
+              type="checkbox"
+              .checked=${showAttentionBatteriesInAreas}
+              @change=${this._nativeBooleanChanged}
+            />
+            ${localize("editor.show_attention_in_areas_label")}
+          </label>
+          <div class="helper">
+            ${localize("editor.show_attention_in_areas_helper")}
+          </div>
+          <label for="battery-threshold">
+            ${localize("editor.battery_threshold_label")}
+          </label>
+          <input
+            id="battery-threshold"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            .value=${String(threshold)}
+            @input=${this._nativeValueChanged}
+          />
+          <div class="helper">
+            ${localize("editor.battery_threshold_helper")}
+          </div>
+          <div class="value">${threshold}%</div>
+          <label for="battery-threshold-overrides">
+            ${localize("editor.battery_overrides_label")}
+          </label>
+          <textarea
+            id="battery-threshold-overrides"
+            rows="4"
+            .value=${(config.battery_threshold_overrides ?? [])
+              .map((override) => `${override.entity_id}: ${override.threshold}`)
+              .join("\n")}
+            @change=${this._nativeBatteryOverridesChanged}
+          ></textarea>
+          <div class="helper">
+            ${localize("editor.battery_overrides_fallback_helper")}
+          </div>
         </div>
       `;
   }
@@ -538,6 +794,130 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     this._emitConfigUpdate(updates);
   }
 
+  /* ---- Battery threshold override handlers ---- */
+
+  private _overrideIndex(ev: Event): number | undefined {
+    if (!(ev.currentTarget instanceof HTMLElement)) {
+      return undefined;
+    }
+
+    const index = Number(ev.currentTarget.dataset.index);
+    return Number.isInteger(index) ? index : undefined;
+  }
+
+  private _updateOverrides(overrides: BatteryThresholdOverride[]): void {
+    this._emitConfigUpdate({
+      battery_threshold_overrides: overrides.length > 0 ? overrides : undefined,
+    });
+  }
+
+  private _overridesExpandedChanged(
+    ev: CustomEvent<{ expanded: boolean }>,
+  ): void {
+    ev.stopPropagation();
+    this._overridesExpanded = ev.detail.expanded;
+  }
+
+  private _addOverride(): void {
+    this._overrideDraft = {
+      index: this._config?.battery_threshold_overrides?.length ?? 0,
+      threshold:
+        this._config?.battery_attention_threshold ??
+        DEFAULT_BATTERY_ATTENTION_THRESHOLD,
+    };
+  }
+
+  private _addOverridePicked(ev: CustomEvent<{ value?: unknown }>): void {
+    ev.stopPropagation();
+    const entityId = ev.detail.value;
+    if (typeof entityId !== "string" || !entityId) {
+      return;
+    }
+
+    this._setOverrideDraft({
+      index: this._config?.battery_threshold_overrides?.length ?? 0,
+      entity_id: entityId,
+      threshold:
+        this._config?.battery_attention_threshold ??
+        DEFAULT_BATTERY_ATTENTION_THRESHOLD,
+    });
+  }
+
+  private _editOverride(ev: Event): void {
+    const index = this._overrideIndex(ev);
+    const override =
+      index === undefined
+        ? undefined
+        : this._config?.battery_threshold_overrides?.[index];
+    if (index === undefined || !override) {
+      return;
+    }
+
+    this._overrideDraft = { index, ...override };
+  }
+
+  private _removeOverride(ev: Event): void {
+    const index = this._overrideIndex(ev);
+    if (index === undefined) {
+      return;
+    }
+
+    this._updateOverrides(
+      (this._config?.battery_threshold_overrides ?? []).filter(
+        (_override, overrideIndex) => overrideIndex !== index,
+      ),
+    );
+  }
+
+  private _closeOverrideEditor(): void {
+    this._overrideDraft = undefined;
+  }
+
+  private _overrideDraftEntityChanged(
+    ev: CustomEvent<{ value?: unknown }>,
+  ): void {
+    ev.stopPropagation();
+    const entityId = ev.detail.value;
+    if (!this._overrideDraft || typeof entityId !== "string" || !entityId) {
+      return;
+    }
+
+    this._setOverrideDraft({ ...this._overrideDraft, entity_id: entityId });
+  }
+
+  private _overrideDraftThresholdChanged(
+    ev: CustomEvent<{ value?: unknown }>,
+  ): void {
+    ev.stopPropagation();
+    const threshold = ev.detail.value;
+    if (
+      !this._overrideDraft ||
+      typeof threshold !== "number" ||
+      Number.isNaN(threshold)
+    ) {
+      return;
+    }
+
+    this._setOverrideDraft({
+      ...this._overrideDraft,
+      threshold: toBatteryThreshold(threshold),
+    });
+  }
+
+  private _setOverrideDraft(draft: BatteryThresholdOverrideDraft): void {
+    this._overrideDraft = draft;
+    if (!draft.entity_id) {
+      return;
+    }
+
+    const overrides = [...(this._config?.battery_threshold_overrides ?? [])];
+    overrides[draft.index] = {
+      entity_id: draft.entity_id,
+      threshold: draft.threshold,
+    };
+    this._updateOverrides(overrides);
+  }
+
   /* ---- Native fallback handlers ---- */
 
   private _nativeModuleEnabledChanged(ev: Event): void {
@@ -603,6 +983,28 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       battery_tile_feature:
         value === DEFAULT_BATTERY_TILE_FEATURE ? undefined : value,
     });
+  }
+
+  private _nativeBatteryOverridesChanged(ev: Event): void {
+    if (!(ev.currentTarget instanceof HTMLTextAreaElement)) {
+      return;
+    }
+
+    const overrides = new Map<string, number>();
+    for (const line of ev.currentTarget.value.split("\n")) {
+      const [entityId, rawThreshold] = line.split(":").map((part) => part.trim());
+      const threshold = Number(rawThreshold);
+      if (entityId && rawThreshold && Number.isFinite(threshold)) {
+        overrides.set(entityId, toBatteryThreshold(threshold));
+      }
+    }
+
+    this._updateOverrides(
+      [...overrides].map(([entityId, threshold]) => ({
+        entity_id: entityId,
+        threshold,
+      })),
+    );
   }
 
   private _nativeStaleValueChanged(ev: Event): void {
@@ -709,6 +1111,93 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       .value {
         color: var(--secondary-text-color);
         font-size: 0.9rem;
+      }
+
+      ha-expansion-panel {
+        display: block;
+        margin-top: var(--ha-space-6, 24px);
+      }
+
+      .overrides {
+        display: flex;
+        flex-direction: column;
+        padding: var(--ha-space-3, 12px);
+      }
+
+      .override-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-height: 60px;
+      }
+
+      .override-row ha-state-icon,
+      .override-row ha-icon {
+        color: var(--state-icon-color, var(--secondary-text-color));
+        margin-inline-end: 0;
+        flex-shrink: 0;
+      }
+
+      .override-content {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .override-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .secondary {
+        color: var(--secondary-text-color);
+        font-size: 0.9rem;
+      }
+
+      .override-row ha-icon-button {
+        --ha-icon-button-size: 36px;
+        color: var(--secondary-text-color);
+      }
+
+      .overrides ha-button {
+        align-self: flex-start;
+        margin-top: 8px;
+      }
+
+      .overrides ha-entity-picker {
+        display: block;
+        margin-top: 8px;
+      }
+
+      .sub-editor-header {
+        display: flex;
+        align-items: center;
+        font-size: 1.125rem;
+      }
+
+      .sub-editor-content {
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        padding: 12px;
+      }
+
+      .element-preview {
+        margin-top: 12px;
+        padding: 4px;
+        background: var(--primary-background-color);
+        border-radius: var(--ha-border-radius-sm, 4px);
+      }
+
+      .element-preview hui-card {
+        display: block;
+        box-sizing: border-box;
+        width: 100%;
+        max-width: 390px;
+        margin: 0 auto;
+        padding: 8px 4px 4px;
       }
     `,
   ];

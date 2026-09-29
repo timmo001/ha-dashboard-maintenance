@@ -480,7 +480,7 @@ class DmMaintenanceSummaryCard extends LitElement {
   private async _computeBatteryCount(hass: HomeAssistant): Promise<number> {
     const devices = await getMaintenanceBatteryDevices(
       hass,
-      this._resolvedMaintenanceStrategy?.battery_attention_threshold,
+      this._resolvedMaintenanceStrategy,
     );
     return devices.filter(isBatteryAttentionPanelDevice).length;
   }

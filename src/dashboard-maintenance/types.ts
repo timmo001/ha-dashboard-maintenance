@@ -113,11 +113,17 @@ export type MaintenanceModuleId =
   | "stale"
   | "integrations";
 
+export interface BatteryThresholdOverride {
+  entity_id: string;
+  threshold: number;
+}
+
 export interface MaintenanceStrategyConfig {
   type: "custom:maintenance";
   system_enabled?: boolean;
   batteries_enabled?: boolean;
   battery_attention_threshold?: number;
+  battery_threshold_overrides?: BatteryThresholdOverride[];
   show_attention_batteries_in_areas?: boolean;
   battery_tile_feature?: BatteryTileFeature;
   repairs_enabled?: boolean;

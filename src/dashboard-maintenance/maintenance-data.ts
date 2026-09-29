@@ -14,6 +14,7 @@ import type {
   FloorRegistryEntry,
   HassEntity,
   HomeAssistant,
+  MaintenanceStrategyConfig,
 } from "./types";
 
 export const DEFAULT_BATTERY_ATTENTION_THRESHOLD = 30;
@@ -83,12 +84,41 @@ const batteryStatePriority = (stateObj: HassEntity): number => {
   return 2;
 };
 
-const normalizeBatteryAttentionThreshold = (
-  threshold?: number,
-): number =>
+export type BatteryThresholdConfig = Pick<
+  MaintenanceStrategyConfig,
+  "battery_attention_threshold" | "battery_threshold_overrides"
+>;
+
+const normalizeBatteryThreshold = (threshold: unknown): number | undefined =>
   typeof threshold === "number" && !Number.isNaN(threshold)
     ? clamp(Math.round(threshold), 0, 100)
-    : DEFAULT_BATTERY_ATTENTION_THRESHOLD;
+    : undefined;
+
+const createBatteryThresholdResolver = (
+  config?: BatteryThresholdConfig,
+): ((entityId: string) => number) => {
+  const defaultThreshold =
+    normalizeBatteryThreshold(config?.battery_attention_threshold) ??
+    DEFAULT_BATTERY_ATTENTION_THRESHOLD;
+  const overrides = new Map<string, number>();
+
+  for (const override of config?.battery_threshold_overrides ?? []) {
+    const threshold = normalizeBatteryThreshold(override?.threshold);
+    if (typeof override?.entity_id === "string" && threshold !== undefined) {
+      overrides.set(override.entity_id, threshold);
+    }
+  }
+
+  return (entityId) => overrides.get(entityId) ?? defaultThreshold;
+};
+
+const batteryNeedsAttention = (
+  stateObj: HassEntity,
+  threshold: number,
+): boolean => {
+  const level = batteryStateLevel(stateObj);
+  return level === null || level < threshold;
+};
 
 const sortDevices = (
   left: MaintenanceBatteryDevice,
@@ -242,37 +272,35 @@ export const fetchConfigEntries = async (
 
 const fallbackDevicesFromStates = (
   hass: HomeAssistant,
-  attentionThreshold: number,
+  thresholdFor: (entityId: string) => number,
 ): MaintenanceBatteryDevice[] =>
   Object.values(hass.states)
     .filter((stateObj) => isMaintenanceBatteryState(stateObj) && isStateVisible(stateObj))
-    .map((stateObj) => {
-      const level = batteryStateLevel(stateObj);
-
-      return {
-        areaId: undefined,
-        entityId: stateObj.entity_id,
-        deviceName: computeStateName(stateObj),
-        level,
-        isCharging: false,
-        needsAttention: level === null || level < attentionThreshold,
-      };
-    })
+    .map((stateObj) => ({
+      areaId: undefined,
+      entityId: stateObj.entity_id,
+      deviceName: computeStateName(stateObj),
+      level: batteryStateLevel(stateObj),
+      isCharging: false,
+      needsAttention: batteryNeedsAttention(
+        stateObj,
+        thresholdFor(stateObj.entity_id),
+      ),
+    }))
     .sort(sortDevices);
 
 export const getMaintenanceBatteryDevices = async (
   hass: HomeAssistant,
-  attentionThreshold?: number,
+  thresholdConfig?: BatteryThresholdConfig,
 ): Promise<MaintenanceBatteryDevice[]> => {
-  const normalizedThreshold =
-    normalizeBatteryAttentionThreshold(attentionThreshold);
+  const thresholdFor = createBatteryThresholdResolver(thresholdConfig);
   const [entities, devices] = await Promise.all([
     fetchEntityRegistry(hass),
     fetchDeviceRegistry(hass),
   ]);
 
   if (Object.keys(entities).length === 0) {
-    return fallbackDevicesFromStates(hass, normalizedThreshold);
+    return fallbackDevicesFromStates(hass, thresholdFor);
   }
 
   const batteryEntitiesByDevice: Record<string, HassEntity[]> = {};
@@ -306,9 +334,17 @@ export const getMaintenanceBatteryDevices = async (
 
   return Object.entries(batteryEntitiesByDevice)
     .map(([deviceId, batteryStates]) => {
+      const attentionByEntityId = new Map(
+        batteryStates.map((stateObj) => [
+          stateObj.entity_id,
+          batteryNeedsAttention(stateObj, thresholdFor(stateObj.entity_id)),
+        ]),
+      );
       const selectedBatteryState = batteryStates.sort(
         (left, right) =>
           batteryStatePriority(left) - batteryStatePriority(right) ||
+          Number(attentionByEntityId.get(right.entity_id)) -
+            Number(attentionByEntityId.get(left.entity_id)) ||
           (batteryStateLevel(left) ?? Number.POSITIVE_INFINITY) -
             (batteryStateLevel(right) ?? Number.POSITIVE_INFINITY) ||
           compareText(left.entity_id, right.entity_id),
@@ -330,8 +366,34 @@ export const getMaintenanceBatteryDevices = async (
         entityId: selectedBatteryState.entity_id,
         level,
         isCharging: chargingDeviceIds.has(deviceId),
-        needsAttention: level === null || level < normalizedThreshold,
+        needsAttention:
+          attentionByEntityId.get(selectedBatteryState.entity_id) ?? false,
       };
     })
     .sort(sortDevices);
+};
+
+export const getBatteryPreviewDevice = (
+  hass: HomeAssistant,
+  entityId: string,
+  threshold: number,
+): MaintenanceBatteryDevice | undefined => {
+  const stateObj = hass.states[entityId];
+  if (!stateObj) {
+    return undefined;
+  }
+
+  const entry = hass.entities?.[entityId];
+  const deviceId = entry?.device_id ?? undefined;
+  const device = deviceId ? hass.devices?.[deviceId] : undefined;
+
+  return {
+    deviceId,
+    areaId: device?.area_id || entry?.area_id,
+    deviceName: computeEntityDisplayName(entry, device, stateObj),
+    entityId,
+    level: batteryStateLevel(stateObj),
+    isCharging: false,
+    needsAttention: batteryNeedsAttention(stateObj, threshold),
+  };
 };
