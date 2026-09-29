@@ -1,4 +1,5 @@
 import { LitElement, css, html, nothing } from "lit";
+import type { PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { setupLocalize } from "./localize";
 import { normalizeAvailabilitySafeListDeviceIds } from "./availability-data";
@@ -173,7 +174,15 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   private _previewCard?: { key: string; config: LovelaceCardConfig };
 
-  private _dialog?: { element: { width?: string }; width?: string };
+  private _dialog?: { element: HTMLElement & { width?: string }; width?: string };
+
+  private _scrollTop?: number;
+
+  private _dialogBody(): HTMLElement | null | undefined {
+    return this._dialog?.element.shadowRoot?.querySelector<HTMLElement>(
+      ".body",
+    );
+  }
 
   connectedCallback(): void {
     super.connectedCallback();
@@ -189,7 +198,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       node = node.parentNode ?? (node instanceof ShadowRoot ? node.host : null);
     }
     if (node) {
-      const element = node as { width?: string };
+      const element = node as HTMLElement & { width?: string };
       this._dialog = { element, width: element.width };
       element.width = "medium";
     }
@@ -203,7 +212,15 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
   }
 
-  protected willUpdate(): void {
+  protected willUpdate(changedProps: PropertyValues): void {
+    if (
+      changedProps.has("_overrideDraft") &&
+      !changedProps.get("_overrideDraft") &&
+      this._overrideDraft
+    ) {
+      this._scrollTop = this._dialogBody()?.scrollTop;
+    }
+
     if (
       this.hass &&
       !this._configEntries &&
@@ -216,7 +233,22 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
   }
 
-  protected async updated(): Promise<void> {
+  protected async updated(changedProps: PropertyValues): Promise<void> {
+    if (
+      changedProps.has("_overrideDraft") &&
+      !changedProps.get("_overrideDraft") !== !this._overrideDraft
+    ) {
+      const body = this._dialogBody();
+      if (body) {
+        const scrollTop = this._overrideDraft ? 0 : (this._scrollTop ?? 0);
+        body.scrollTop = scrollTop;
+        // Nested forms render after this update, so restore again once they have.
+        requestAnimationFrame(() => {
+          body.scrollTop = scrollTop;
+        });
+      }
+    }
+
     // ha-device-picker does not forward add-button, so set it on its inner picker.
     const devicePicker = this.shadowRoot?.querySelector("ha-device-picker");
     if (!devicePicker) {
