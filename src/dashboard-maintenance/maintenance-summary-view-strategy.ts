@@ -48,7 +48,7 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
     if (isModuleEnabled(config, "batteries")) {
       const batteryDevices = await getMaintenanceBatteryDevices(
         hass,
-        config.battery_attention_threshold,
+        config,
       );
       rawSections.push(
         makeBatteryAttentionSection(localize, batteryDevices, config, {

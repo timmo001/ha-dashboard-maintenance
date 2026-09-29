@@ -28,7 +28,7 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
     const localize = setupLocalize(hass);
     const allBatteryDevices = await getMaintenanceBatteryDevices(
       hass,
-      config.battery_attention_threshold,
+      config,
     );
     const batteryDevices = filterItemsByArea(allBatteryDevices, config.area_id);
     const attentionDevices = batteryDevices.filter(isBatteryAttentionPanelDevice);
