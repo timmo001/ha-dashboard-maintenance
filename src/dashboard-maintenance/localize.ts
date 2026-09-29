@@ -161,6 +161,21 @@ const en = {
     "Show batteries needing attention in their area sections",
   "editor.battery_threshold_helper":
     "Devices below this battery level, or with unknown/unavailable battery state, are marked as needing attention.",
+  "editor.battery_overrides_label": "Threshold overrides",
+  "editor.battery_overrides_helper":
+    "Set a different attention threshold for individual batteries. Batteries without an override use the threshold above.",
+  "editor.battery_overrides_fallback_helper":
+    "One override per line, written as entity_id: threshold (for example sensor.door_battery: 15).",
+  "editor.battery_override_add": "Add override",
+  "editor.battery_override_edit": "Edit override",
+  "editor.battery_override_title": "Threshold override",
+  "editor.battery_override_entity": "Battery",
+  "editor.battery_override_threshold": "Threshold",
+  "editor.battery_override_threshold_helper":
+    "This battery is marked as needing attention below this level.",
+  "editor.battery_override_threshold_value": "Below {threshold}%",
+  "editor.battery_override_remove": "Remove override",
+  "editor.back": "Back",
   "editor.show_attention_in_areas_helper":
     "When enabled, low-battery devices appear in the top attention section and again in their area sections.",
   "editor.battery_tile_feature_label": "Battery tile feature",
