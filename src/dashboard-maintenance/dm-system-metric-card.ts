@@ -9,6 +9,7 @@ import {
   type IntegrationSetupData,
   type SystemStatusData,
 } from "./system-status-subscription";
+import { tileCardStyle } from "./tile-card-style";
 import type { CustomCardEntry, HomeAssistant } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -248,25 +249,6 @@ const formatSetupInfoSecondary = (data: IntegrationSetupData): string =>
 // ---------------------------------------------------------------------------
 // Card element
 // ---------------------------------------------------------------------------
-
-const tileCardStyle = css`
-  ha-card:has(ha-tile-container[focused]) {
-    --shadow-default: var(--ha-card-box-shadow, 0 0 0 0 transparent);
-    --shadow-focus: 0 0 0 1px var(--tile-color);
-    border-color: var(--tile-color);
-    box-shadow: var(--shadow-default), var(--shadow-focus);
-  }
-
-  ha-card {
-    transition:
-      box-shadow 180ms ease-in-out,
-      border-color 180ms ease-in-out;
-  }
-
-  ha-tile-icon {
-    --tile-icon-color: var(--tile-color);
-  }
-`;
 
 @customElement("dm-system-metric-card")
 class DmSystemMetricCard extends LitElement {

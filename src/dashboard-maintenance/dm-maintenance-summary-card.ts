@@ -20,6 +20,7 @@ import {
 } from "./maintenance-data";
 import { getMaintenanceRepairIssues } from "./repairs-data";
 import { getMaintenanceStaleEntities } from "./stale-data";
+import { tileCardStyle } from "./tile-card-style";
 import type {
   CustomCardEntry,
   CustomCardSuggestion,
@@ -170,25 +171,6 @@ const getEntitySuggestion = (
   return null;
 };
 
-const tileCardStyle = css`
-  ha-card:has(ha-tile-container[focused]) {
-    --shadow-default: var(--ha-card-box-shadow, 0 0 0 0 transparent);
-    --shadow-focus: 0 0 0 1px var(--tile-color);
-    border-color: var(--tile-color);
-    box-shadow: var(--shadow-default), var(--shadow-focus);
-  }
-
-  ha-card {
-    transition:
-      box-shadow 180ms ease-in-out,
-      border-color 180ms ease-in-out;
-  }
-
-  ha-tile-icon {
-    --tile-icon-color: var(--tile-color);
-  }
-`;
-
 @customElement("dm-maintenance-summary-card")
 class DmMaintenanceSummaryCard extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
@@ -258,6 +240,10 @@ class DmMaintenanceSummaryCard extends LitElement {
 
   public getCardSize(): number {
     return 1;
+  }
+
+  public getGridOptions() {
+    return { columns: 6, rows: 1, min_columns: 6, min_rows: 1 };
   }
 
   private _countLabel(metric: SummaryMetric): string {
