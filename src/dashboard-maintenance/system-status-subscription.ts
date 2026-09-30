@@ -218,13 +218,15 @@ export const fetchHostInfo = async (
     return hostInfoFetchPromise;
   }
 
-  if (!hass.connection) {
+  const connection = hass.connection;
+
+  if (!connection) {
     return null;
   }
 
   hostInfoFetchPromise = (async (): Promise<HostInfoData | null> => {
     try {
-      const response = await hass.connection!.sendMessagePromise<HostInfoResponse | null>({
+      const response = await connection.sendMessagePromise<HostInfoResponse | null>({
         type: "supervisor/api",
         endpoint: "/host/info",
         method: "get",
@@ -321,13 +323,15 @@ export const fetchIntegrationSetupInfo = async (
     return setupInfoFetchPromise;
   }
 
-  if (!hass.connection) {
+  const connection = hass.connection;
+
+  if (!connection) {
     return null;
   }
 
   setupInfoFetchPromise = (async (): Promise<IntegrationSetupData | null> => {
     try {
-      const response = await hass.connection!.sendMessagePromise<
+      const response = await connection.sendMessagePromise<
         Array<{ domain: string; seconds?: number }>
       >({ type: "integration/setup_info" });
 

@@ -355,9 +355,15 @@ class DmSystemMetricCard extends LitElement {
     }
 
     this._unsubStream = subscribeSystemStatus(this.hass, (data) => {
+      const metric = this._config?.metric;
+
+      if (!metric) {
+        return;
+      }
+
       this._streamReady = true;
-      this._streamValue = formatStreamValue(this._config!.metric, data);
-      this._streamSecondary = formatStreamSecondary(this._config!.metric, data);
+      this._streamValue = formatStreamValue(metric, data);
+      this._streamSecondary = formatStreamSecondary(metric, data);
     });
   }
 

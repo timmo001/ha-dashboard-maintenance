@@ -71,7 +71,10 @@ export interface HomeAssistantMessage {
 }
 
 export interface HomeAssistantConnection {
+  // These generics mirror home-assistant-js-websocket, where callers state the message type.
+  // oxlint-disable-next-line typescript/no-unnecessary-type-parameters
   sendMessagePromise<T>(message: HomeAssistantMessage): Promise<T>;
+  // oxlint-disable-next-line typescript/no-unnecessary-type-parameters
   subscribeMessage<T>(
     callback: (message: T) => void,
     params: HomeAssistantMessage,

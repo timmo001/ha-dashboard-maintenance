@@ -4,24 +4,19 @@ import { customElement, property, state } from "lit/decorators.js";
 import { setupLocalize, type LocalizeFunc } from "./localize";
 import type {
   DmMaintenanceSummaryCardConfig,
-  SummaryMetric,
   SummaryTapAction,
 } from "./dm-maintenance-summary-card";
 import {
   buildDashboardSummaryPath,
   findLovelaceDashboardConfig,
 } from "./lovelace-dashboard";
+import {
+  DEFAULT_SUMMARY_METRIC,
+  isSummaryMetric,
+  SUMMARY_METRICS,
+  type SummaryMetric,
+} from "./summary-metric";
 import type { HomeAssistant } from "./types";
-
-const DEFAULT_SUMMARY: SummaryMetric = "batteries";
-
-const SUMMARY_OPTIONS: SummaryMetric[] = [
-  "batteries",
-  "repairs",
-  "updates",
-  "availability",
-  "stale",
-];
 
 interface SummaryFormData {
   summary?: string;
@@ -34,8 +29,6 @@ interface SummaryFormData {
 type HaFormValueChangedEvent = CustomEvent<{
   value: SummaryFormData;
 }>;
-
-const SUMMARY_OPTION_VALUES = new Set<string>(SUMMARY_OPTIONS);
 
 const SUMMARY_LABEL_KEY: Record<
   SummaryMetric,
@@ -58,11 +51,8 @@ const cleanText = (value?: string): string | undefined => {
   return normalized ? normalized : undefined;
 };
 
-const isSummaryMetric = (value?: string): value is SummaryMetric =>
-  value !== undefined && SUMMARY_OPTION_VALUES.has(value);
-
 const normalizeSummary = (value?: string): SummaryMetric =>
-  isSummaryMetric(value) ? value : DEFAULT_SUMMARY;
+  isSummaryMetric(value) ? value : DEFAULT_SUMMARY_METRIC;
 
 const isDefaultNavigateAction = (action?: SummaryTapAction): boolean =>
   !action ||
@@ -199,7 +189,7 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
         selector: {
           select: {
             mode: "dropdown",
-            options: SUMMARY_OPTIONS.map((value) => ({
+            options: SUMMARY_METRICS.map((value) => ({
               value,
               label: localize(SUMMARY_LABEL_KEY[value]),
             })),
@@ -297,7 +287,7 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
       type: "custom:dm-maintenance-summary-card",
     };
 
-    if (summary !== DEFAULT_SUMMARY) {
+    if (summary !== DEFAULT_SUMMARY_METRIC) {
       nextConfig.summary = summary;
     }
 

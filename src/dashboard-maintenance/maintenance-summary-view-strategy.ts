@@ -121,9 +121,7 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
       );
     }
 
-    const sections = rawSections.filter(
-      (s): s is LovelaceSectionConfig => s !== null,
-    );
+    const sections = rawSections.filter((s) => s !== null);
 
     if (sections.length === 0) {
       sections.push(

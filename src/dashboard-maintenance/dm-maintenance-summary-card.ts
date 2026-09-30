@@ -11,6 +11,11 @@ import {
 } from "./availability-data";
 import { setupLocalize } from "./localize";
 import {
+  DEFAULT_SUMMARY_METRIC,
+  isSummaryMetric,
+  type SummaryMetric,
+} from "./summary-metric";
+import {
   buildDashboardSummaryPath,
   findLovelaceDashboardConfig,
   type LovelaceDashboardConfig,
@@ -29,13 +34,6 @@ import type {
   MaintenanceStrategyConfig,
 } from "./types";
 import { getMaintenanceUpdates, updateCanInstall } from "./update-data";
-
-export type SummaryMetric =
-  | "batteries"
-  | "repairs"
-  | "updates"
-  | "availability"
-  | "stale";
 
 export type SummaryTapAction = {
   action?: string;
@@ -58,18 +56,6 @@ interface ActionHandlerEvent extends Event {
     action?: "tap" | "hold" | "double_tap";
   };
 }
-
-const SUMMARY_METRICS = [
-  "batteries",
-  "repairs",
-  "updates",
-  "availability",
-  "stale",
-] as const;
-
-const SUMMARY_METRIC_VALUES = new Set<string>(SUMMARY_METRICS);
-
-const DEFAULT_METRIC: SummaryMetric = "batteries";
 
 const DEFAULT_NAVIGATION_PATH = "summary";
 
@@ -126,9 +112,6 @@ const COUNT_LABEL_KEY: Record<
   },
 };
 
-const isSummaryMetric = (value?: string): value is SummaryMetric =>
-  value !== undefined && SUMMARY_METRIC_VALUES.has(value);
-
 const isMaintenanceStrategyConfig = (
   value: LovelaceDashboardConfig["strategy"],
 ): value is MaintenanceStrategyConfig =>
@@ -137,7 +120,7 @@ const isMaintenanceStrategyConfig = (
 const resolveMetric = (config?: DmMaintenanceSummaryCardConfig): SummaryMetric => {
   const selected = config?.summary ?? config?.metric;
 
-  return isSummaryMetric(selected) ? selected : DEFAULT_METRIC;
+  return isSummaryMetric(selected) ? selected : DEFAULT_SUMMARY_METRIC;
 };
 
 const hasAction = (action?: SummaryTapAction): boolean =>

@@ -1,6 +1,6 @@
 import { LitElement, css, html, nothing } from "lit";
 import type { PropertyValues } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, property, query, state } from "lit/decorators.js";
 import { setupLocalize } from "./localize";
 import { normalizeAvailabilitySafeListDeviceIds } from "./availability-data";
 import {
@@ -202,16 +202,19 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   @state() private _configEntries?: Record<string, ConfigEntry>;
 
+  @query("ha-device-picker")
+  private _devicePicker?: HTMLElement & { updateComplete?: Promise<unknown> };
+
   private _previewCard?: { key: string; config: LovelaceCardConfig };
 
   private _dialog?: { element: DialogElement; width?: string };
 
   private _scrollTop?: number;
 
-  private _dialogBody(): HTMLElement | null | undefined {
-    return this._dialog?.element.shadowRoot?.querySelector<HTMLElement>(
-      ".body",
-    );
+  private _dialogBody(): HTMLElement | undefined {
+    const body = this._dialog?.element.shadowRoot?.querySelector(".body");
+
+    return body instanceof HTMLElement ? body : undefined;
   }
 
   connectedCallback(): void {
@@ -285,9 +288,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     // ha-device-picker does not forward add-button, so set it on its inner picker.
-    const devicePicker = this.shadowRoot?.querySelector<
-      HTMLElement & { updateComplete?: Promise<unknown> }
-    >("ha-device-picker");
+    const devicePicker = this._devicePicker;
 
     if (!devicePicker) {
       return;
@@ -295,14 +296,17 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
     await devicePicker.updateComplete;
 
-    const innerPicker = devicePicker.shadowRoot?.querySelector<
-      HTMLElement & { addButtonLabel?: string }
-    >("ha-generic-picker");
+    const innerPicker =
+      devicePicker.shadowRoot?.querySelector("ha-generic-picker");
 
     const label = setupLocalize(this.hass)("editor.availability_safe_list_add");
 
-    if (innerPicker && innerPicker.addButtonLabel !== label) {
-      innerPicker.addButtonLabel = label;
+    if (innerPicker instanceof HTMLElement) {
+      const picker: HTMLElement & { addButtonLabel?: string } = innerPicker;
+
+      if (picker.addButtonLabel !== label) {
+        picker.addButtonLabel = label;
+      }
     }
   }
 
