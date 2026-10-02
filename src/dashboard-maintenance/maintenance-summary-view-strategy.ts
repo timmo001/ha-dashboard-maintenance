@@ -1,6 +1,7 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { setupLocalize } from "./localize";
+import { shouldRegenerateMaintenance } from "./strategy-regenerate";
 import { getMaintenanceBatteryDevices } from "./maintenance-data";
 import { makeBatteryAttentionSection } from "./maintenance-battery-sections";
 import { makeRepairsSummarySection } from "./maintenance-repairs-sections";
@@ -27,6 +28,19 @@ const SUMMARY_ITEM_LIMIT = 12;
 
 @customElement("ll-strategy-view-maintenance-summary")
 export class MaintenanceSummaryViewStrategy extends ReactiveElement {
+  public static shouldRegenerate(
+    config: MaintenanceViewStrategyConfig,
+    oldHass: HomeAssistant,
+    newHass: HomeAssistant,
+  ): boolean {
+    return shouldRegenerateMaintenance(config, oldHass, newHass, [
+      "batteries",
+      "availability",
+      "updates",
+      "stale",
+    ]);
+  }
+
   public static async generate(
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,

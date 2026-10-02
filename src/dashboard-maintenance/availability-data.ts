@@ -48,7 +48,7 @@ export interface MaintenanceAvailabilityEntity {
   state: "unavailable";
 }
 
-const isRelevantAvailabilityIssue = (
+export const isRelevantAvailabilityIssue = (
   stateObj: HassEntity,
 ): stateObj is HassEntity & { state: "unavailable" } =>
   isAvailabilityIssue(stateObj) && isAvailabilityDomainRelevant(stateObj.entity_id);

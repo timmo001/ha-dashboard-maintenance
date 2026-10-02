@@ -15,6 +15,7 @@ import { MaintenanceSummaryViewStrategy } from "./maintenance-summary-view-strat
 import { MaintenanceIntegrationsViewStrategy } from "./maintenance-integrations-view-strategy";
 import { MaintenanceSystemViewStrategy } from "./maintenance-system-view-strategy";
 import type { LovelaceViewConfig } from "./maintenance-view-helpers";
+import { shouldRegenerateMaintenance } from "./strategy-regenerate";
 import { hasSystemData } from "./system-data";
 import type {
   AreaRegistryEntry,
@@ -298,6 +299,19 @@ const buildStaleViews = async (
 
 @customElement("ll-strategy-dashboard-maintenance")
 class MaintenanceDashboardStrategy extends ReactiveElement {
+  public static shouldRegenerate(
+    config: MaintenanceDashboardStrategyConfig,
+    oldHass: HomeAssistant,
+    newHass: HomeAssistant,
+  ): boolean {
+    return shouldRegenerateMaintenance(config, oldHass, newHass, [
+      "batteries",
+      "availability",
+      "updates",
+      "stale",
+    ]);
+  }
+
   public static async generate(
     config: MaintenanceDashboardStrategyConfig,
     hass: HomeAssistant,

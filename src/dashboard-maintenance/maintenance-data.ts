@@ -95,7 +95,7 @@ const normalizeBatteryThreshold = (threshold?: number): number | undefined =>
     ? clamp(Math.round(threshold), 0, 100)
     : undefined;
 
-const createBatteryThresholdResolver = (
+export const createBatteryThresholdResolver = (
   config?: BatteryThresholdConfig,
 ): ((entityId: string) => number) => {
   const defaultThreshold =
@@ -131,6 +131,28 @@ const sortDevices = (
   Number(right.needsAttention) - Number(left.needsAttention) ||
   (left.level ?? -1) - (right.level ?? -1) ||
   compareText(left.deviceName, right.deviceName);
+
+/** Captures the parts of a state that decide where a battery is listed. */
+export const batteryMembershipKey = (
+  stateObj: HassEntity,
+  thresholdFor: (entityId: string) => number,
+): string => {
+  if (isBatteryChargingState(stateObj)) {
+    return "charging";
+  }
+
+  if (!isMaintenanceBatteryState(stateObj)) {
+    return "";
+  }
+
+  if (isUnknownOrUnavailableBatteryState(stateObj)) {
+    return stateObj.state;
+  }
+
+  return batteryNeedsAttention(stateObj, thresholdFor(stateObj.entity_id))
+    ? "attention"
+    : "ok";
+};
 
 export const isBatteryAttentionPanelDevice = (
   device: MaintenanceBatteryDevice,

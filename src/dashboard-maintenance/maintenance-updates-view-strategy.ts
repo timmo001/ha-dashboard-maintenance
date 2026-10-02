@@ -1,6 +1,7 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { setupLocalize } from "./localize";
+import { shouldRegenerateMaintenance } from "./strategy-regenerate";
 import { makeUpdatesSections } from "./maintenance-update-sections";
 import {
   makeViewConfig,
@@ -12,6 +13,14 @@ import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
 
 @customElement("ll-strategy-view-maintenance-updates")
 export class MaintenanceUpdatesViewStrategy extends ReactiveElement {
+  public static shouldRegenerate(
+    config: MaintenanceViewStrategyConfig,
+    oldHass: HomeAssistant,
+    newHass: HomeAssistant,
+  ): boolean {
+    return shouldRegenerateMaintenance(config, oldHass, newHass, ["updates"]);
+  }
+
   public static async generate(
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,

@@ -2,6 +2,7 @@ import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { filterItemsByArea } from "./entity-helpers";
 import { setupLocalize } from "./localize";
+import { shouldRegenerateMaintenance } from "./strategy-regenerate";
 import { getMaintenanceAvailabilityEntities } from "./availability-data";
 import { makeAvailabilitySections } from "./maintenance-availability-sections";
 import {
@@ -13,6 +14,14 @@ import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
 
 @customElement("ll-strategy-view-maintenance-availability")
 export class MaintenanceAvailabilityViewStrategy extends ReactiveElement {
+  public static shouldRegenerate(
+    config: MaintenanceViewStrategyConfig,
+    oldHass: HomeAssistant,
+    newHass: HomeAssistant,
+  ): boolean {
+    return shouldRegenerateMaintenance(config, oldHass, newHass, ["availability"]);
+  }
+
   public static async generate(
     config: MaintenanceViewStrategyConfig,
     hass: HomeAssistant,

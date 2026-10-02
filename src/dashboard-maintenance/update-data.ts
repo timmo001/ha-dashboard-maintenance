@@ -57,6 +57,24 @@ const isVisibleUpdateEntity = (
   return isEntityRegistryVisible(entry);
 };
 
+/** Captures the parts of an update state that decide where it is listed. */
+export const updateMembershipKey = (stateObj: HassEntity): string => {
+  if (computeDomain(stateObj.entity_id) !== "update") {
+    return "";
+  }
+
+  const { in_progress, latest_version, skipped_version, supported_features } =
+    stateObj.attributes;
+
+  return JSON.stringify([
+    stateObj.state,
+    latest_version,
+    skipped_version,
+    Boolean(in_progress),
+    supported_features,
+  ]);
+};
+
 export const getMaintenanceUpdates = async (
   hass: HomeAssistant,
 ): Promise<MaintenanceUpdateEntity[]> => {
