@@ -532,13 +532,14 @@ class DmSystemMetricCard extends LitElement {
           <ha-tile-info
             slot="info"
             .primary=${label}
-            .secondaryLoading=${!loaded}
           >
-            <span slot="secondary"
-              >${value}${secondary
-                ? html`<span class="detail">${secondary}</span>`
-                : nothing}</span
-            >
+            ${!loaded
+              ? html`<ha-skeleton-text slot="secondary"></ha-skeleton-text>`
+              : html`<span slot="secondary"
+                  >${value}${secondary
+                    ? html`<span class="detail">${secondary}</span>`
+                    : nothing}</span
+                >`}
           </ha-tile-info>
         </ha-tile-container>
       </ha-card>

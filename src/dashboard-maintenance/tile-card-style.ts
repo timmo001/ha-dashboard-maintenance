@@ -16,4 +16,8 @@ export const tileCardStyle = css`
   ha-tile-icon {
     --tile-icon-color: var(--tile-color);
   }
+  /* ha-tile-info stretches slotted secondary content to full width */
+  ha-skeleton-text {
+    width: var(--ha-skeleton-text-width, 140px);
+  }
 `;

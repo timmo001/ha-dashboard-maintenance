@@ -1,4 +1,4 @@
-import { css, html, LitElement } from "lit";
+import { css, html, LitElement, nothing } from "lit";
 import type { PropertyValues } from "lit";
 import { customElement, property, state } from "lit/decorators.js";
 import { classMap } from "lit/directives/class-map.js";
@@ -573,8 +573,11 @@ class DmMaintenanceSummaryCard extends LitElement {
             slot="info"
             .primary=${model.title}
             .secondary=${model.secondaryText}
-            .secondaryLoading=${model.secondaryLoading}
-          ></ha-tile-info>
+          >
+            ${model.secondaryLoading
+              ? html`<ha-skeleton-text slot="secondary"></ha-skeleton-text>`
+              : nothing}
+          </ha-tile-info>
         </ha-tile-container>
       </ha-card>
     `;
