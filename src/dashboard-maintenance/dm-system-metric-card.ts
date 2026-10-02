@@ -104,9 +104,6 @@ const isSystemMetricType = (value: string): value is SystemMetricType =>
 const isStreamMetric = (metric: SystemMetricType): boolean =>
   metric === "cpu" || metric === "memory_percent" || metric === "memory_used";
 
-const needsBothSources = (metric: SystemMetricType): boolean =>
-  metric === "memory_percent" || metric === "disk_percent";
-
 const isHostMetric = (metric: SystemMetricType): boolean =>
   metric === "disk_percent" ||
   metric === "disk_free" ||
@@ -340,7 +337,7 @@ class DmSystemMetricCard extends LitElement {
       this._setupStream();
     }
 
-    if (isHostMetric(metric) || needsBothSources(metric)) {
+    if (isHostMetric(metric)) {
       this._setupHostInfo();
     }
 
@@ -471,8 +468,7 @@ class DmSystemMetricCard extends LitElement {
 
   /**
    * Whether the card has all data needed for its metric.
-   * Stream-only metrics need the stream; host-only need host info;
-   * mixed metrics (memory_percent, disk_percent) need both;
+   * Stream metrics need the stream; host metrics need host info;
    * setup info metrics need the integration/setup_info response.
    */
   private _isLoaded(): boolean {
@@ -482,7 +478,7 @@ class DmSystemMetricCard extends LitElement {
 
     const metric = this._config.metric;
     const needsStream = isStreamMetric(metric);
-    const needsHost = isHostMetric(metric) || needsBothSources(metric);
+    const needsHost = isHostMetric(metric);
     const needsSetupInfo = isSetupInfoMetric(metric);
 
     if (needsStream && !this._streamReady) {
