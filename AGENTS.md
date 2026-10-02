@@ -6,7 +6,7 @@ It is distributed as a HACS `Dashboard` repository, not as a custom integration.
 ## Scope
 
 - Source TypeScript lives in `src/`
-- Frontend build output is generated into `dist/dashboard-maintenance.js`
+- Frontend build output is generated into `dist/ha-dashboard-maintenance.js`
 - Local publish tooling lives in `scripts/`
 
 ## Existing agent rules
@@ -39,12 +39,12 @@ pnpm install
 pnpm run build
 ```
 
-This generates `dist/dashboard-maintenance.js`.
+This generates `dist/ha-dashboard-maintenance.js`.
 
 ### Check built frontend JavaScript syntax
 
 ```bash
-node --check dist/dashboard-maintenance.js
+node --check dist/ha-dashboard-maintenance.js
 ```
 
 ### Publish to a local Home Assistant instance
@@ -69,7 +69,7 @@ If you add tests later, prefer this structure:
 
 1. Make code changes
 2. Run `pnpm run build` after every change
-3. Run `node --check dist/dashboard-maintenance.js`
+3. Run `node --check dist/ha-dashboard-maintenance.js`
 4. Validate the bundle in Home Assistant with a registered Lovelace resource
 
 ## Frontend TypeScript style guidelines
@@ -109,15 +109,20 @@ If you add tests later, prefer this structure:
 
 ## Assets and generated files
 
-- `dist/dashboard-maintenance.js` is generated and ignored by git
+- `dist/ha-dashboard-maintenance.js` is generated and ignored by git
 - `node_modules/` is ignored by git
 - Do not edit generated build output directly
 
 ## Files to keep in sync
 
-- If you change the generated frontend filename, update both:
+- If you change the generated frontend filename, update all of:
   - `hacs.json`
   - `rolldown.config.mjs`
+  - `package.json` (`check` script)
+  - `.github/workflows/release.yml` (`dist-glob`)
+  - `scripts/publish-to-local.sh`
+  - `README.md`
+  - this file
 - If you change the fixed local publish destination, update both:
   - `README.md`
   - `scripts/publish-to-local.sh`
@@ -139,5 +144,5 @@ If you add tests later, prefer this structure:
 
 - `pnpm install`
 - `pnpm run build`
-- `node --check dist/dashboard-maintenance.js`
+- `node --check dist/ha-dashboard-maintenance.js`
 - Register the resource in Home Assistant and confirm the custom strategy resolves in Lovelace
