@@ -142,6 +142,7 @@ export type MaintenanceModuleId =
 export interface BatteryThresholdOverride {
   entity_id: string;
   threshold: number;
+  note?: string;
 }
 
 export interface MaintenanceStrategyConfig {

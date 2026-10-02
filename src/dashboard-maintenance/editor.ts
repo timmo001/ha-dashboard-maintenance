@@ -53,6 +53,7 @@ interface BatteryThresholdOverrideDraft {
   index: number;
   entity_id?: string;
   threshold: number;
+  note?: string;
 }
 
 const toBatteryThreshold = (value: number): number =>
@@ -533,9 +534,14 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
               `
             : html`<ha-icon icon="mdi:battery-unknown"></ha-icon>`,
           primary: name,
-          secondary: localize("editor.battery_override_threshold_value", {
-            threshold: override.threshold,
-          }),
+          secondary: override.note
+            ? localize("editor.battery_override_threshold_note_value", {
+                threshold: override.threshold,
+                note: override.note,
+              })
+            : localize("editor.battery_override_threshold_value", {
+                threshold: override.threshold,
+              }),
           actions: html`
             <ha-icon-button
               .label=${localize("editor.battery_override_edit")}
@@ -692,6 +698,15 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           .value=${draft.threshold}
           .disabled=${!draft.entity_id}
           @value-changed=${this._overrideDraftThresholdChanged}
+        ></ha-selector>
+        <ha-selector
+          .hass=${this.hass}
+          .selector=${{ text: { multiline: true } }}
+          .label=${localize("editor.battery_override_note")}
+          .helper=${localize("editor.battery_override_note_helper")}
+          .value=${draft.note ?? ""}
+          .disabled=${!draft.entity_id}
+          @value-changed=${this._overrideDraftNoteChanged}
         ></ha-selector>
       </div>
       ${previewDevice && customElements.get("hui-card")
@@ -1149,6 +1164,18 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     });
   };
 
+  private _overrideDraftNoteChanged = (
+    ev: CustomEvent<{ value?: string }>,
+  ): void => {
+    ev.stopPropagation();
+
+    if (!this._overrideDraft) {
+      return;
+    }
+
+    this._setOverrideDraft({ ...this._overrideDraft, note: ev.detail.value });
+  };
+
   private _setOverrideDraft(draft: BatteryThresholdOverrideDraft): void {
     this._overrideDraft = draft;
 
@@ -1156,11 +1183,19 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       return;
     }
 
-    const overrides = [...(this._config?.battery_threshold_overrides ?? [])];
-    overrides[draft.index] = {
+    const note = draft.note?.trim();
+
+    const override: BatteryThresholdOverride = {
       entity_id: draft.entity_id,
       threshold: draft.threshold,
     };
+
+    if (note) {
+      override.note = note;
+    }
+
+    const overrides = [...(this._config?.battery_threshold_overrides ?? [])];
+    overrides[draft.index] = override;
     this._updateOverrides(overrides);
   }
 
@@ -1250,11 +1285,25 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       }
     }
 
+    const existingOverrides = this._config?.battery_threshold_overrides ?? [];
+
     this._updateOverrides(
-      [...overrides].map(([entityId, threshold]) => ({
-        entity_id: entityId,
-        threshold,
-      })),
+      [...overrides].map(([entityId, threshold]) => {
+        const override: BatteryThresholdOverride = {
+          entity_id: entityId,
+          threshold,
+        };
+
+        const note = existingOverrides.find(
+          (existing) => existing.entity_id === entityId,
+        )?.note;
+
+        if (note) {
+          override.note = note;
+        }
+
+        return override;
+      }),
     );
   };
 

@@ -39,7 +39,7 @@ Use `custom:dm-maintenance-summary-card` on any dashboard (for example Home Over
 Shows devices with numeric battery sensors, sorted so low-battery devices appear first. Devices can be browsed by area using per-area subviews.
 
 - Devices below `battery_attention_threshold` (default 30 %) are highlighted in an attention section at the top.
-- Individual batteries can use their own threshold through `battery_threshold_overrides`. In the visual editor, use "Add override" on the Batteries section to pick a battery and set its threshold.
+- Individual batteries can use their own threshold through `battery_threshold_overrides`. In the visual editor, use "Add override" on the Batteries section to pick a battery and set its threshold. An optional `note` lets you record why, for example because a battery lasts longer in that device.
 - Remaining devices are grouped by floor and area, with unassigned devices in an "Other Devices" section.
 - Per-area subviews let you browse batteries for a single room; an "All Batteries" subview shows every device.
 - When a device has multiple battery sensors the most relevant one is selected automatically.
@@ -187,7 +187,7 @@ All options are optional. Omitting a key uses the default shown below.
 |-----|------|---------|-------------|
 | `batteries_enabled` | `boolean` | `true` | Enable or disable the batteries module. |
 | `battery_attention_threshold` | `number` | `30` | Battery percentage (0 – 100) below which a device is flagged as needing attention. |
-| `battery_threshold_overrides` | `{ entity_id: string; threshold: number }[]` | `[]` | Per-battery thresholds (0 – 100) that replace `battery_attention_threshold` for the listed battery sensor entities. |
+| `battery_threshold_overrides` | `{ entity_id: string; threshold: number; note?: string }[]` | `[]` | Per-battery thresholds (0 – 100) that replace `battery_attention_threshold` for the listed battery sensor entities. `note` is optional and shown in the editor. |
 | `show_attention_batteries_in_areas` | `boolean` | `true` | Show attention-flagged batteries inside per-area sections. |
 | `repairs_enabled` | `boolean` | `true` | Enable or disable the repairs module. |
 | `updates_enabled` | `boolean` | `true` | Enable or disable the updates module. |
@@ -220,6 +220,7 @@ strategy:
   battery_threshold_overrides:
     - entity_id: sensor.front_door_lock_battery
       threshold: 40
+      note: Lithium cells hold their voltage until nearly empty
   show_attention_batteries_in_areas: false
   repairs_enabled: true
   updates_enabled: true

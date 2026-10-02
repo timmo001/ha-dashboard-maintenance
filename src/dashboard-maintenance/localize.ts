@@ -177,6 +177,10 @@ const en = {
   "editor.battery_override_threshold_helper":
     "This battery is marked as needing attention below this level.",
   "editor.battery_override_threshold_value": "Below {threshold}%",
+  "editor.battery_override_threshold_note_value": "Below {threshold}% · {note}",
+  "editor.battery_override_note": "Note",
+  "editor.battery_override_note_helper":
+    "Optional. Explain why this battery uses a different threshold, for example if it lasts longer in this device.",
   "editor.battery_override_remove": "Remove override",
   "editor.back": "Back",
   "editor.show_attention_in_areas_helper":
