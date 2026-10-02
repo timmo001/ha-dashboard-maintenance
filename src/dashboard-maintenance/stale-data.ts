@@ -12,7 +12,7 @@ import {
   fetchDeviceRegistry,
   fetchEntityRegistry,
 } from "./maintenance-data";
-import type { HomeAssistant } from "./types";
+import type { HassEntity, HomeAssistant } from "./types";
 
 export const DEFAULT_STALE_THRESHOLD_HOURS = 6;
 
@@ -69,12 +69,38 @@ const normalizeStaleThresholdHours = (
   );
 };
 
+export const staleThresholdMs = (thresholdHours?: number): number =>
+  normalizeStaleThresholdHours(thresholdHours) * 60 * 60 * 1000;
+
+// Use last_updated (when HA last received any state report) in
+// preference to last_changed (when the value actually changed).
+// A sensor that keeps reporting the same value refreshes
+// last_updated but not last_changed.
+const staleTimestamp = (stateObj: HassEntity): number =>
+  parseTimestamp(stateObj.last_updated || stateObj.last_changed);
+
+export const isStaleState = (
+  stateObj: HassEntity,
+  thresholdMs: number,
+  now: number,
+): boolean => {
+  if (
+    !isStaleRelevantDomain(stateObj.entity_id) ||
+    isAvailabilityIssue(stateObj)
+  ) {
+    return false;
+  }
+
+  const lastUpdatedTs = staleTimestamp(stateObj);
+
+  return lastUpdatedTs !== 0 && now - lastUpdatedTs >= thresholdMs;
+};
+
 export const getMaintenanceStaleEntities = async (
   hass: HomeAssistant,
   thresholdHours?: number,
 ): Promise<MaintenanceStaleEntity[]> => {
-  const normalizedThreshold = normalizeStaleThresholdHours(thresholdHours);
-  const thresholdMs = normalizedThreshold * 60 * 60 * 1000;
+  const thresholdMs = staleThresholdMs(thresholdHours);
   const now = Date.now();
 
   const [entities, devices] = await Promise.all([
@@ -85,10 +111,7 @@ export const getMaintenanceStaleEntities = async (
   const hasEntityRegistry = Object.keys(entities).length > 0;
 
   return Object.values(hass.states)
-    .filter((stateObj) =>
-      isStaleRelevantDomain(stateObj.entity_id) &&
-      !isAvailabilityIssue(stateObj),
-    )
+    .filter((stateObj) => isStaleState(stateObj, thresholdMs, now))
     .map<MaintenanceStaleEntity | undefined>((stateObj) => {
       const ctx = resolveStateContext(
         stateObj,
@@ -107,31 +130,13 @@ export const getMaintenanceStaleEntities = async (
         return undefined;
       }
 
-      // Use last_updated (when HA last received any state report) in
-      // preference to last_changed (when the value actually changed).
-      // A sensor that keeps reporting the same value refreshes
-      // last_updated but not last_changed.
-      const lastUpdatedTs = parseTimestamp(
-        stateObj.last_updated || stateObj.last_changed,
-      );
-
-      if (lastUpdatedTs === 0) {
-        return undefined;
-      }
-
-      const staleDurationMs = now - lastUpdatedTs;
-
-      if (staleDurationMs < thresholdMs) {
-        return undefined;
-      }
-
       return {
         areaId: device?.area_id || entry?.area_id,
         deviceId,
         displayName: computeEntityDisplayName(entry, device, stateObj),
         entityId: stateObj.entity_id,
         lastUpdated: stateObj.last_updated || stateObj.last_changed || "",
-        staleDurationMs,
+        staleDurationMs: now - staleTimestamp(stateObj),
         state: stateObj.state,
       } satisfies MaintenanceStaleEntity;
     })
