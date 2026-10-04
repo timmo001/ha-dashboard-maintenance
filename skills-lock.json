@@ -29,6 +29,13 @@
       "skillPath": "lit-rendering/SKILL.md",
       "computedHash": "d10b6e0d4a5fa5a6b475b9db0742642c34a8fd63cd1f32778cc4e673ef8708c6"
     },
+    "skill-prefixes": {
+      "source": "timmo001/skills",
+      "ref": "c7497d43ccf72ee0ca447b63fd7a4e9f687fb008",
+      "sourceType": "github",
+      "skillPath": "skill-prefixes/SKILL.md",
+      "computedHash": "8c4203c19621bc61824eb955e9584dbebc47774de8bad7b02653fb59c1e419c4"
+    },
     "testing": {
       "source": "timmo001/skills",
       "ref": "f04608d991091ce1b42df82acc14b735c6250bab",
