@@ -5,5 +5,6 @@ export default defineConfig({
   extends: [recommended],
   options: {
     typeAware: true,
+    maxWarnings: 0,
   },
 });
