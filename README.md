@@ -252,7 +252,7 @@ pnpm run lint
 pnpm run check
 ```
 
-`pnpm run lint` runs Oxlint. `pnpm run check` rebuilds the bundle and checks the generated JavaScript syntax. Git commits run both through a `pre-commit` hook.
+`pnpm run build` type-checks and bundles in parallel. `pnpm run lint` runs Oxlint. `pnpm run check` rebuilds the bundle and checks the generated JavaScript syntax. Git commits run lint and check in parallel through a `pre-commit` hook.
 
 ## Release layout
 
