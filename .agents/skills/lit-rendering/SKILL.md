@@ -1,7 +1,7 @@
 ---
 name: lit-rendering
 license: Apache-2.0
-description: Lit rendering and picker callback-shape guidance for editing and reviewing Lit components.
+description: Lit rendering and picker callback-shape guidance. Use when editing or reviewing Lit component render logic, derived render data, memoization, or picker callbacks.
 ---
 
 # Lit Rendering
