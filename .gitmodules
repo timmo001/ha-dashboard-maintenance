@@ -1,0 +1,4 @@
+[submodule "vendor/home-assistant-frontend"]
+	path = vendor/home-assistant-frontend
+	url = https://github.com/home-assistant/frontend.git
+	shallow = true
