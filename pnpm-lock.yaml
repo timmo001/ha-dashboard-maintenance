@@ -174,8 +174,8 @@ importers:
         specifier: 1.87.0
         version: 1.87.0
       '@timmo001/oxlint-rules':
-        specifier: 0.5.0
-        version: 0.5.0(@oxlint/plugins@1.87.0)(oxlint@1.87.0(oxlint-tsgolint@7.0.2003))
+        specifier: 0.6.2
+        version: 0.6.2(@oxlint/plugins@1.87.0)(oxlint@1.87.0(oxlint-tsgolint@7.0.2003))
       oxlint:
         specifier: 1.87.0
         version: 1.87.0(oxlint-tsgolint@7.0.2003)
@@ -458,13 +458,13 @@ packages:
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
-  '@timmo001/oxlint-rules@0.5.0':
-    resolution: {integrity: sha512-5Tm1duCF2fzPRSwFGTOIDoR4qWXQIUtf0dYWt4ApoRbtJTPrPi4OZjdmhglaE/IoEaDSuUFp2Jx08Emmno/o1g==}
+  '@timmo001/oxlint-rules@0.6.2':
+    resolution: {integrity: sha512-a2pte8DgmqpSVWcjPo21uabKypyfv0TtOdl36oUG+p17MlIs2zT7DiZhn0tnEXjdXna3KFnmzGEHvW0KspVlXA==}
     engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
-      '@oxlint/plugins': 1.86.0
-      oxlint: 1.86.0
+      '@oxlint/plugins': 1.87.0
+      oxlint: 1.87.0
 
   '@types/trusted-types@2.0.7':
     resolution: {integrity: sha512-ScaPdn1dQczgbl0QFTeTOmVHFULt394XJgOQNoyVhZ6r2vLnMLJfBPd53SB52T/3G36VI1/g2MZaX0cwDuXsfw==}
@@ -763,7 +763,7 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.1': {}
 
-  '@timmo001/oxlint-rules@0.5.0(@oxlint/plugins@1.87.0)(oxlint@1.87.0(oxlint-tsgolint@7.0.2003))':
+  '@timmo001/oxlint-rules@0.6.2(@oxlint/plugins@1.87.0)(oxlint@1.87.0(oxlint-tsgolint@7.0.2003))':
     dependencies:
       '@oxlint/plugins': 1.87.0
       oxlint: 1.87.0(oxlint-tsgolint@7.0.2003)
