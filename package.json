@@ -24,7 +24,7 @@
     "@timmo001/oxlint-rules": "0.6.2",
     "oxlint": "1.88.0",
     "oxlint-tsgolint": "7.0.2004",
-    "rolldown": "1.2.13",
+    "rolldown": "1.2.14",
     "simple-git-hooks": "2.14.0",
     "typescript": "7.0.2"
   }
