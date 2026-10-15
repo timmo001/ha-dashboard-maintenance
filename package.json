@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@oxlint/plugins": "1.88.0",
-    "@timmo001/oxlint-rules": "0.6.2",
+    "@timmo001/oxlint-rules": "0.6.3",
     "oxlint": "1.88.0",
     "oxlint-tsgolint": "7.0.2004",
     "rolldown": "1.2.14",
