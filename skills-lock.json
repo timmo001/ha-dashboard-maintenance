@@ -24,10 +24,10 @@
     },
     "home-assistant-frontend": {
       "source": "timmo001/skills",
-      "ref": "c7f26f77ff0778fe65ff315115be9dbbf2d1b1dd",
+      "ref": "409ac65a85cfcb82dfba81565d3598fa941647ac",
       "sourceType": "github",
       "skillPath": "home-assistant-frontend/SKILL.md",
-      "computedHash": "74d86a0408fede6451074713f441944444b0a4ff032d27479f7b6a337401ac31"
+      "computedHash": "f4b7634776309a30075ca6ad0b266de03088c7dcff5b4a82ca0c06520490d82b"
     },
     "home-assistant-lit-rendering": {
       "source": "timmo001/skills",
