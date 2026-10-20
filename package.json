@@ -20,9 +20,9 @@
     "lit": "3.3.3"
   },
   "devDependencies": {
-    "@oxlint/plugins": "1.88.0",
+    "@oxlint/plugins": "1.89.0",
     "@timmo001/oxlint-rules": "0.6.3",
-    "oxlint": "1.88.0",
+    "oxlint": "1.89.0",
     "oxlint-tsgolint": "7.0.2004",
     "rolldown": "1.2.14",
     "simple-git-hooks": "2.14.0",
