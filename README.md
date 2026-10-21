@@ -86,16 +86,15 @@ Shows entities whose state has not been updated within a configurable time windo
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=timmo001&repository=ha-dashboard-maintenance&category=plugin)
 
-1. Open the button above to add this repository in HACS.
-2. If you add it manually, open HACS, go to the top-right menu, choose `Custom repositories`, add `https://github.com/timmo001/ha-dashboard-maintenance`, and select `Dashboard`.
-3. Install the repository from HACS.
-4. Open `Settings -> Dashboards -> three dots menu -> Resources`.
-5. Add this Lovelace resource:
+1. Open the button above, or search for `Dashboard Maintenance` in HACS.
+2. Install it from HACS.
+3. Open `Settings -> Dashboards -> three dots menu -> Resources`.
+4. Add this Lovelace resource:
 
    - URL: `/hacsfiles/ha-dashboard-maintenance/ha-dashboard-maintenance.js`
    - Type: `module`
 
-6. Reload Lovelace resources or refresh Home Assistant.
+5. Reload Lovelace resources or refresh Home Assistant.
 
 ## Local development setup
 
