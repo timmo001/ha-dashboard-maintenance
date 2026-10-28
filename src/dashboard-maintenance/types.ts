@@ -130,14 +130,22 @@ export type BatteryTileFeature = (typeof BATTERY_TILE_FEATURES)[number];
 
 export const DEFAULT_BATTERY_TILE_FEATURE: BatteryTileFeature = "trend";
 
-export type MaintenanceModuleId =
-  | "system"
-  | "batteries"
-  | "repairs"
-  | "updates"
-  | "availability"
-  | "stale"
-  | "integrations";
+export const MAINTENANCE_MODULE_IDS = [
+  "system",
+  "batteries",
+  "repairs",
+  "updates",
+  "availability",
+  "stale",
+  "integrations",
+] as const;
+
+export type MaintenanceModuleId = (typeof MAINTENANCE_MODULE_IDS)[number];
+
+export const isMaintenanceModuleId = (
+  value: unknown,
+): value is MaintenanceModuleId =>
+  MAINTENANCE_MODULE_IDS.some((id) => id === value);
 
 export interface BatteryThresholdOverride {
   entity_id: string;
@@ -183,6 +191,10 @@ export interface MaintenanceViewStrategyConfig extends MaintenanceStrategyConfig
 }
 
 export interface MaintenanceDashboardStrategyConfig extends MaintenanceStrategyConfig {}
+
+export interface MaintenanceSectionStrategyConfig extends MaintenanceStrategyConfig {
+  module?: MaintenanceModuleId;
+}
 
 /** Returns true when a module is enabled (defaults to true when unset). */
 export const isModuleEnabled = (

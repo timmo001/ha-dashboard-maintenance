@@ -1,4 +1,15 @@
 const en = {
+  // Strategy picker entries
+  "strategy.dashboard.name": "Maintenance",
+  "strategy.dashboard.description":
+    "Home maintenance overview with batteries, repairs, updates, availability, stale data, and integrations.",
+  "strategy.section.name": "Maintenance",
+  "strategy.section.description":
+    "One maintenance module, such as batteries needing attention or pending updates.",
+
+  // Section strategy
+  "section.unknown_module": "Choose a maintenance module for this section.",
+
   // Create-dashboard dialog default title (`getCreateSuggestions`)
   "dashboard.suggested_title": "Maintenance",
 
@@ -212,6 +223,9 @@ const en = {
   "editor.module_enabled_label": "Enabled",
   "editor.module_enabled_helper":
     "When disabled, this module is hidden from the dashboard and its data is not loaded.",
+  "editor.section_module_label": "Module",
+  "editor.section_module_helper":
+    "The section is hidden on the dashboard while this module has nothing to show.",
 };
 
 export type TranslationKey = keyof typeof en;

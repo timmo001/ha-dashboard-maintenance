@@ -9,25 +9,46 @@ import "./dashboard-maintenance/maintenance-stale-view-strategy";
 import "./dashboard-maintenance/maintenance-summary-view-strategy";
 import "./dashboard-maintenance/maintenance-system-view-strategy";
 import "./dashboard-maintenance/maintenance-integrations-view-strategy";
+import "./dashboard-maintenance/maintenance-section-strategy";
 import "./dashboard-maintenance/maintenance-updates-view-strategy";
+import { setupLocalize } from "./dashboard-maintenance/localize";
 import { MAINTENANCE_DASHBOARD_IMAGES } from "./dashboard-maintenance/strategy-images";
 
-window.customStrategies = window.customStrategies || [];
+const DOCUMENTATION_URL =
+  "https://github.com/timmo001/ha-dashboard-maintenance#readme";
 
-if (
-  !window.customStrategies.some(
-    (strategy) =>
-      strategy.type === "maintenance" && strategy.strategyType === "dashboard",
-  )
-) {
-  window.customStrategies.push({
+const localize = setupLocalize();
+
+const STRATEGIES = [
+  {
     type: "maintenance",
-    name: "Maintenance",
-    description:
-      "Home maintenance overview with batteries, repairs, updates, availability, stale data, and integrations.",
-    images: MAINTENANCE_DASHBOARD_IMAGES,
     strategyType: "dashboard",
-  });
+    name: localize("strategy.dashboard.name"),
+    description: localize("strategy.dashboard.description"),
+    images: MAINTENANCE_DASHBOARD_IMAGES,
+  },
+  {
+    type: "maintenance",
+    strategyType: "section",
+    name: localize("strategy.section.name"),
+    description: localize("strategy.section.description"),
+  },
+] as const;
+
+window.customStrategies ??= [];
+
+for (const strategy of STRATEGIES) {
+  if (
+    !window.customStrategies.some(
+      ({ type, strategyType }) =>
+        type === strategy.type && strategyType === strategy.strategyType,
+    )
+  ) {
+    window.customStrategies.push({
+      ...strategy,
+      documentationURL: DOCUMENTATION_URL,
+    });
+  }
 }
 
 declare global {

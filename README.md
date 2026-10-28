@@ -1,11 +1,12 @@
 # Dashboard Maintenance
 
-Custom Lovelace dashboard and view strategy for Home Assistant maintenance dashboards.
+Custom Lovelace dashboard, view and section strategies for Home Assistant maintenance dashboards.
 
 ## What it adds
 
 - `custom:maintenance` dashboard strategy for full dashboards
 - `custom:maintenance` view strategy for single Lovelace views
+- `custom:maintenance` section strategy for adding one maintenance module to any sections dashboard
 - `custom:dm-maintenance-summary-card` for linking to maintenance dashboards
 - a strategy editor with a battery attention threshold slider
 
@@ -152,6 +153,26 @@ views:
       icon: mdi:battery-heart-variant
       battery_attention_threshold: 30
 ```
+
+## Use as a section in an existing dashboard
+
+In a sections view, add a section, choose **Maintenance** under the custom section types, then pick the module it shows. In YAML:
+
+```yaml
+sections:
+  - strategy:
+      type: custom:maintenance
+      module: batteries
+      battery_attention_threshold: 20
+```
+
+The section shows the same list as that module's part of the summary view, with every item rather than the first 12. It hides itself on the dashboard while the module has nothing to show, and stays visible while you edit the dashboard. The repairs, updates and integrations headings link to their Home Assistant settings pages.
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `module` | `"system" \| "batteries" \| "repairs" \| "updates" \| "availability" \| "stale" \| "integrations"` | Which module the section shows. |
+
+The module's own options from the [common options](#common-options-dashboard-and-view-strategy) apply too: `battery_attention_threshold`, `battery_threshold_overrides` and `battery_tile_feature` for batteries, `availability_safe_list_device_ids` for availability, and `stale_threshold_hours` for stale.
 
 ## Use the maintenance summary card
 

@@ -16,10 +16,12 @@ import type {
   HomeAssistant,
   MaintenanceDashboardStrategyConfig,
   MaintenanceModuleId,
+  MaintenanceSectionStrategyConfig,
 } from "./types";
 import {
   BATTERY_TILE_FEATURES,
   DEFAULT_BATTERY_TILE_FEATURE,
+  isMaintenanceModuleId,
 } from "./types";
 import {
   DEFAULT_BATTERY_ATTENTION_THRESHOLD,
@@ -48,6 +50,10 @@ const MDI_PENCIL_PATH =
   "M20.71,7.04C21.1,6.65 21.1,6 20.71,5.63L18.37,3.29C18,2.9 17.35,2.9 16.96,3.29L15.12,5.12L18.87,8.87M3,17.25V21H6.75L17.81,9.93L14.06,6.18L3,17.25Z";
 
 const MDI_PLUS_PATH = "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z";
+
+// The section editor shares this editor, with the module the section shows
+type MaintenanceEditorConfig = MaintenanceDashboardStrategyConfig &
+  Pick<MaintenanceSectionStrategyConfig, "module">;
 
 interface BatteryThresholdOverrideDraft {
   index: number;
@@ -169,22 +175,20 @@ interface HaFormSelector {
     unit_of_measurement?: string;
   };
   select?: {
-    mode: "list";
+    mode: "list" | "dropdown";
     options: { value: string; label: string }[];
   };
 }
 
 interface HaFormSchema {
   name: string;
+  required?: boolean;
   selector: HaFormSelector;
   hidden?: {
     field: ModuleEnabledKey;
     value: false;
   };
 }
-
-const isMaintenanceModuleId = (value: string): value is MaintenanceModuleId =>
-  MODULES.some((mod) => mod.id === value);
 
 const isBatteryTileFeature = (value: string): value is BatteryTileFeature =>
   BATTERY_TILE_FEATURES.some((feature) => feature === value);
@@ -193,7 +197,7 @@ const isBatteryTileFeature = (value: string): value is BatteryTileFeature =>
 class DashboardMaintenanceStrategyEditor extends LitElement {
   @property({ attribute: false }) public hass?: HomeAssistant;
 
-  @state() private _config?: MaintenanceDashboardStrategyConfig;
+  @state() private _config?: MaintenanceEditorConfig;
 
   @state() private _overrideDraft?: BatteryThresholdOverrideDraft;
 
@@ -212,6 +216,11 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   private _scrollTop?: number;
 
+  /** Edits a section strategy: one chosen module, with no enable toggles. */
+  protected get _section(): boolean {
+    return false;
+  }
+
   private _dialogBody(): HTMLElement | undefined {
     const body = this._dialog?.element.shadowRoot?.querySelector(".body");
 
@@ -228,7 +237,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     // The strategy editor dialog is large; use the default dialog width instead.
-    let node: Node | null = this.parentNode;
+    let node: Node | null = this._section ? null : this.parentNode;
 
     while (node && !(node instanceof HTMLElement && node.localName === "ha-dialog")) {
       node = node.parentNode ?? (node instanceof ShadowRoot ? node.host : null);
@@ -311,7 +320,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
   }
 
-  public setConfig(config: MaintenanceDashboardStrategyConfig): void {
+  public setConfig(config: MaintenanceEditorConfig): void {
     this._config = config;
   }
 
@@ -332,6 +341,10 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
     const config = this._config;
     const hasForm = Boolean(customElements.get("ha-form"));
+
+    if (this._section) {
+      return this._renderSection(localize, config, hasForm);
+    }
 
     return MODULES.map((mod) => {
       const enabled = config[mod.enabledKey] !== false;
@@ -360,6 +373,72 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     });
   }
 
+  private _renderSection(
+    localize: ReturnType<typeof setupLocalize>,
+    config: MaintenanceEditorConfig,
+    hasForm: boolean,
+  ) {
+    const mod = MODULES.find((item) => item.id === config.module);
+
+    return html`
+      ${hasForm
+        ? html`
+            <ha-form
+              .hass=${this.hass}
+              .data=${{ module: config.module }}
+              .schema=${[
+                {
+                  name: "module",
+                  required: true,
+                  selector: {
+                    select: {
+                      mode: "dropdown",
+                      options: MODULES.map((item) => ({
+                        value: item.id,
+                        label: localize(item.headerKey),
+                      })),
+                    },
+                  },
+                } satisfies HaFormSchema,
+              ]}
+              .computeLabel=${this._computeLabel}
+              .computeHelper=${this._computeHelper}
+              @value-changed=${this._sectionModuleChanged}
+            ></ha-form>
+          `
+        : html`
+            <div class="fallback-editor">
+              <label for="section-module">
+                ${localize("editor.section_module_label")}
+              </label>
+              <select
+                id="section-module"
+                @change=${this._nativeSectionModuleChanged}
+              >
+                ${MODULES.map(
+                  (item) => html`
+                    <option
+                      value=${item.id}
+                      ?selected=${item.id === config.module}
+                    >
+                      ${localize(item.headerKey)}
+                    </option>
+                  `,
+                )}
+              </select>
+              <div class="helper">
+                ${localize("editor.section_module_helper")}
+              </div>
+            </div>
+          `}
+      ${mod
+        ? hasForm
+          ? this._renderModuleForm(localize, mod, true, config)
+          : this._renderModuleSettings(localize, mod, config)
+        : nothing}
+    `;
+  }
+
   private _renderEnableToggle(
     localize: ReturnType<typeof setupLocalize>,
     mod: ModuleDescriptor,
@@ -385,14 +464,14 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     localize: ReturnType<typeof setupLocalize>,
     mod: ModuleDescriptor,
     enabled: boolean,
-    config: MaintenanceDashboardStrategyConfig,
+    config: MaintenanceEditorConfig,
   ) {
     const data: ModuleFormData = {};
     data[mod.enabledKey] = enabled;
 
-    const schema: HaFormSchema[] = [
-      { name: mod.enabledKey, selector: { boolean: {} } },
-    ];
+    const schema: HaFormSchema[] = this._section
+      ? []
+      : [{ name: mod.enabledKey, selector: { boolean: {} } }];
 
     const hidden = { field: mod.enabledKey, value: false } as const;
 
@@ -424,11 +503,16 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
             },
             hidden,
           },
-          {
-            name: "show_attention_batteries_in_areas",
-            selector: { boolean: {} },
-            hidden,
-          },
+          // A section only shows the batteries needing attention
+          ...(this._section
+            ? []
+            : [
+                {
+                  name: "show_attention_batteries_in_areas",
+                  selector: { boolean: {} },
+                  hidden,
+                },
+              ]),
           {
             name: "battery_attention_threshold",
             selector: {
@@ -489,6 +573,10 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     data: ModuleFormData,
     schema: HaFormSchema[],
   ) {
+    if (schema.length === 0) {
+      return nothing;
+    }
+
     return html`
       <ha-form
         data-module=${mod.id}
@@ -650,7 +738,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   private _renderOverrideEditor(
     localize: ReturnType<typeof setupLocalize>,
-    config: MaintenanceDashboardStrategyConfig,
+    config: MaintenanceEditorConfig,
     draft: BatteryThresholdOverrideDraft,
   ) {
     const previewDevice =
@@ -742,7 +830,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
   private _renderModuleSettings(
     localize: ReturnType<typeof setupLocalize>,
     mod: ModuleDescriptor,
-    config: MaintenanceDashboardStrategyConfig,
+    config: MaintenanceEditorConfig,
   ) {
     switch (mod.id) {
       case "batteries":
@@ -758,7 +846,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   private _renderAvailabilitySettings(
     localize: ReturnType<typeof setupLocalize>,
-    config: MaintenanceDashboardStrategyConfig,
+    config: MaintenanceEditorConfig,
   ) {
     const safeListDeviceIds =
       config.availability_safe_list_device_ids ?? [];
@@ -783,7 +871,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   private _renderBatterySettings(
     localize: ReturnType<typeof setupLocalize>,
-    config: MaintenanceDashboardStrategyConfig,
+    config: MaintenanceEditorConfig,
   ) {
     const threshold =
       config.battery_attention_threshold ??
@@ -818,18 +906,22 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
               ${localize("editor.battery_tile_feature_helper")}
             </div>
           </fieldset>
-          <label for="show-attention-batteries-in-areas">
-            <input
-              id="show-attention-batteries-in-areas"
-              type="checkbox"
-              .checked=${showAttentionBatteriesInAreas}
-              @change=${this._nativeBooleanChanged}
-            />
-            ${localize("editor.show_attention_in_areas_label")}
-          </label>
-          <div class="helper">
-            ${localize("editor.show_attention_in_areas_helper")}
-          </div>
+          ${this._section
+            ? nothing
+            : html`
+                <label for="show-attention-batteries-in-areas">
+                  <input
+                    id="show-attention-batteries-in-areas"
+                    type="checkbox"
+                    .checked=${showAttentionBatteriesInAreas}
+                    @change=${this._nativeBooleanChanged}
+                  />
+                  ${localize("editor.show_attention_in_areas_label")}
+                </label>
+                <div class="helper">
+                  ${localize("editor.show_attention_in_areas_helper")}
+                </div>
+              `}
           <label for="battery-threshold">
             ${localize("editor.battery_threshold_label")}
           </label>
@@ -866,7 +958,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   private _renderStaleSettings(
     localize: ReturnType<typeof setupLocalize>,
-    config: MaintenanceDashboardStrategyConfig,
+    config: MaintenanceEditorConfig,
   ) {
     const staleThreshold =
       config.stale_threshold_hours ?? DEFAULT_STALE_THRESHOLD_HOURS;
@@ -899,6 +991,8 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     switch (schema.name) {
+      case "module":
+        return localize("editor.section_module_label");
       case "battery_attention_threshold":
         return localize("editor.battery_threshold_label");
       case "show_attention_batteries_in_areas":
@@ -920,6 +1014,8 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     switch (schema.name) {
+      case "module":
+        return localize("editor.section_module_helper");
       case "battery_attention_threshold":
         return localize("editor.battery_threshold_helper");
       case "show_attention_batteries_in_areas":
@@ -954,7 +1050,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     const data = ev.detail.value;
-    const updates: Partial<MaintenanceDashboardStrategyConfig> = {};
+    const updates: Partial<MaintenanceEditorConfig> = {};
 
     const enabled = data[activeModule.enabledKey];
 
@@ -996,6 +1092,31 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     this._emitConfigUpdate(updates);
+  };
+
+  /* ---- Section module handlers ---- */
+
+  private _sectionModuleChanged = (
+    ev: CustomEvent<{ value: { module?: string } }>,
+  ): void => {
+    ev.stopPropagation();
+    const module = ev.detail.value.module;
+
+    if (isMaintenanceModuleId(module)) {
+      this._emitConfigUpdate({ module });
+    }
+  };
+
+  private _nativeSectionModuleChanged = (ev: Event): void => {
+    if (!(ev.currentTarget instanceof HTMLSelectElement)) {
+      return;
+    }
+
+    const module = ev.currentTarget.value;
+
+    if (isMaintenanceModuleId(module)) {
+      this._emitConfigUpdate({ module });
+    }
   };
 
   /* ---- Battery threshold override handlers ---- */
@@ -1341,13 +1462,13 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
   /* ---- Config emit ---- */
 
   private _emitConfigUpdate(
-    updates: Partial<MaintenanceDashboardStrategyConfig>,
+    updates: Partial<MaintenanceEditorConfig>,
   ): void {
     if (!this._config) {
       return;
     }
 
-    const config: MaintenanceDashboardStrategyConfig = {
+    const config: MaintenanceEditorConfig = {
       ...this._config,
       ...updates,
     };
@@ -1445,8 +1566,16 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
   ];
 }
 
+@customElement("dashboard-maintenance-section-editor")
+class DashboardMaintenanceSectionEditor extends DashboardMaintenanceStrategyEditor {
+  protected override get _section(): boolean {
+    return true;
+  }
+}
+
 declare global {
   interface HTMLElementTagNameMap {
     "dashboard-maintenance-strategy-editor": DashboardMaintenanceStrategyEditor;
+    "dashboard-maintenance-section-editor": DashboardMaintenanceSectionEditor;
   }
 }

@@ -21,6 +21,7 @@ It is distributed as a HACS `Dashboard` repository, not as a custom integration.
 - `src/dashboard-maintenance/localize.ts` contains all user-facing strings and the translation helper
 - `src/dashboard-maintenance/maintenance-dashboard-strategy.ts` generates full dashboards
 - `src/dashboard-maintenance/maintenance-view-strategy.ts` generates single Lovelace views
+- `src/dashboard-maintenance/maintenance-section-strategy.ts` generates one module's section for any sections dashboard
 - `src/dashboard-maintenance/maintenance-data.ts` builds the battery-focused maintenance dataset
 
 ## Setup commands
