@@ -1,5 +1,5 @@
 import { LitElement, css, html, nothing } from "lit";
-import type { PropertyValues } from "lit";
+import type { PropertyValues, TemplateResult } from "lit";
 import { customElement, property, query, state } from "lit/decorators.js";
 import { setupLocalize } from "./localize";
 import { normalizeAvailabilitySafeListDeviceIds } from "./availability-data";
@@ -21,7 +21,10 @@ import type {
 import {
   BATTERY_TILE_FEATURES,
   DEFAULT_BATTERY_TILE_FEATURE,
+  getEnabledModules,
   isMaintenanceModuleId,
+  isModuleEnabled,
+  MAINTENANCE_MODULE_IDS,
 } from "./types";
 import {
   DEFAULT_BATTERY_ATTENTION_THRESHOLD,
@@ -85,14 +88,6 @@ interface ModuleDescriptor {
     | "editor.stale_description"
     | "editor.availability_description"
     | "editor.integrations_description";
-  enabledKey:
-    | "system_enabled"
-    | "batteries_enabled"
-    | "updates_enabled"
-    | "repairs_enabled"
-    | "stale_enabled"
-    | "availability_enabled"
-    | "integrations_enabled";
 }
 
 const MODULES = [
@@ -101,55 +96,57 @@ const MODULES = [
     icon: "mdi:server",
     headerKey: "editor.system_header",
     descriptionKey: "editor.system_description",
-    enabledKey: "system_enabled",
   },
   {
     id: "batteries",
     icon: "mdi:battery-heart-variant",
     headerKey: "editor.batteries_header",
     descriptionKey: "editor.batteries_description",
-    enabledKey: "batteries_enabled",
   },
   {
     id: "repairs",
     icon: "mdi:wrench",
     headerKey: "editor.repairs_header",
     descriptionKey: "editor.repairs_description",
-    enabledKey: "repairs_enabled",
   },
   {
     id: "updates",
     icon: "mdi:package-up",
     headerKey: "editor.updates_header",
     descriptionKey: "editor.updates_description",
-    enabledKey: "updates_enabled",
   },
   {
     id: "availability",
     icon: "mdi:help-circle-outline",
     headerKey: "editor.availability_header",
     descriptionKey: "editor.availability_description",
-    enabledKey: "availability_enabled",
-  },
-  {
-    id: "stale",
-    icon: "mdi:clock-alert-outline",
-    headerKey: "editor.stale_header",
-    descriptionKey: "editor.stale_description",
-    enabledKey: "stale_enabled",
   },
   {
     id: "integrations",
     icon: "mdi:puzzle",
     headerKey: "editor.integrations_header",
     descriptionKey: "editor.integrations_description",
-    enabledKey: "integrations_enabled",
+  },
+  {
+    id: "stale",
+    icon: "mdi:clock-alert-outline",
+    headerKey: "editor.stale_header",
+    descriptionKey: "editor.stale_description",
   },
 ] as const satisfies readonly ModuleDescriptor[];
 
-type ModuleEnabledKey = ModuleDescriptor["enabledKey"];
+/** The modules with settings of their own, shown in the dashboard editor while enabled. */
+const MODULES_WITH_SETTINGS = new Set<MaintenanceModuleId>([
+  "batteries",
+  "availability",
+  "stale",
+]);
 
-interface ModuleFormData extends Partial<Record<ModuleEnabledKey, boolean>> {
+const LEGACY_ENABLED_KEYS = MAINTENANCE_MODULE_IDS.map(
+  (id) => `${id}_enabled` as const,
+);
+
+interface ModuleFormData {
   battery_attention_threshold?: number;
   show_attention_batteries_in_areas?: boolean;
   battery_tile_feature?: string;
@@ -175,26 +172,29 @@ interface HaFormSelector {
     slider_ticks?: boolean;
     unit_of_measurement?: string;
   };
-  select?: {
-    mode: "box";
-    box_max_columns: number;
-    options: {
-      value: string;
-      label: string;
-      description?: string;
-      image: { src: string; src_dark: string };
-    }[];
-  };
+  select?:
+    | {
+        mode: "box";
+        box_max_columns: number;
+        options: {
+          value: string;
+          label: string;
+          description?: string;
+          image: { src: string; src_dark: string };
+        }[];
+      }
+    | {
+        mode: "dropdown";
+        multiple: true;
+        reorder: true;
+        options: { value: string; label: string }[];
+      };
 }
 
 interface HaFormSchema {
   name: string;
   required?: boolean;
   selector: HaFormSelector;
-  hidden?: {
-    field: ModuleEnabledKey;
-    value: false;
-  };
 }
 
 const isBatteryTileFeature = (value: string): value is BatteryTileFeature =>
@@ -278,7 +278,8 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     if (
       this.hass &&
       !this._configEntries &&
-      this._config?.availability_enabled !== false
+      this._config &&
+      isModuleEnabled(this._config, "availability")
     ) {
       this._configEntries = {};
       void fetchConfigEntries(this.hass).then((entries) => {
@@ -353,31 +354,82 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       return this._renderSection(localize, config, hasForm);
     }
 
-    return MODULES.map((mod) => {
-      const enabled = config[mod.enabledKey] !== false;
+    const enabledModules = getEnabledModules(config);
 
-      return html`
-        <ha-expansion-panel
-          class="module"
-          outlined
-          expanded
-          .header=${localize(mod.headerKey)}
-          .secondary=${localize(mod.descriptionKey)}
-        >
-          <ha-icon slot="leading-icon" icon=${mod.icon}></ha-icon>
-          <div class="expansion-content">
-            ${hasForm
-              ? this._renderModuleForm(localize, mod, enabled, config)
-              : html`
-                  ${this._renderEnableToggle(localize, mod, enabled)}
-                  ${enabled
-                    ? this._renderModuleSettings(localize, mod, config)
-                    : nothing}
-                `}
-          </div>
-        </ha-expansion-panel>
-      `;
-    });
+    if (!hasForm) {
+      return MODULES.map((mod) => {
+        const enabled = enabledModules.includes(mod.id);
+
+        return this._renderModulePanel(
+          localize,
+          mod,
+          html`
+            ${this._renderEnableToggle(localize, mod, enabled)}
+            ${enabled
+              ? this._renderModuleSettings(localize, mod, config)
+              : nothing}
+          `,
+        );
+      });
+    }
+
+    return html`
+      <ha-form
+        .hass=${this.hass}
+        .data=${{ modules: enabledModules }}
+        .schema=${[
+          {
+            name: "modules",
+            selector: {
+              select: {
+                mode: "dropdown",
+                multiple: true,
+                reorder: true,
+                options: MODULES.map((item) => ({
+                  value: item.id,
+                  label: localize(item.headerKey),
+                })),
+              },
+            },
+          } satisfies HaFormSchema,
+        ]}
+        .computeLabel=${this._computeLabel}
+        .computeHelper=${this._computeHelper}
+        @value-changed=${this._modulesChanged}
+      ></ha-form>
+      ${enabledModules
+        .filter((id) => MODULES_WITH_SETTINGS.has(id))
+        .map((id) => {
+          const mod = MODULES.find((item) => item.id === id);
+
+          return mod
+            ? this._renderModulePanel(
+                localize,
+                mod,
+                this._renderModuleForm(localize, mod, config),
+              )
+            : nothing;
+        })}
+    `;
+  }
+
+  private _renderModulePanel(
+    localize: ReturnType<typeof setupLocalize>,
+    mod: ModuleDescriptor,
+    content: TemplateResult | typeof nothing,
+  ) {
+    return html`
+      <ha-expansion-panel
+        class="module"
+        outlined
+        expanded
+        .header=${localize(mod.headerKey)}
+        .secondary=${localize(mod.descriptionKey)}
+      >
+        <ha-icon slot="leading-icon" icon=${mod.icon}></ha-icon>
+        <div class="expansion-content">${content}</div>
+      </ha-expansion-panel>
+    `;
   }
 
   private _renderSection(
@@ -443,7 +495,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           `}
       ${mod
         ? hasForm
-          ? this._renderModuleForm(localize, mod, true, config)
+          ? this._renderModuleForm(localize, mod, config)
           : this._renderModuleSettings(localize, mod, config)
         : nothing}
     `;
@@ -473,17 +525,10 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
   private _renderModuleForm(
     localize: ReturnType<typeof setupLocalize>,
     mod: ModuleDescriptor,
-    enabled: boolean,
     config: MaintenanceEditorConfig,
   ) {
     const data: ModuleFormData = {};
-    data[mod.enabledKey] = enabled;
-
-    const schema: HaFormSchema[] = this._section
-      ? []
-      : [{ name: mod.enabledKey, selector: { boolean: {} } }];
-
-    const hidden = { field: mod.enabledKey, value: false } as const;
+    const schema: HaFormSchema[] = [];
 
     switch (mod.id) {
       case "batteries":
@@ -513,7 +558,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
                 })),
               },
             },
-            hidden,
           },
           // A section only shows the batteries needing attention
           ...(this._section
@@ -522,7 +566,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
                 {
                   name: "show_attention_batteries_in_areas",
                   selector: { boolean: {} },
-                  hidden,
                 },
               ]),
           {
@@ -535,7 +578,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
                 slider_ticks: true,
               },
             },
-            hidden,
           },
         );
         break;
@@ -552,12 +594,11 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
               unit_of_measurement: "h",
             },
           },
-          hidden,
         });
         break;
     }
 
-    if (mod.id === "batteries" && enabled) {
+    if (mod.id === "batteries") {
       return html`
         ${this._renderForm(mod, data, schema)}
         ${this._renderBatteryThresholdOverrides(
@@ -567,7 +608,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       `;
     }
 
-    if (mod.id === "availability" && enabled) {
+    if (mod.id === "availability") {
       return html`
         ${this._renderForm(mod, data, schema)}
         ${this._renderAvailabilitySafeList(
@@ -998,11 +1039,9 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
   private _computeLabel = (schema: { name: string }): string => {
     const localize = setupLocalize(this.hass);
 
-    if (schema.name.endsWith("_enabled")) {
-      return localize("editor.module_enabled_label");
-    }
-
     switch (schema.name) {
+      case "modules":
+        return localize("editor.modules_label");
       case "module":
         return localize("editor.section_module_label");
       case "battery_attention_threshold":
@@ -1021,11 +1060,9 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
   private _computeHelper = (schema: { name: string }): string => {
     const localize = setupLocalize(this.hass);
 
-    if (schema.name.endsWith("_enabled")) {
-      return localize("editor.module_enabled_helper");
-    }
-
     switch (schema.name) {
+      case "modules":
+        return localize("editor.modules_helper");
       case "module":
         return localize("editor.section_module_helper");
       case "battery_attention_threshold":
@@ -1064,12 +1101,6 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     const data = ev.detail.value;
     const updates: Partial<MaintenanceEditorConfig> = {};
 
-    const enabled = data[activeModule.enabledKey];
-
-    if (enabled !== undefined) {
-      updates[activeModule.enabledKey] = enabled ? undefined : false;
-    }
-
     if (activeModule.id === "batteries") {
       const threshold = data.battery_attention_threshold;
 
@@ -1104,6 +1135,21 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     this._emitConfigUpdate(updates);
+  };
+
+  /* ---- Module list handlers ---- */
+
+  private _modulesChanged = (
+    ev: CustomEvent<{ value: { modules?: unknown } }>,
+  ): void => {
+    ev.stopPropagation();
+    const modules = ev.detail.value.modules;
+
+    this._emitConfigUpdate({
+      modules: Array.isArray(modules)
+        ? modules.filter(isMaintenanceModuleId)
+        : [],
+    });
   };
 
   /* ---- Section module handlers ---- */
@@ -1347,8 +1393,12 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     const enabled = input.checked;
+    const modules = getEnabledModules(this._config ?? { type: "custom:maintenance" });
+
     this._emitConfigUpdate({
-      [`${moduleId}_enabled`]: enabled ? undefined : false,
+      modules: enabled
+        ? [...modules, moduleId]
+        : modules.filter((id) => id !== moduleId),
     });
   };
 
@@ -1484,6 +1534,25 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       ...this._config,
       ...updates,
     };
+
+    // The dashboard keeps one ordered module list, replacing the old enabled flags
+    if (!this._section) {
+      const modules = getEnabledModules(config);
+
+      for (const key of LEGACY_ENABLED_KEYS) {
+        delete config[key];
+      }
+
+      // Every module in the default order is the default, so it's left out
+      if (
+        modules.length === MAINTENANCE_MODULE_IDS.length &&
+        modules.every((id, index) => id === MAINTENANCE_MODULE_IDS[index])
+      ) {
+        delete config.modules;
+      } else {
+        config.modules = modules;
+      }
+    }
 
     this.dispatchEvent(
       new CustomEvent("config-changed", {

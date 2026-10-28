@@ -9,24 +9,10 @@ import {
   type LovelaceSectionConfig,
   type LovelaceViewConfig,
 } from "./maintenance-view-helpers";
-import type {
-  HomeAssistant,
-  MaintenanceModuleId,
-  MaintenanceViewStrategyConfig,
-} from "./types";
-import { isModuleEnabled } from "./types";
+import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
+import { getEnabledModules } from "./types";
 
 const SUMMARY_ITEM_LIMIT = 12;
-
-const SUMMARY_MODULES = [
-  "system",
-  "batteries",
-  "repairs",
-  "updates",
-  "availability",
-  "integrations",
-  "stale",
-] as const satisfies readonly MaintenanceModuleId[];
 
 @customElement("ll-strategy-view-maintenance-summary")
 export class MaintenanceSummaryViewStrategy extends ReactiveElement {
@@ -51,11 +37,7 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
 
     const sections: LovelaceSectionConfig[] = [];
 
-    for (const module of SUMMARY_MODULES) {
-      if (!isModuleEnabled(config, module)) {
-        continue;
-      }
-
+    for (const module of getEnabledModules(config)) {
       const section = await makeModuleSummarySection(module, localize, hass, config, {
         limit: SUMMARY_ITEM_LIMIT,
         showMorePath: module,

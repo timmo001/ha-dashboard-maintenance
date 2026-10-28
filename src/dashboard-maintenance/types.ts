@@ -136,8 +136,8 @@ export const MAINTENANCE_MODULE_IDS = [
   "repairs",
   "updates",
   "availability",
-  "stale",
   "integrations",
+  "stale",
 ] as const;
 
 export type MaintenanceModuleId = (typeof MAINTENANCE_MODULE_IDS)[number];
@@ -153,21 +153,21 @@ export interface BatteryThresholdOverride {
   note?: string;
 }
 
-export interface MaintenanceStrategyConfig {
+/** Before `modules`, each module had its own flag. Still read when `modules` is unset. */
+type LegacyModuleEnabledFlags = Partial<
+  Record<`${MaintenanceModuleId}_enabled`, boolean>
+>;
+
+export interface MaintenanceStrategyConfig extends LegacyModuleEnabledFlags {
   type: "custom:maintenance";
-  system_enabled?: boolean;
-  batteries_enabled?: boolean;
+  /** The modules shown, in view order. Every module when unset. */
+  modules?: MaintenanceModuleId[];
   battery_attention_threshold?: number;
   battery_threshold_overrides?: BatteryThresholdOverride[];
   show_attention_batteries_in_areas?: boolean;
   battery_tile_feature?: BatteryTileFeature;
-  repairs_enabled?: boolean;
-  updates_enabled?: boolean;
-  availability_enabled?: boolean;
   availability_safe_list_device_ids?: string[];
-  stale_enabled?: boolean;
   stale_threshold_hours?: number;
-  integrations_enabled?: boolean;
 }
 
 export type MaintenanceViewMode =
@@ -196,8 +196,18 @@ export interface MaintenanceSectionStrategyConfig extends MaintenanceStrategyCon
   module?: MaintenanceModuleId;
 }
 
-/** Returns true when a module is enabled (defaults to true when unset). */
+/**
+ * The enabled modules, in view order. Without `modules`, every module whose
+ * legacy `<module>_enabled` flag isn't false, in the default order.
+ */
+export const getEnabledModules = (
+  config: MaintenanceStrategyConfig,
+): MaintenanceModuleId[] =>
+  Array.isArray(config.modules)
+    ? [...new Set(config.modules.filter(isMaintenanceModuleId))]
+    : MAINTENANCE_MODULE_IDS.filter((id) => config[`${id}_enabled`] !== false);
+
 export const isModuleEnabled = (
   config: MaintenanceStrategyConfig,
   module: MaintenanceModuleId,
-): boolean => config[`${module}_enabled`] !== false;
+): boolean => getEnabledModules(config).includes(module);

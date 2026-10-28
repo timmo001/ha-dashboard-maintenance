@@ -224,6 +224,9 @@ const en = {
   "editor.module_enabled_helper":
     "When disabled, this module is hidden from the dashboard and its data is not loaded.",
   "editor.section_module_label": "Module",
+  "editor.modules_label": "Modules",
+  "editor.modules_helper":
+    "Views in tab order. Drag to reorder, remove to hide a module.",
   "editor.section_module_helper":
     "The section is hidden on the dashboard while this module has nothing to show.",
 };

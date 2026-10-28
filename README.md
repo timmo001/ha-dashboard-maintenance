@@ -205,16 +205,14 @@ All options are optional. Omitting a key uses the default shown below.
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
-| `batteries_enabled` | `boolean` | `true` | Enable or disable the batteries module. |
+| `modules` | `("system" \| "batteries" \| "repairs" \| "updates" \| "availability" \| "integrations" \| "stale")[]` | every module, in this order | The modules shown, in view order. The summary view lists their sections in the same order. Leave a module out to hide it. |
 | `battery_attention_threshold` | `number` | `30` | Battery percentage (0 – 100) below which a device is flagged as needing attention. |
 | `battery_threshold_overrides` | `{ entity_id: string; threshold: number; note?: string }[]` | `[]` | Per-battery thresholds (0 – 100) that replace `battery_attention_threshold` for the listed battery sensor entities. `note` is optional and shown in the editor. |
 | `show_attention_batteries_in_areas` | `boolean` | `true` | Show attention-flagged batteries inside per-area sections. |
-| `repairs_enabled` | `boolean` | `true` | Enable or disable the repairs module. |
-| `updates_enabled` | `boolean` | `true` | Enable or disable the updates module. |
-| `availability_enabled` | `boolean` | `true` | Enable or disable the availability module. |
 | `availability_safe_list_device_ids` | `string[]` | `[]` | Device IDs to exclude from availability checks. |
-| `stale_enabled` | `boolean` | `true` | Enable or disable the stale-data module. |
 | `stale_threshold_hours` | `number` | `6` | Hours (1 – 72) after which an entity is considered stale. |
+
+Older configs that turn modules off with `<module>_enabled: false` still work while `modules` is unset. The editor replaces them with `modules` on the next change.
 
 ### View-only options
 
@@ -235,19 +233,20 @@ These options are only used when the strategy is placed on a single view.
 ```yaml
 strategy:
   type: custom:maintenance
-  batteries_enabled: true
+  modules:
+    - batteries
+    - updates
+    - repairs
+    - availability
+    - stale
   battery_attention_threshold: 20
   battery_threshold_overrides:
     - entity_id: sensor.front_door_lock_battery
       threshold: 40
       note: Lithium cells hold their voltage until nearly empty
   show_attention_batteries_in_areas: false
-  repairs_enabled: true
-  updates_enabled: true
-  availability_enabled: true
   availability_safe_list_device_ids:
     - abc123def456
-  stale_enabled: true
   stale_threshold_hours: 48
 ```
 

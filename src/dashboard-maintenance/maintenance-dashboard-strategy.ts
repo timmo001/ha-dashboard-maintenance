@@ -21,8 +21,9 @@ import type {
   AreaRegistryEntry,
   HomeAssistant,
   MaintenanceDashboardStrategyConfig,
+  MaintenanceModuleId,
 } from "./types";
-import { isModuleEnabled } from "./types";
+import { getEnabledModules } from "./types";
 
 interface LovelaceDashboardConfig {
   views: LovelaceViewConfig[];
@@ -323,32 +324,24 @@ class MaintenanceDashboardStrategy extends ReactiveElement {
       await buildSummaryView(config, localize, hass),
     ];
 
-    if (isModuleEnabled(config, "system") && await hasSystemData(hass)) {
-      views.push(...(await buildSystemView(config, localize, hass)));
-    }
+    const builders: Record<
+      MaintenanceModuleId,
+      () => Promise<LovelaceViewConfig[]>
+    > = {
+      system: async () =>
+        (await hasSystemData(hass))
+          ? buildSystemView(config, localize, hass)
+          : [],
+      batteries: () => buildBatteriesViews(config, localize, areas, hass),
+      repairs: () => buildRepairsViews(config, localize, hass),
+      updates: () => buildUpdatesViews(config, localize, hass),
+      availability: () => buildAvailabilityViews(config, localize, areas, hass),
+      integrations: () => buildIntegrationsViews(config, localize, hass),
+      stale: () => buildStaleViews(config, localize, areas, hass),
+    };
 
-    if (isModuleEnabled(config, "batteries")) {
-      views.push(...(await buildBatteriesViews(config, localize, areas, hass)));
-    }
-
-    if (isModuleEnabled(config, "repairs")) {
-      views.push(...(await buildRepairsViews(config, localize, hass)));
-    }
-
-    if (isModuleEnabled(config, "updates")) {
-      views.push(...(await buildUpdatesViews(config, localize, hass)));
-    }
-
-    if (isModuleEnabled(config, "availability")) {
-      views.push(...(await buildAvailabilityViews(config, localize, areas, hass)));
-    }
-
-    if (isModuleEnabled(config, "integrations")) {
-      views.push(...(await buildIntegrationsViews(config, localize, hass)));
-    }
-
-    if (isModuleEnabled(config, "stale")) {
-      views.push(...(await buildStaleViews(config, localize, areas, hass)));
+    for (const module of getEnabledModules(config)) {
+      views.push(...(await builders[module]()));
     }
 
     return { views };
