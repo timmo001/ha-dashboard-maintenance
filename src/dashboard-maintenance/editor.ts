@@ -38,6 +38,7 @@ import {
   MAX_STALE_THRESHOLD_HOURS,
   MIN_STALE_THRESHOLD_HOURS,
 } from "./stale-data";
+import { moduleImage, tileFeatureImage } from "./selector-images";
 
 const DEFAULT_SHOW_ATTENTION_BATTERIES_IN_AREAS = true;
 
@@ -175,8 +176,14 @@ interface HaFormSelector {
     unit_of_measurement?: string;
   };
   select?: {
-    mode: "list" | "dropdown";
-    options: { value: string; label: string }[];
+    mode: "box";
+    box_max_columns: number;
+    options: {
+      value: string;
+      label: string;
+      description?: string;
+      image: { src: string; src_dark: string };
+    }[];
   };
 }
 
@@ -392,10 +399,13 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
                   required: true,
                   selector: {
                     select: {
-                      mode: "dropdown",
+                      mode: "box",
+                      box_max_columns: 2,
                       options: MODULES.map((item) => ({
                         value: item.id,
                         label: localize(item.headerKey),
+                        description: localize(item.descriptionKey),
+                        image: moduleImage(item.id),
                       })),
                     },
                   },
@@ -492,12 +502,14 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
             name: "battery_tile_feature",
             selector: {
               select: {
-                mode: "list",
+                mode: "box",
+                box_max_columns: 3,
                 options: BATTERY_TILE_FEATURES.map((option) => ({
                   value: option,
                   label: localize(
                     `editor.battery_tile_feature_option_${option}`,
                   ),
+                  image: tileFeatureImage(option),
                 })),
               },
             },
