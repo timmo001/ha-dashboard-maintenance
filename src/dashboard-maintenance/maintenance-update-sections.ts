@@ -21,6 +21,7 @@ export const makeUpdateSummarySection = (
   options?: {
     limit?: number;
     showMorePath?: string;
+    navigationPath?: string;
   },
 ): LovelaceSectionConfig | null => {
   const summaryUpdates = updates.filter(
@@ -37,7 +38,7 @@ export const makeUpdateSummarySection = (
     "mdi:package-up",
     limitAndMakeCards(localize, summaryUpdates, makeUpdateCard, options),
     SUMMARY_COLUMN_SPAN,
-    "updates",
+    options?.navigationPath,
   );
 };
 

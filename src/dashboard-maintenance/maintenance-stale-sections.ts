@@ -24,6 +24,7 @@ export const makeStaleSummarySection = (
   options?: {
     limit?: number;
     showMorePath?: string;
+    navigationPath?: string;
   },
 ): LovelaceSectionConfig | null => {
   if (entities.length === 0) {
@@ -43,7 +44,7 @@ export const makeStaleSummarySection = (
       options,
     ),
     SUMMARY_COLUMN_SPAN,
-    "stale",
+    options?.navigationPath,
   );
 };
 

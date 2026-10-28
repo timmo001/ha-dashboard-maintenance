@@ -31,6 +31,7 @@ export const makeAvailabilitySummarySection = (
   options?: {
     limit?: number;
     showMorePath?: string;
+    navigationPath?: string;
   },
 ): Promise<LovelaceSectionConfig | null> => {
   if (entities.length === 0) {
@@ -47,6 +48,7 @@ const makeAvailabilitySummarySectionContent = async (
   options?: {
     limit?: number;
     showMorePath?: string;
+    navigationPath?: string;
   },
 ): Promise<LovelaceSectionConfig> => {
   const unavailableEntities = entities.filter((entity) => entity.state === "unavailable");
@@ -84,7 +86,7 @@ const makeAvailabilitySummarySectionContent = async (
     "mdi:lan-disconnect",
     cards,
     SUMMARY_COLUMN_SPAN,
-    "availability",
+    options?.navigationPath,
   );
 };
 

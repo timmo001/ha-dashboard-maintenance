@@ -17,6 +17,7 @@ export const makeRepairsSummarySection = (
   options?: {
     limit?: number;
     showMorePath?: string;
+    navigationPath?: string;
   },
 ): LovelaceSectionConfig | null => {
   if (issues.length === 0) {
@@ -28,7 +29,7 @@ export const makeRepairsSummarySection = (
     "mdi:wrench",
     limitAndMakeCards(localize, issues, (issue) => makeRepairCard(localize, issue), options),
     SUMMARY_COLUMN_SPAN,
-    "repairs",
+    options?.navigationPath,
   );
 };
 

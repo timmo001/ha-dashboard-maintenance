@@ -93,6 +93,7 @@ export const makeIntegrationsSummarySection = async (
   options?: {
     limit?: number;
     showMorePath?: string;
+    navigationPath?: string;
   },
 ): Promise<LovelaceSectionConfig | null> => {
   const entries = flattenGroupedIntegrationErrors(grouped);
@@ -122,6 +123,6 @@ export const makeIntegrationsSummarySection = async (
       options,
     ),
     SUMMARY_COLUMN_SPAN,
-    "integrations",
+    options?.navigationPath,
   );
 };

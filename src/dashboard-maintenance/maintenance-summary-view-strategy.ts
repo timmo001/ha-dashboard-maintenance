@@ -2,29 +2,31 @@ import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
 import { setupLocalize } from "./localize";
 import { shouldRegenerateMaintenance } from "./strategy-regenerate";
-import { getMaintenanceBatteryDevices } from "./maintenance-data";
-import { makeBatteryAttentionSection } from "./maintenance-battery-sections";
-import { makeRepairsSummarySection } from "./maintenance-repairs-sections";
-import { getMaintenanceRepairIssues } from "./repairs-data";
-import { makeUpdateSummarySection } from "./maintenance-update-sections";
-import { getMaintenanceUpdates } from "./update-data";
-import { makeAvailabilitySummarySection } from "./maintenance-availability-sections";
-import { getMaintenanceAvailabilityEntities } from "./availability-data";
-import { makeStaleSummarySection } from "./maintenance-stale-sections";
-import { getMaintenanceStaleEntities } from "./stale-data";
-import { getGroupedIntegrationErrors } from "./integrations-data";
-import { makeIntegrationsSummarySection } from "./maintenance-integrations-sections";
-import { makeSystemSummarySection } from "./maintenance-system-sections";
+import { makeModuleSummarySection } from "./maintenance-module-sections";
 import {
   makeEmptyStateSection,
   makeViewConfig,
   type LovelaceSectionConfig,
   type LovelaceViewConfig,
 } from "./maintenance-view-helpers";
-import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
+import type {
+  HomeAssistant,
+  MaintenanceModuleId,
+  MaintenanceViewStrategyConfig,
+} from "./types";
 import { isModuleEnabled } from "./types";
 
 const SUMMARY_ITEM_LIMIT = 12;
+
+const SUMMARY_MODULES = [
+  "system",
+  "batteries",
+  "repairs",
+  "updates",
+  "availability",
+  "integrations",
+  "stale",
+] as const satisfies readonly MaintenanceModuleId[];
 
 @customElement("ll-strategy-view-maintenance-summary")
 export class MaintenanceSummaryViewStrategy extends ReactiveElement {
@@ -47,95 +49,24 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
   ): Promise<LovelaceViewConfig> {
     const localize = setupLocalize(hass);
 
-    const rawSections: (LovelaceSectionConfig | null)[] = [];
+    const sections: LovelaceSectionConfig[] = [];
 
-    if (isModuleEnabled(config, "system")) {
-      rawSections.push(
-        await makeSystemSummarySection(localize, hass, {
-          limit: SUMMARY_ITEM_LIMIT,
-          showMorePath: "system",
-        }),
-      );
+    for (const module of SUMMARY_MODULES) {
+      if (!isModuleEnabled(config, module)) {
+        continue;
+      }
+
+      const section = await makeModuleSummarySection(module, localize, hass, config, {
+        limit: SUMMARY_ITEM_LIMIT,
+        showMorePath: module,
+        navigationPath:
+          module === "batteries" ? config.heading_navigation_path : module,
+      });
+
+      if (section) {
+        sections.push(section);
+      }
     }
-
-    if (isModuleEnabled(config, "batteries")) {
-      const batteryDevices = await getMaintenanceBatteryDevices(
-        hass,
-        config,
-      );
-
-      rawSections.push(
-        makeBatteryAttentionSection(localize, batteryDevices, config, {
-          limit: SUMMARY_ITEM_LIMIT,
-          showMorePath: "batteries",
-        }),
-      );
-    }
-
-    if (isModuleEnabled(config, "repairs")) {
-      const repairIssues = await getMaintenanceRepairIssues(hass);
-      rawSections.push(
-        makeRepairsSummarySection(localize, repairIssues, {
-          limit: SUMMARY_ITEM_LIMIT,
-          showMorePath: "repairs",
-        }),
-      );
-    }
-
-    if (isModuleEnabled(config, "updates")) {
-      const updates = await getMaintenanceUpdates(hass);
-      rawSections.push(
-        makeUpdateSummarySection(localize, updates, {
-          limit: SUMMARY_ITEM_LIMIT,
-          showMorePath: "updates",
-        }),
-      );
-    }
-
-    if (isModuleEnabled(config, "availability")) {
-      const availabilityEntities = await getMaintenanceAvailabilityEntities(
-        hass,
-        config.availability_safe_list_device_ids,
-      );
-
-      rawSections.push(
-        await makeAvailabilitySummarySection(localize, hass, availabilityEntities, {
-          limit: SUMMARY_ITEM_LIMIT,
-          showMorePath: "availability",
-        }),
-      );
-    }
-
-    if (isModuleEnabled(config, "integrations")) {
-      const groupedIntegrations = await getGroupedIntegrationErrors(hass);
-      rawSections.push(
-        await makeIntegrationsSummarySection(
-          localize,
-          hass,
-          groupedIntegrations,
-          {
-            limit: SUMMARY_ITEM_LIMIT,
-            showMorePath: "integrations",
-          },
-        ),
-      );
-    }
-
-    if (isModuleEnabled(config, "stale")) {
-      const staleEntities = await getMaintenanceStaleEntities(
-        hass,
-        config.stale_threshold_hours,
-      );
-
-      rawSections.push(
-        makeStaleSummarySection(localize, staleEntities, {
-          limit: SUMMARY_ITEM_LIMIT,
-          showMorePath: "stale",
-        }),
-      );
-    }
-
-    const sections = rawSections.filter((s) => s !== null);
 
     if (sections.length === 0) {
       sections.push(

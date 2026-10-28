@@ -66,6 +66,7 @@ export const makeSystemSummarySection = async (
   options?: {
     limit?: number;
     showMorePath?: string;
+    navigationPath?: string;
   },
 ): Promise<LovelaceSectionConfig | null> => {
   const [metrics, sensors] = await Promise.all([
@@ -93,7 +94,7 @@ export const makeSystemSummarySection = async (
     "mdi:server",
     cards,
     SUMMARY_COLUMN_SPAN,
-    "system",
+    options?.navigationPath,
   );
 };
 
