@@ -1,0 +1,171 @@
+# Live demo on https://timmo.dev/demos/ha-dashboard-maintenance, rendered with
+# Home Assistant's embed components against mocked entities. It's read from
+# each release, so it has to match that release's card.
+#
+# The maintenance dashboard and its views are strategies, which the embed
+# can't render, so this shows the summary tiles the project registers as a
+# card. Each one counts what needs attention across the mocked home: low
+# batteries (the charging vacuum is left out), pending updates, unavailable
+# devices and sensors that have stopped reporting. The embed can't list
+# dashboards, so the tiles use the default thresholds.
+entities:
+  # Batteries: two below the default 30% threshold, one charging, the rest fine
+  - entity_id: sensor.front_door_lock_battery
+    state: "12"
+    device_id: front_door_lock
+    area_id: hallway
+    attributes:
+      friendly_name: Front door lock Battery
+      device_class: battery
+      state_class: measurement
+      unit_of_measurement: "%"
+  - entity_id: sensor.kitchen_motion_battery
+    state: "24"
+    device_id: kitchen_motion
+    area_id: kitchen
+    attributes:
+      friendly_name: Kitchen motion Battery
+      device_class: battery
+      state_class: measurement
+      unit_of_measurement: "%"
+  - entity_id: sensor.living_room_remote_battery
+    state: "86"
+    device_id: living_room_remote
+    area_id: living_room
+    attributes:
+      friendly_name: Living room remote Battery
+      device_class: battery
+      state_class: measurement
+      unit_of_measurement: "%"
+  - entity_id: sensor.bedroom_thermostat_battery
+    state: "64"
+    device_id: bedroom_thermostat
+    area_id: bedroom
+    attributes:
+      friendly_name: Bedroom thermostat Battery
+      device_class: battery
+      state_class: measurement
+      unit_of_measurement: "%"
+  - entity_id: sensor.robot_vacuum_battery
+    state: "18"
+    device_id: robot_vacuum
+    area_id: living_room
+    attributes:
+      friendly_name: Robot vacuum Battery
+      device_class: battery
+      state_class: measurement
+      unit_of_measurement: "%"
+  - entity_id: binary_sensor.robot_vacuum_charging
+    state: "on"
+    device_id: robot_vacuum
+    area_id: living_room
+    attributes:
+      friendly_name: Robot vacuum Charging
+      device_class: battery_charging
+  # Updates: two ready to install, one up to date
+  - entity_id: update.home_assistant_core_update
+    state: "on"
+    attributes:
+      friendly_name: Home Assistant Core Update
+      title: Home Assistant Core
+      installed_version: 2026.10.4
+      latest_version: 2026.11.0
+      supported_features: 23
+      in_progress: false
+  - entity_id: update.hallway_sensor_firmware
+    state: "on"
+    device_id: hallway_sensor
+    area_id: hallway
+    attributes:
+      friendly_name: Hallway sensor Firmware
+      title: Hallway sensor
+      installed_version: 1.2.3
+      latest_version: 1.3.0
+      supported_features: 5
+      in_progress: false
+  - entity_id: update.kitchen_speaker_firmware
+    state: "off"
+    device_id: kitchen_speaker
+    area_id: kitchen
+    attributes:
+      friendly_name: Kitchen speaker Firmware
+      title: Kitchen speaker
+      installed_version: 4.1.0
+      latest_version: 4.1.0
+      supported_features: 5
+      in_progress: false
+  # Availability: one device offline with two entities, one plug offline
+  - entity_id: light.garden_lights
+    state: unavailable
+    device_id: garden_controller
+    area_id: garden
+    attributes:
+      friendly_name: Garden lights
+  - entity_id: sensor.garden_controller_signal
+    state: unavailable
+    device_id: garden_controller
+    area_id: garden
+    attributes:
+      friendly_name: Garden controller Signal
+  - entity_id: switch.office_plug
+    state: unavailable
+    device_id: office_plug
+    area_id: office
+    attributes:
+      friendly_name: Office plug
+  # Stale: a sensor that hasn't reported in days
+  - entity_id: sensor.greenhouse_humidity
+    state: "71"
+    device_id: greenhouse_sensor
+    area_id: garden
+    last_changed: "2026-01-01T08:00:00+00:00"
+    last_updated: "2026-01-01T08:00:00+00:00"
+    attributes:
+      friendly_name: Greenhouse humidity
+      device_class: humidity
+      state_class: measurement
+      unit_of_measurement: "%"
+  - entity_id: light.kitchen
+    state: "on"
+    device_id: kitchen_lights
+    area_id: kitchen
+    attributes:
+      friendly_name: Kitchen
+      brightness: 200
+      color_mode: brightness
+      supported_color_modes:
+        - brightness
+areas:
+  - area_id: hallway
+    name: Hallway
+  - area_id: kitchen
+    name: Kitchen
+  - area_id: living_room
+    name: Living room
+  - area_id: bedroom
+    name: Bedroom
+  - area_id: garden
+    name: Garden
+  - area_id: office
+    name: Office
+cards:
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: custom:dm-maintenance-summary-card
+        summary: batteries
+        title: Batteries
+        icon: mdi:battery-alert-variant-outline
+      - type: custom:dm-maintenance-summary-card
+        summary: updates
+        title: Updates
+        icon: mdi:package-up
+      - type: custom:dm-maintenance-summary-card
+        summary: availability
+        title: Unavailable
+        icon: mdi:lan-disconnect
+      - type: custom:dm-maintenance-summary-card
+        summary: stale
+        title: Stale
+        icon: mdi:clock-alert-outline
