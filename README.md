@@ -86,7 +86,7 @@ Shows entities whose state has not been updated within a configurable time windo
 <!-- ha-marketplace:exclude-start -->
 ## Install with HACS
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=timmo001&repository=ha-dashboard-maintenance&category=plugin)
+[![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=timmo001&repository=ha-dashboard-maintenance&category=plugin)
 
 1. Open the button above, or search for `Dashboard Maintenance` in HACS.
 2. Install it from HACS.
