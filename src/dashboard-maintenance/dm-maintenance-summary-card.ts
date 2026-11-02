@@ -299,6 +299,7 @@ class DmMaintenanceSummaryCard extends LitElement {
     this._resolvedMaintenanceStrategy = undefined;
 
     let found = false;
+    let lookupFailed = false;
 
     try {
       const result = await findLovelaceDashboardConfig(
@@ -317,9 +318,17 @@ class DmMaintenanceSummaryCard extends LitElement {
         found = true;
       }
     } catch {
-      // Keep fallback path behavior.
+      // The dashboard list couldn't be read, which isn't the same as there
+      // being no maintenance dashboard: count with the default settings.
+      lookupFailed = true;
     } finally {
       this._discoveryInFlight = false;
+
+      if (lookupFailed) {
+        this._resolvedMaintenanceStrategy = { type: "custom:maintenance" };
+        found = true;
+      }
+
       this._dashboardNotFound = !found;
 
       if (this._dashboardNotFound) {
