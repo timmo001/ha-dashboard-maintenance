@@ -83,6 +83,7 @@ Shows entities whose state has not been updated within a configurable time windo
 - Per-area subviews let you browse stale entities for a single room; an "All Stale" subview shows everything.
 - Unavailable entities are excluded because they are unreachable rather than stale.
 
+<!-- ha-marketplace:exclude-start -->
 ## Install with HACS
 
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=timmo001&repository=ha-dashboard-maintenance&category=plugin)
@@ -124,6 +125,7 @@ If you run Home Assistant OS or Supervised, you can use the SSH app:
 - Use the HACS `/hacsfiles/...` URL for installed releases.
 - Use the `/local/...` URL for the default local publish flow.
 - Set the resource type to `module`.
+<!-- ha-marketplace:exclude-end -->
 
 ## Use as a full dashboard
 
@@ -262,6 +264,7 @@ strategy:
 - It only includes devices with numeric battery percentage sensors. Binary low-battery entities are intentionally skipped.
 - The strategy will not load until the Lovelace resource is registered.
 
+<!-- ha-marketplace:exclude-start -->
 ## Development
 
 ```bash
@@ -279,3 +282,4 @@ pnpm run check
 - Local build output: `dist/ha-dashboard-maintenance.js`
 - Local publish target: `/config/www/community/ha-dashboard-maintenance/ha-dashboard-maintenance.js`
 - Recommended local dev resource URL: `/local/community/ha-dashboard-maintenance/ha-dashboard-maintenance.js`
+<!-- ha-marketplace:exclude-end -->
