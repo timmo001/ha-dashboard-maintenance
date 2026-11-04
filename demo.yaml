@@ -2,12 +2,12 @@
 # Home Assistant's embed components against mocked entities. It's read from
 # each release, so it has to match that release's card.
 #
-# The maintenance dashboard and its views are strategies, which the embed
-# can't render, so this shows the summary tiles the project registers as a
-# card. Each one counts what needs attention across the mocked home: low
-# batteries (the charging vacuum is left out), pending updates, unavailable
-# devices and sensors that have stopped reporting. The embed can't list
-# dashboards, so the tiles use the default thresholds.
+# It shows everything the project adds, against one mocked home: the full
+# maintenance dashboard with its tabs, a maintenance section for each module,
+# and the summary tiles. They find low batteries (the charging vacuum is left
+# out), pending updates, unavailable devices and sensors that have stopped
+# reporting. The embed has no other dashboards, so the tiles use the default
+# thresholds.
 entities:
   # Batteries: two below the default 30% threshold, one charging, the rest fine
   - entity_id: sensor.front_door_lock_battery
@@ -148,6 +148,87 @@ areas:
     name: Garden
   - area_id: office
     name: Office
+# The devices of the entities, which the availability module names them by
+devices:
+  - id: front_door_lock
+    name: Front door lock
+    manufacturer: Acme
+    model: Smart lock
+    area_id: hallway
+  - id: kitchen_motion
+    name: Kitchen motion
+    manufacturer: Acme
+    model: Motion sensor
+    area_id: kitchen
+  - id: living_room_remote
+    name: Living room remote
+    manufacturer: Acme
+    model: Remote
+    area_id: living_room
+  - id: bedroom_thermostat
+    name: Bedroom thermostat
+    manufacturer: Acme
+    model: Radiator thermostat
+    area_id: bedroom
+  - id: robot_vacuum
+    name: Robot vacuum
+    manufacturer: Acme
+    model: Robot vacuum
+    area_id: living_room
+  - id: hallway_sensor
+    name: Hallway sensor
+    manufacturer: Acme
+    model: Multisensor
+    area_id: hallway
+  - id: kitchen_speaker
+    name: Kitchen speaker
+    manufacturer: Acme
+    model: Smart speaker
+    area_id: kitchen
+  - id: garden_controller
+    name: Garden controller
+    manufacturer: Acme
+    model: Light controller
+    area_id: garden
+  - id: office_plug
+    name: Office plug
+    manufacturer: Acme
+    model: Smart plug
+    area_id: office
+  - id: greenhouse_sensor
+    name: Greenhouse sensor
+    manufacturer: Acme
+    model: Humidity sensor
+    area_id: garden
+  - id: kitchen_lights
+    name: Kitchen lights
+    manufacturer: Acme
+    model: Smart bulb
+    area_id: kitchen
+# Every module but system, whose hardware status the mocked backend can't give
+dashboard:
+  strategy:
+    type: custom:maintenance
+    modules:
+      - batteries
+      - repairs
+      - updates
+      - availability
+      - integrations
+      - stale
+sections:
+  - strategy:
+      type: custom:maintenance
+      module: batteries
+  - strategy:
+      type: custom:maintenance
+      module: updates
+  - strategy:
+      type: custom:maintenance
+      module: availability
+  - strategy:
+      type: custom:maintenance
+      module: stale
 cards:
   - type: grid
     columns: 2
