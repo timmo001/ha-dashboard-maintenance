@@ -1,0 +1,49 @@
+min_version = "2025.1.0"
+
+[tools]
+node = "26.13.1"
+pnpm = "12.21.0"
+# The linters the shared hk pre-push hook runs, matching CI.
+hk = "2.12.0"
+pkl = "0.33.0"
+uv = "0.13.8"
+# yamllint's PyYAML has no wheels for newer Pythons, and mise won't build it from source.
+python = "3.15.2"
+"pipx:yamllint" = "1.38.0"
+"npm:markdownlint-cli2" = "0.24.1"
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
+
+[tasks.install]
+description = "Install dependencies"
+run = "pnpm install --frozen-lockfile"
+
+[tasks.lint]
+description = "Lint source with the shared Oxlint rules"
+depends = ["install"]
+run = "pnpm run lint"
+
+[tasks.typecheck]
+description = "Type-check source"
+depends = ["install"]
+run = "pnpm run typecheck"
+
+[tasks.format]
+description = "Format source and configuration"
+depends = ["install"]
+run = "pnpm run format"
+
+[tasks."format:check"]
+description = "Check formatting without writing"
+depends = ["install"]
+run = "pnpm run format:check"
+
+[tasks.build]
+description = "Build the Lovelace bundle into dist"
+depends = ["install"]
+run = "pnpm run build"
+
+[tasks.check]
+description = "Lint, verify formatting, and build the bundle with a syntax check"
+depends = ["lint", "format:check"]
+run = "pnpm run check"
