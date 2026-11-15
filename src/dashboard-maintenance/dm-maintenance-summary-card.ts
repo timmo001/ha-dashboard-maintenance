@@ -114,10 +114,11 @@ const COUNT_LABEL_KEY: Record<
 
 const isMaintenanceStrategyConfig = (
   value: LovelaceDashboardConfig["strategy"],
-): value is MaintenanceStrategyConfig =>
-  value?.type === "custom:maintenance";
+): value is MaintenanceStrategyConfig => value?.type === "custom:maintenance";
 
-const resolveMetric = (config?: DmMaintenanceSummaryCardConfig): SummaryMetric => {
+const resolveMetric = (
+  config?: DmMaintenanceSummaryCardConfig,
+): SummaryMetric => {
   const selected = config?.summary ?? config?.metric;
 
   return isSummaryMetric(selected) ? selected : DEFAULT_SUMMARY_METRIC;
@@ -246,7 +247,9 @@ class DmMaintenanceSummaryCard extends LitElement {
 
     const keys = COUNT_LABEL_KEY[metric];
 
-    return localize(this._count === 1 ? keys.one : keys.other, { count: this._count });
+    return localize(this._count === 1 ? keys.one : keys.other, {
+      count: this._count,
+    });
   }
 
   private _tapAction(): SummaryTapAction {
@@ -260,7 +263,8 @@ class DmMaintenanceSummaryCard extends LitElement {
 
     return {
       action: "navigate",
-      navigation_path: this._config.navigation_path || this._resolvedMaintenanceSummaryPath,
+      navigation_path:
+        this._config.navigation_path || this._resolvedMaintenanceSummaryPath,
     };
   }
 
@@ -308,12 +312,15 @@ class DmMaintenanceSummaryCard extends LitElement {
       );
 
       if (result) {
-        this._resolvedMaintenanceSummaryPath = buildDashboardSummaryPath(result.urlPath);
+        this._resolvedMaintenanceSummaryPath = buildDashboardSummaryPath(
+          result.urlPath,
+        );
         this._resolvedMaintenanceStrategy = {
           ...result.match,
-          availability_safe_list_device_ids: normalizeAvailabilitySafeListDeviceIds(
-            result.match.availability_safe_list_device_ids,
-          ),
+          availability_safe_list_device_ids:
+            normalizeAvailabilitySafeListDeviceIds(
+              result.match.availability_safe_list_device_ids,
+            ),
         };
         found = true;
       }
@@ -483,11 +490,15 @@ class DmMaintenanceSummaryCard extends LitElement {
 
     return updates.filter(
       (update) =>
-        update.inProgress || update.skippedCurrentVersion || updateCanInstall(update),
+        update.inProgress ||
+        update.skippedCurrentVersion ||
+        updateCanInstall(update),
     ).length;
   }
 
-  private async _computeAvailabilityCount(hass: HomeAssistant): Promise<number> {
+  private async _computeAvailabilityCount(
+    hass: HomeAssistant,
+  ): Promise<number> {
     const entities = await getMaintenanceAvailabilityEntities(
       hass,
       this._resolvedMaintenanceStrategy?.availability_safe_list_device_ids,
@@ -567,11 +578,11 @@ class DmMaintenanceSummaryCard extends LitElement {
     const model = this._buildRenderModel(this._config);
 
     return html`
-        <ha-card
-          class=${classMap({ error: model.isError })}
-          aria-label=${model.secondaryLoading ? model.title : `${model.title}: ${model.secondary}`}
-          style=${styleMap({ "--tile-color": METRIC_COLOR[model.metric] })}
-        >
+      <ha-card
+        class=${classMap({ error: model.isError })}
+        aria-label=${model.secondaryLoading ? model.title : `${model.title}: ${model.secondary}`}
+        style=${styleMap({ "--tile-color": METRIC_COLOR[model.metric] })}
+      >
         <ha-tile-container
           .interactive=${model.interactive}
           .actionHandlerOptions=${{ hasTap: model.hasTap, hasHold: model.hasHold }}
@@ -583,9 +594,11 @@ class DmMaintenanceSummaryCard extends LitElement {
             .primary=${model.title}
             .secondary=${model.secondaryText}
           >
-            ${model.secondaryLoading
-              ? html`<ha-skeleton-text slot="secondary"></ha-skeleton-text>`
-              : nothing}
+            ${
+              model.secondaryLoading
+                ? html`<ha-skeleton-text slot="secondary"></ha-skeleton-text>`
+                : nothing
+            }
           </ha-tile-info>
         </ha-tile-container>
       </ha-card>
@@ -616,7 +629,11 @@ class DmMaintenanceSummaryCard extends LitElement {
 
 window.customCards = window.customCards || [];
 
-if (!window.customCards.some((card) => card.type === "dm-maintenance-summary-card")) {
+if (
+  !window.customCards.some(
+    (card) => card.type === "dm-maintenance-summary-card",
+  )
+) {
   window.customCards.push({
     type: "dm-maintenance-summary-card",
     name: "Maintenance summary",

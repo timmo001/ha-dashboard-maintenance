@@ -246,7 +246,10 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     // The strategy editor dialog is large; use the default dialog width instead.
     let node: Node | null = this._section ? null : this.parentNode;
 
-    while (node && !(node instanceof HTMLElement && node.localName === "ha-dialog")) {
+    while (
+      node &&
+      !(node instanceof HTMLElement && node.localName === "ha-dialog")
+    ) {
       node = node.parentNode ?? (node instanceof ShadowRoot ? node.host : null);
     }
 
@@ -365,9 +368,11 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           mod,
           html`
             ${this._renderEnableToggle(localize, mod, enabled)}
-            ${enabled
-              ? this._renderModuleSettings(localize, mod, config)
-              : nothing}
+            ${
+              enabled
+                ? this._renderModuleSettings(localize, mod, config)
+                : nothing
+            }
           `,
         );
       });
@@ -440,64 +445,68 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     const mod = MODULES.find((item) => item.id === config.module);
 
     return html`
-      ${hasForm
-        ? html`
-            <ha-form
-              .hass=${this.hass}
-              .data=${{ module: config.module }}
-              .schema=${[
-                {
-                  name: "module",
-                  required: true,
-                  selector: {
-                    select: {
-                      mode: "box",
-                      box_max_columns: 2,
-                      options: MODULES.map((item) => ({
-                        value: item.id,
-                        label: localize(item.headerKey),
-                        description: localize(item.descriptionKey),
-                        image: moduleImage(item.id),
-                      })),
+      ${
+        hasForm
+          ? html`
+              <ha-form
+                .hass=${this.hass}
+                .data=${{ module: config.module }}
+                .schema=${[
+                  {
+                    name: "module",
+                    required: true,
+                    selector: {
+                      select: {
+                        mode: "box",
+                        box_max_columns: 2,
+                        options: MODULES.map((item) => ({
+                          value: item.id,
+                          label: localize(item.headerKey),
+                          description: localize(item.descriptionKey),
+                          image: moduleImage(item.id),
+                        })),
+                      },
                     },
-                  },
-                } satisfies HaFormSchema,
-              ]}
-              .computeLabel=${this._computeLabel}
-              .computeHelper=${this._computeHelper}
-              @value-changed=${this._sectionModuleChanged}
-            ></ha-form>
-          `
-        : html`
-            <div class="fallback-editor">
-              <label for="section-module">
-                ${localize("editor.section_module_label")}
-              </label>
-              <select
-                id="section-module"
-                @change=${this._nativeSectionModuleChanged}
-              >
-                ${MODULES.map(
-                  (item) => html`
-                    <option
-                      value=${item.id}
-                      ?selected=${item.id === config.module}
-                    >
-                      ${localize(item.headerKey)}
-                    </option>
-                  `,
-                )}
-              </select>
-              <div class="helper">
-                ${localize("editor.section_module_helper")}
+                  } satisfies HaFormSchema,
+                ]}
+                .computeLabel=${this._computeLabel}
+                .computeHelper=${this._computeHelper}
+                @value-changed=${this._sectionModuleChanged}
+              ></ha-form>
+            `
+          : html`
+              <div class="fallback-editor">
+                <label for="section-module">
+                  ${localize("editor.section_module_label")}
+                </label>
+                <select
+                  id="section-module"
+                  @change=${this._nativeSectionModuleChanged}
+                >
+                  ${MODULES.map(
+                    (item) => html`
+                      <option
+                        value=${item.id}
+                        ?selected=${item.id === config.module}
+                      >
+                        ${localize(item.headerKey)}
+                      </option>
+                    `,
+                  )}
+                </select>
+                <div class="helper">
+                  ${localize("editor.section_module_helper")}
+                </div>
               </div>
-            </div>
-          `}
-      ${mod
-        ? hasForm
-          ? this._renderModuleForm(localize, mod, config)
-          : this._renderModuleSettings(localize, mod, config)
-        : nothing}
+            `
+      }
+      ${
+        mod
+          ? hasForm
+            ? this._renderModuleForm(localize, mod, config)
+            : this._renderModuleSettings(localize, mod, config)
+          : nothing
+      }
     `;
   }
 
@@ -749,15 +758,16 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           : undefined;
 
         return renderEditorItemRow({
-          icon: domain && customElements.get("ha-domain-icon")
-            ? html`
-                <ha-domain-icon
-                  .hass=${this.hass}
-                  .domain=${domain}
-                  brand-fallback
-                ></ha-domain-icon>
-              `
-            : html`<ha-icon icon="mdi:devices"></ha-icon>`,
+          icon:
+            domain && customElements.get("ha-domain-icon")
+              ? html`
+                  <ha-domain-icon
+                    .hass=${this.hass}
+                    .domain=${domain}
+                    brand-fallback
+                  ></ha-domain-icon>
+                `
+              : html`<ha-icon icon="mdi:devices"></ha-icon>`,
           primary: computeDeviceName(device) || deviceId,
           secondary: areaId ? areas[areaId]?.name : undefined,
           actions: html`
@@ -850,20 +860,22 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
           @value-changed=${this._overrideDraftNoteChanged}
         ></ha-selector>
       </div>
-      ${previewDevice && customElements.get("hui-card")
-        ? html`
-            <div class="element-preview">
-              <hui-card
-                .hass=${this.hass}
-                .config=${this._getPreviewCardConfig(
-                  previewDevice,
-                  config.battery_tile_feature,
-                )}
-                preview
-              ></hui-card>
-            </div>
-          `
-        : nothing}
+      ${
+        previewDevice && customElements.get("hui-card")
+          ? html`
+              <div class="element-preview">
+                <hui-card
+                  .hass=${this.hass}
+                  .config=${this._getPreviewCardConfig(
+                    previewDevice,
+                    config.battery_tile_feature,
+                  )}
+                  preview
+                ></hui-card>
+              </div>
+            `
+          : nothing
+      }
     `;
   }
 
@@ -901,25 +913,24 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     localize: ReturnType<typeof setupLocalize>,
     config: MaintenanceEditorConfig,
   ) {
-    const safeListDeviceIds =
-      config.availability_safe_list_device_ids ?? [];
+    const safeListDeviceIds = config.availability_safe_list_device_ids ?? [];
 
     return html`
-        <div class="fallback-editor">
-          <label for="availability-safe-list">
-            ${localize("editor.availability_safe_list_label")}
-          </label>
-          <textarea
-            id="availability-safe-list"
-            rows="4"
-            .value=${safeListDeviceIds.join("\n")}
-            @input=${this._nativeAvailabilitySafeListChanged}
-          ></textarea>
-          <div class="helper">
-            ${localize("editor.availability_safe_list_helper")}
-          </div>
+      <div class="fallback-editor">
+        <label for="availability-safe-list">
+          ${localize("editor.availability_safe_list_label")}
+        </label>
+        <textarea
+          id="availability-safe-list"
+          rows="4"
+          .value=${safeListDeviceIds.join("\n")}
+          @input=${this._nativeAvailabilitySafeListChanged}
+        ></textarea>
+        <div class="helper">
+          ${localize("editor.availability_safe_list_helper")}
         </div>
-      `;
+      </div>
+    `;
   }
 
   private _renderBatterySettings(
@@ -927,8 +938,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     config: MaintenanceEditorConfig,
   ) {
     const threshold =
-      config.battery_attention_threshold ??
-      DEFAULT_BATTERY_ATTENTION_THRESHOLD;
+      config.battery_attention_threshold ?? DEFAULT_BATTERY_ATTENTION_THRESHOLD;
 
     const showAttentionBatteriesInAreas =
       config.show_attention_batteries_in_areas ??
@@ -938,28 +948,29 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       config.battery_tile_feature ?? DEFAULT_BATTERY_TILE_FEATURE;
 
     return html`
-        <div class="fallback-editor">
-          <fieldset class="radio-group">
-            <legend>${localize("editor.battery_tile_feature_label")}</legend>
-            ${BATTERY_TILE_FEATURES.map(
-              (option) => html`
-                <label>
-                  <input
-                    type="radio"
-                    name="battery-tile-feature"
-                    value=${option}
-                    .checked=${batteryTileFeature === option}
-                    @change=${this._nativeBatteryTileFeatureChanged}
-                  />
-                  ${localize(`editor.battery_tile_feature_option_${option}`)}
-                </label>
-              `,
-            )}
-            <div class="helper">
-              ${localize("editor.battery_tile_feature_helper")}
-            </div>
-          </fieldset>
-          ${this._section
+      <div class="fallback-editor">
+        <fieldset class="radio-group">
+          <legend>${localize("editor.battery_tile_feature_label")}</legend>
+          ${BATTERY_TILE_FEATURES.map(
+            (option) => html`
+              <label>
+                <input
+                  type="radio"
+                  name="battery-tile-feature"
+                  value=${option}
+                  .checked=${batteryTileFeature === option}
+                  @change=${this._nativeBatteryTileFeatureChanged}
+                />
+                ${localize(`editor.battery_tile_feature_option_${option}`)}
+              </label>
+            `,
+          )}
+          <div class="helper">
+            ${localize("editor.battery_tile_feature_helper")}
+          </div>
+        </fieldset>
+        ${
+          this._section
             ? nothing
             : html`
                 <label for="show-attention-batteries-in-areas">
@@ -974,39 +985,38 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
                 <div class="helper">
                   ${localize("editor.show_attention_in_areas_helper")}
                 </div>
-              `}
-          <label for="battery-threshold">
-            ${localize("editor.battery_threshold_label")}
-          </label>
-          <input
-            id="battery-threshold"
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            .value=${String(threshold)}
-            @input=${this._nativeValueChanged}
-          />
-          <div class="helper">
-            ${localize("editor.battery_threshold_helper")}
-          </div>
-          <div class="value">${threshold}%</div>
-          <label for="battery-threshold-overrides">
-            ${localize("editor.battery_overrides_label")}
-          </label>
-          <textarea
-            id="battery-threshold-overrides"
-            rows="4"
-            .value=${(config.battery_threshold_overrides ?? [])
-              .map((override) => `${override.entity_id}: ${override.threshold}`)
-              .join("\n")}
-            @change=${this._nativeBatteryOverridesChanged}
-          ></textarea>
-          <div class="helper">
-            ${localize("editor.battery_overrides_fallback_helper")}
-          </div>
+              `
+        }
+        <label for="battery-threshold">
+          ${localize("editor.battery_threshold_label")}
+        </label>
+        <input
+          id="battery-threshold"
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          .value=${String(threshold)}
+          @input=${this._nativeValueChanged}
+        />
+        <div class="helper">${localize("editor.battery_threshold_helper")}</div>
+        <div class="value">${threshold}%</div>
+        <label for="battery-threshold-overrides">
+          ${localize("editor.battery_overrides_label")}
+        </label>
+        <textarea
+          id="battery-threshold-overrides"
+          rows="4"
+          .value=${(config.battery_threshold_overrides ?? [])
+            .map((override) => `${override.entity_id}: ${override.threshold}`)
+            .join("\n")}
+          @change=${this._nativeBatteryOverridesChanged}
+        ></textarea>
+        <div class="helper">
+          ${localize("editor.battery_overrides_fallback_helper")}
         </div>
-      `;
+      </div>
+    `;
   }
 
   private _renderStaleSettings(
@@ -1017,23 +1027,23 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
       config.stale_threshold_hours ?? DEFAULT_STALE_THRESHOLD_HOURS;
 
     return html`
-        <div class="fallback-editor">
-          <label for="stale-threshold">
-            ${localize("editor.stale_threshold_label")}
-          </label>
-          <input
-            id="stale-threshold"
-            type="range"
-            min=${MIN_STALE_THRESHOLD_HOURS}
-            max=${MAX_STALE_THRESHOLD_HOURS}
-            step="1"
-            .value=${String(staleThreshold)}
-            @input=${this._nativeStaleValueChanged}
-          />
-          <div class="helper">${localize("editor.stale_threshold_helper")}</div>
-          <div class="value">${staleThreshold}h</div>
-        </div>
-      `;
+      <div class="fallback-editor">
+        <label for="stale-threshold">
+          ${localize("editor.stale_threshold_label")}
+        </label>
+        <input
+          id="stale-threshold"
+          type="range"
+          min=${MIN_STALE_THRESHOLD_HOURS}
+          max=${MAX_STALE_THRESHOLD_HOURS}
+          step="1"
+          .value=${String(staleThreshold)}
+          @input=${this._nativeStaleValueChanged}
+        />
+        <div class="helper">${localize("editor.stale_threshold_helper")}</div>
+        <div class="value">${staleThreshold}h</div>
+      </div>
+    `;
   }
 
   private _computeLabel = (schema: { name: string }): string => {
@@ -1393,7 +1403,10 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     const enabled = input.checked;
-    const modules = getEnabledModules(this._config ?? { type: "custom:maintenance" });
+
+    const modules = getEnabledModules(
+      this._config ?? { type: "custom:maintenance" },
+    );
 
     this._emitConfigUpdate({
       modules: enabled
@@ -1460,7 +1473,10 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     const overrides = new Map<string, number>();
 
     for (const line of ev.currentTarget.value.split("\n")) {
-      const [entityId, rawThreshold] = line.split(":").map((part) => part.trim());
+      const [entityId, rawThreshold] = line
+        .split(":")
+        .map((part) => part.trim());
+
       const threshold = Number(rawThreshold);
 
       if (entityId && rawThreshold && Number.isFinite(threshold)) {
@@ -1510,9 +1526,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
     }
 
     const safeListDeviceIds = normalizeAvailabilitySafeListDeviceIds(
-      ev.currentTarget.value
-        .split(/[\n,]/)
-        .map((value) => value.trim()),
+      ev.currentTarget.value.split(/[\n,]/).map((value) => value.trim()),
     );
 
     this._emitConfigUpdate({
@@ -1523,9 +1537,7 @@ class DashboardMaintenanceStrategyEditor extends LitElement {
 
   /* ---- Config emit ---- */
 
-  private _emitConfigUpdate(
-    updates: Partial<MaintenanceEditorConfig>,
-  ): void {
+  private _emitConfigUpdate(updates: Partial<MaintenanceEditorConfig>): void {
     if (!this._config) {
       return;
     }

@@ -25,7 +25,9 @@ const flattenGroupedIntegrationErrors = (
   ...grouped.setupRetry,
 ];
 
-const collectConfigEntryIds = (grouped: GroupedIntegrationErrors): Set<string> =>
+const collectConfigEntryIds = (
+  grouped: GroupedIntegrationErrors,
+): Set<string> =>
   new Set(flattenGroupedIntegrationErrors(grouped).map((e) => e.entry_id));
 
 export const makeIntegrationsSections = async (

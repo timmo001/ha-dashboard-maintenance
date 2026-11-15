@@ -36,20 +36,22 @@ export class MaintenanceBatteriesViewStrategy extends ReactiveElement {
   ): Promise<LovelaceViewConfig> {
     const localize = setupLocalize(hass);
 
-    const allBatteryDevices = await getMaintenanceBatteryDevices(
-      hass,
-      config,
-    );
+    const allBatteryDevices = await getMaintenanceBatteryDevices(hass, config);
 
     const batteryDevices = filterItemsByArea(allBatteryDevices, config.area_id);
-    const attentionDevices = batteryDevices.filter(isBatteryAttentionPanelDevice);
+
+    const attentionDevices = batteryDevices.filter(
+      isBatteryAttentionPanelDevice,
+    );
 
     const showAttentionBatteriesInAreas =
       config.show_attention_batteries_in_areas ?? true;
 
     const areaSectionDevices = showAttentionBatteriesInAreas
       ? batteryDevices
-      : batteryDevices.filter((device) => !isBatteryAttentionPanelDevice(device));
+      : batteryDevices.filter(
+          (device) => !isBatteryAttentionPanelDevice(device),
+        );
 
     const limitOpts = viewLimitOptions(config, "batteries-all");
 

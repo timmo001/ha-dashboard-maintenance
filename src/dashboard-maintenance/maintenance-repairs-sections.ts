@@ -27,7 +27,12 @@ export const makeRepairsSummarySection = (
   return makeSection(
     localize("repair.heading"),
     "mdi:wrench",
-    limitAndMakeCards(localize, issues, (issue) => makeRepairCard(localize, issue), options),
+    limitAndMakeCards(
+      localize,
+      issues,
+      (issue) => makeRepairCard(localize, issue),
+      options,
+    ),
     SUMMARY_COLUMN_SPAN,
     options?.navigationPath,
   );
@@ -51,10 +56,15 @@ export const makeRepairsSections = (
     ];
   }
 
-  const makeCards = (issue: MaintenanceRepairIssue) => makeRepairCard(localize, issue);
+  const makeCards = (issue: MaintenanceRepairIssue) =>
+    makeRepairCard(localize, issue);
 
-  const criticalIssues = issues.filter((issue) => issue.severity === "critical");
+  const criticalIssues = issues.filter(
+    (issue) => issue.severity === "critical",
+  );
+
   const errorIssues = issues.filter((issue) => issue.severity === "error");
+
   const warningIssues = issues.filter((issue) => issue.severity === "warning");
 
   const sections = [

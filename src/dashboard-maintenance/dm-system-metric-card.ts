@@ -529,17 +529,18 @@ class DmSystemMetricCard extends LitElement {
           @action=${this._handleTap}
         >
           <ha-tile-icon slot="icon" .icon=${icon}></ha-tile-icon>
-          <ha-tile-info
-            slot="info"
-            .primary=${label}
-          >
-            ${!loaded
-              ? html`<ha-skeleton-text slot="secondary"></ha-skeleton-text>`
-              : html`<span slot="secondary"
-                  >${value}${secondary
-                    ? html`<span class="detail">${secondary}</span>`
-                    : nothing}</span
-                >`}
+          <ha-tile-info slot="info" .primary=${label}>
+            ${
+              !loaded
+                ? html`<ha-skeleton-text slot="secondary"></ha-skeleton-text>`
+                : html`<span slot="secondary"
+                    >${value}${
+                      secondary
+                        ? html`<span class="detail">${secondary}</span>`
+                        : nothing
+                    }</span
+                  >`
+            }
           </ha-tile-info>
         </ha-tile-container>
       </ha-card>
@@ -577,7 +578,8 @@ if (!window.customCards.some((card) => card.type === "dm-system-metric-card")) {
   window.customCards.push({
     type: "dm-system-metric-card",
     name: "System metric",
-    description: "Displays a live system metric (CPU, RAM, disk, uptime) from the HA hardware/supervisor APIs.",
+    description:
+      "Displays a live system metric (CPU, RAM, disk, uptime) from the HA hardware/supervisor APIs.",
     preview: false,
   });
 }

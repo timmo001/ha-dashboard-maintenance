@@ -26,7 +26,9 @@ export const makeUpdateSummarySection = (
 ): LovelaceSectionConfig | null => {
   const summaryUpdates = updates.filter(
     (update) =>
-      update.inProgress || update.skippedCurrentVersion || updateCanInstall(update),
+      update.inProgress ||
+      update.skippedCurrentVersion ||
+      updateCanInstall(update),
   );
 
   if (summaryUpdates.length === 0) {
@@ -85,7 +87,12 @@ export const makeUpdatesSections = (
       ? makeSection(
           localize("update.heading_in_progress"),
           "mdi:progress-download",
-          limitAndMakeCards(localize, inProgressUpdates, makeUpdateCard, options),
+          limitAndMakeCards(
+            localize,
+            inProgressUpdates,
+            makeUpdateCard,
+            options,
+          ),
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,
@@ -93,7 +100,12 @@ export const makeUpdatesSections = (
       ? makeSection(
           localize("update.heading_available"),
           "mdi:package-up",
-          limitAndMakeCards(localize, availableUpdates, makeUpdateCard, options),
+          limitAndMakeCards(
+            localize,
+            availableUpdates,
+            makeUpdateCard,
+            options,
+          ),
           MAINTENANCE_COLUMN_SPAN,
         )
       : undefined,

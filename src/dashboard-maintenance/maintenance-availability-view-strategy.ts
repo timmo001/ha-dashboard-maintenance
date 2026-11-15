@@ -19,7 +19,9 @@ export class MaintenanceAvailabilityViewStrategy extends ReactiveElement {
     oldHass: HomeAssistant,
     newHass: HomeAssistant,
   ): boolean {
-    return shouldRegenerateMaintenance(config, oldHass, newHass, ["availability"]);
+    return shouldRegenerateMaintenance(config, oldHass, newHass, [
+      "availability",
+    ]);
   }
 
   public static async generate(

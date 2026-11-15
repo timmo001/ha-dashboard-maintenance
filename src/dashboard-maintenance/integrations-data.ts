@@ -2,7 +2,10 @@ import { compareText } from "./entity-helpers";
 import { fetchConfigEntries, fetchEntityRegistry } from "./maintenance-data";
 import type { ConfigEntry, HomeAssistant } from "./types";
 
-const SETUP_FAILURE_STATES = new Set<string>(["setup_error", "migration_error"]);
+const SETUP_FAILURE_STATES = new Set<string>([
+  "setup_error",
+  "migration_error",
+]);
 
 export interface GroupedIntegrationErrors {
   setupFailed: ConfigEntry[];
@@ -45,7 +48,11 @@ const groupErroredConfigEntries = (
   }
 
   const sortEntries = (left: ConfigEntry, right: ConfigEntry): number =>
-    compareText(left.title || left.domain, right.title || right.domain, language);
+    compareText(
+      left.title || left.domain,
+      right.title || right.domain,
+      language,
+    );
 
   setupFailed.sort(sortEntries);
   failedUnload.sort(sortEntries);
@@ -62,8 +69,12 @@ export const getGroupedIntegrationErrors = async (
   return groupErroredConfigEntries(entries, hass.locale?.language);
 };
 
-export const countIntegrationErrors = (grouped: GroupedIntegrationErrors): number =>
-  grouped.setupFailed.length + grouped.failedUnload.length + grouped.setupRetry.length;
+export const countIntegrationErrors = (
+  grouped: GroupedIntegrationErrors,
+): number =>
+  grouped.setupFailed.length +
+  grouped.failedUnload.length +
+  grouped.setupRetry.length;
 
 export interface IntegrationRepresentativeEntity {
   entityId: string;

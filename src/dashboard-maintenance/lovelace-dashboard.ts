@@ -38,11 +38,12 @@ export const findLovelaceDashboardConfig = async <T>(
 
   for (const urlPath of urlPaths) {
     try {
-      const config = await connection.sendMessagePromise<LovelaceDashboardConfig | null>({
-        type: "lovelace/config",
-        url_path: urlPath,
-        force: false,
-      });
+      const config =
+        await connection.sendMessagePromise<LovelaceDashboardConfig | null>({
+          type: "lovelace/config",
+          url_path: urlPath,
+          force: false,
+        });
 
       const match = getMatch(config);
 

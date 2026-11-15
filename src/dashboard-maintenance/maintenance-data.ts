@@ -49,7 +49,8 @@ const isBatterySensorEntity = (stateObj: HassEntity): boolean => {
 };
 
 const isBatteryChargingState = (stateObj: HassEntity): boolean =>
-  stateObj.attributes.device_class === "battery_charging" && stateObj.state === "on";
+  stateObj.attributes.device_class === "battery_charging" &&
+  stateObj.state === "on";
 
 const batteryStateLevel = (stateObj: HassEntity): number | null => {
   if (!isBatterySensorEntity(stateObj)) {
@@ -172,7 +173,9 @@ export const fetchEntityRegistry = async (
   }
 
   try {
-    const entries = await hass.connection.sendMessagePromise<EntityRegistryEntry[]>({
+    const entries = await hass.connection.sendMessagePromise<
+      EntityRegistryEntry[]
+    >({
       type: "config/entity_registry/list",
     });
 
@@ -194,7 +197,9 @@ export const fetchDeviceRegistry = async (
   }
 
   try {
-    const entries = await hass.connection.sendMessagePromise<DeviceRegistryEntry[]>({
+    const entries = await hass.connection.sendMessagePromise<
+      DeviceRegistryEntry[]
+    >({
       type: "config/device_registry/list",
     });
 
@@ -245,7 +250,9 @@ export const getMaintenanceAreas = async (
   }
 
   try {
-    const entries = await hass.connection.sendMessagePromise<AreaRegistryEntry[]>({
+    const entries = await hass.connection.sendMessagePromise<
+      AreaRegistryEntry[]
+    >({
       type: "config/area_registry/list",
     });
 
@@ -267,7 +274,9 @@ export const getMaintenanceFloors = async (
   }
 
   try {
-    const entries = await hass.connection.sendMessagePromise<FloorRegistryEntry[]>({
+    const entries = await hass.connection.sendMessagePromise<
+      FloorRegistryEntry[]
+    >({
       type: "config/floor_registry/list",
     });
 
@@ -282,7 +291,10 @@ export const fetchConfigEntries = async (
 ): Promise<Record<string, ConfigEntry>> => {
   if (hass.configEntries?.entries) {
     return Object.fromEntries(
-      (hass.configEntries?.entries ?? []).map((entry) => [entry.entry_id, entry]),
+      (hass.configEntries?.entries ?? []).map((entry) => [
+        entry.entry_id,
+        entry,
+      ]),
     );
   }
 
@@ -306,7 +318,10 @@ const fallbackDevicesFromStates = (
   thresholdFor: (entityId: string) => number,
 ): MaintenanceBatteryDevice[] =>
   Object.values(hass.states)
-    .filter((stateObj) => isMaintenanceBatteryState(stateObj) && isStateVisible(stateObj))
+    .filter(
+      (stateObj) =>
+        isMaintenanceBatteryState(stateObj) && isStateVisible(stateObj),
+    )
     .map((stateObj) => ({
       areaId: undefined,
       entityId: stateObj.entity_id,

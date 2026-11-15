@@ -226,11 +226,12 @@ export const fetchHostInfo = async (
 
   hostInfoFetchPromise = (async (): Promise<HostInfoData | null> => {
     try {
-      const response = await connection.sendMessagePromise<HostInfoResponse | null>({
-        type: "supervisor/api",
-        endpoint: "/host/info",
-        method: "get",
-      });
+      const response =
+        await connection.sendMessagePromise<HostInfoResponse | null>({
+          type: "supervisor/api",
+          endpoint: "/host/info",
+          method: "get",
+        });
 
       const parsed = parseHostInfoResponse(response);
 
@@ -261,10 +262,9 @@ export const probeHardwareStatusAvailable = async (
   }
 
   try {
-    const unsub = await hass.connection.subscribeMessage(
-      () => {},
-      { type: "hardware/subscribe_system_status" },
-    );
+    const unsub = await hass.connection.subscribeMessage(() => {}, {
+      type: "hardware/subscribe_system_status",
+    });
 
     unsub();
 

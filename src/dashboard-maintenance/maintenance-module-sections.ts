@@ -49,7 +49,11 @@ const MODULE_SECTIONS: Record<MaintenanceModuleId, ModuleSectionBuilder> = {
       options,
     ),
   updates: async (localize, hass, _config, options) =>
-    makeUpdateSummarySection(localize, await getMaintenanceUpdates(hass), options),
+    makeUpdateSummarySection(
+      localize,
+      await getMaintenanceUpdates(hass),
+      options,
+    ),
   availability: async (localize, hass, config, options) =>
     makeAvailabilitySummarySection(
       localize,

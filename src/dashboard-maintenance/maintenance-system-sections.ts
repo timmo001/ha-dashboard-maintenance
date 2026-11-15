@@ -82,7 +82,11 @@ export const makeSystemSummarySection = async (
   const sensorCards = sensors.map(makeSystemEntityTileCard);
   const allCards = [...metricCards, ...sensorCards];
 
-  const { items: shownCards, hiddenCount } = limitItems(allCards, options?.limit);
+  const { items: shownCards, hiddenCount } = limitItems(
+    allCards,
+    options?.limit,
+  );
+
   const cards = [...shownCards];
 
   if (options?.showMorePath && hiddenCount > 0) {

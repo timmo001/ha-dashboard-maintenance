@@ -12,10 +12,7 @@ import {
   type MaintenanceAvailabilityEntity,
 } from "./availability-data";
 import type { MaintenanceRepairIssue } from "./repairs-data";
-import {
-  staleEntityIcon,
-  type MaintenanceStaleEntity,
-} from "./stale-data";
+import { staleEntityIcon, type MaintenanceStaleEntity } from "./stale-data";
 import type { MaintenanceUpdateEntity } from "./update-data";
 import { updateCanInstall } from "./update-data";
 import type {
@@ -137,9 +134,7 @@ const NAME_AREA_DEVICE: EntityNameItem[] = [
   { type: "device" },
 ];
 
-const NAME_DEVICE: EntityNameItem[] = [
-  { type: "device" },
-];
+const NAME_DEVICE: EntityNameItem[] = [{ type: "device" }];
 
 const NAME_DEVICE_ENTITY: EntityNameItem[] = [
   { type: "device" },
@@ -276,11 +271,14 @@ export const makeShowMoreCard = (
   hiddenCount: number,
   navigationPath: string,
 ): LovelaceCardConfig => ({
-  ...makeHeadingCard(localize("common.show_count_more", { count: hiddenCount }), {
-    headingStyle: "subtitle",
-    icon: "mdi:chevron-right",
-    navigationPath,
-  }),
+  ...makeHeadingCard(
+    localize("common.show_count_more", { count: hiddenCount }),
+    {
+      headingStyle: "subtitle",
+      icon: "mdi:chevron-right",
+      navigationPath,
+    },
+  ),
   grid_options: {
     rows: "auto",
   },
@@ -368,7 +366,11 @@ export const makeBatteryCard = (
   }
 
   return makeTileCard(
-    { entityId: device.entityId, deviceId: device.deviceId, displayName: device.deviceName },
+    {
+      entityId: device.entityId,
+      deviceId: device.deviceId,
+      displayName: device.deviceName,
+    },
     device.needsAttention ? "mdi:battery-alert-variant-outline" : undefined,
     features.length > 0
       ? { name: options?.name, features }
@@ -402,9 +404,7 @@ export const makeRepairCard = (
 ): LovelaceCardConfig => {
   const severityLabel = localize(`repair.severity_${issue.severity}`);
 
-  const learnMoreLink = issue.learnMoreUrl
-    ? ` [↗](${issue.learnMoreUrl})`
-    : "";
+  const learnMoreLink = issue.learnMoreUrl ? ` [↗](${issue.learnMoreUrl})` : "";
 
   return {
     type: "markdown",
@@ -451,11 +451,25 @@ export const makeIntegrationEntryCard = (
   },
 ): LovelaceCardConfig => {
   const domain = entry.domain;
-  const navPath = configEntryNavigationPath(domain, entry.entry_id, options?.subentryId);
-  const stateKey = entry.state ? INTEGRATION_STATE_LABEL.get(entry.state) : undefined;
+
+  const navPath = configEntryNavigationPath(
+    domain,
+    entry.entry_id,
+    options?.subentryId,
+  );
+
+  const stateKey = entry.state
+    ? INTEGRATION_STATE_LABEL.get(entry.state)
+    : undefined;
+
   const stateText = stateKey ? localize(stateKey) : (entry.state ?? "");
-  const subtitle = entry.reason?.trim() ? `${stateText}: ${entry.reason.trim()}` : stateText;
-  const fallbackEntity = options?.representativeEntityId ?? `${domain}.integration`;
+
+  const subtitle = entry.reason?.trim()
+    ? `${stateText}: ${entry.reason.trim()}`
+    : stateText;
+
+  const fallbackEntity =
+    options?.representativeEntityId ?? `${domain}.integration`;
 
   return makeShortcutCard(
     entry.title || domain,
@@ -474,8 +488,7 @@ export const makeAvailabilityCard = (
 export const makeStaleCard = (
   entity: MaintenanceStaleEntity,
   options?: NameOnlyTileOptions,
-): LovelaceCardConfig =>
-  makeTileCard(entity, staleEntityIcon(), options);
+): LovelaceCardConfig => makeTileCard(entity, staleEntityIcon(), options);
 
 // ---------------------------------------------------------------------------
 // Item limiting & show-more helpers
@@ -486,10 +499,7 @@ interface LimitedItems<T> {
   items: T[];
 }
 
-export const limitItems = <T,>(
-  items: T[],
-  limit?: number,
-): LimitedItems<T> => {
+export const limitItems = <T>(items: T[], limit?: number): LimitedItems<T> => {
   if (limit === undefined || items.length <= limit) {
     return { hiddenCount: 0, items };
   }
@@ -501,7 +511,7 @@ export const limitItems = <T,>(
 };
 
 /** Limit items, map to cards, and append a show-more card when items are truncated. */
-export const limitAndMakeCards = <T,>(
+export const limitAndMakeCards = <T>(
   localize: LocalizeFunc,
   items: T[],
   makeCard: (item: T) => LovelaceCardConfig,
@@ -524,12 +534,15 @@ export const makeEmptyStateSection = (
   content: string,
   icon: string,
 ): LovelaceSectionConfig =>
-  makeGridSection([
-    {
-      ...makeEmptyStateCard(title, content, icon),
-      grid_options: { columns: 12 },
-    },
-  ], 1);
+  makeGridSection(
+    [
+      {
+        ...makeEmptyStateCard(title, content, icon),
+        grid_options: { columns: 12 },
+      },
+    ],
+    1,
+  );
 
 export const makeGridSection = (
   cards: LovelaceCardConfig[],
@@ -572,10 +585,12 @@ const makeAreaHeadingCard = (
 ): LovelaceCardConfig =>
   makeHeadingCard(area.name, {
     headingStyle: "subtitle",
-    navigationPath: hass.panels?.home ? `/home/areas-${area.area_id}` : undefined,
+    navigationPath: hass.panels?.home
+      ? `/home/areas-${area.area_id}`
+      : undefined,
   });
 
-const makeLimitedCards = <T,>(
+const makeLimitedCards = <T>(
   localize: LocalizeFunc,
   items: T[],
   makeCard: (item: T) => LovelaceCardConfig,
@@ -629,7 +644,11 @@ const makeAreaCards = <T extends AreaScopedItem>(
 
     if (shown.hiddenCount > 0) {
       cards.push(
-        makeShowMoreCard(localize, shown.hiddenCount, buildShowMorePath(area.area_id)),
+        makeShowMoreCard(
+          localize,
+          shown.hiddenCount,
+          buildShowMorePath(area.area_id),
+        ),
       );
     }
   }
@@ -788,7 +807,9 @@ export const makeHierarchySections = async <T extends AreaScopedItem>(
       hierarchy.areas,
       areas,
       makeHeadingCard(
-        floorCount > 1 ? localize("common.other_areas") : localize("common.areas"),
+        floorCount > 1
+          ? localize("common.other_areas")
+          : localize("common.areas"),
       ),
       options?.limit,
     );
@@ -798,7 +819,12 @@ export const makeHierarchySections = async <T extends AreaScopedItem>(
     }
   }
 
-  const unassignedSection = makeUnassignedSection(localize, config, sections, options);
+  const unassignedSection = makeUnassignedSection(
+    localize,
+    config,
+    sections,
+    options,
+  );
 
   if (unassignedSection) {
     sections.push(unassignedSection);

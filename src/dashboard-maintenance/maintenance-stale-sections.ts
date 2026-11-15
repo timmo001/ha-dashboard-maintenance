@@ -1,7 +1,4 @@
-import {
-  type MaintenanceStaleEntity,
-  staleEntityIcon,
-} from "./stale-data";
+import { type MaintenanceStaleEntity, staleEntityIcon } from "./stale-data";
 import type { LocalizeFunc } from "./localize";
 import {
   limitAndMakeCards,

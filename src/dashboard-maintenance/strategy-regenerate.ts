@@ -14,7 +14,12 @@ import type {
 } from "./types";
 import { isModuleEnabled } from "./types";
 
-const REGISTRY_DEPENDENCIES = ["entities", "devices", "areas", "floors"] as const;
+const REGISTRY_DEPENDENCIES = [
+  "entities",
+  "devices",
+  "areas",
+  "floors",
+] as const;
 
 /**
  * Home Assistant only regenerates strategies on registry changes by default.
@@ -51,7 +56,9 @@ export const shouldRegenerateMaintenance = (
     }
 
     const parts = [
-      enabled.has("batteries") ? batteryMembershipKey(stateObj, thresholdFor) : "",
+      enabled.has("batteries")
+        ? batteryMembershipKey(stateObj, thresholdFor)
+        : "",
       enabled.has("availability") && isRelevantAvailabilityIssue(stateObj),
       enabled.has("updates") ? updateMembershipKey(stateObj) : "",
       enabled.has("stale") && isStaleState(stateObj, staleMs, now),

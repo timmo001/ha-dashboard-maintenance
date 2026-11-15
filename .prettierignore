@@ -1,0 +1,9 @@
+node_modules/
+dist/
+vendor/
+AGENTS.md
+.agents/skills/
+.mise/locks/
+pnpm-lock.yaml
+mise.lock
+skills-lock.json

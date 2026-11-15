@@ -8,10 +8,7 @@ import {
   parseTimestamp,
   resolveStateContext,
 } from "./entity-helpers";
-import {
-  fetchDeviceRegistry,
-  fetchEntityRegistry,
-} from "./maintenance-data";
+import { fetchDeviceRegistry, fetchEntityRegistry } from "./maintenance-data";
 import type { HassEntity, HomeAssistant } from "./types";
 
 export const DEFAULT_STALE_THRESHOLD_HOURS = 6;
@@ -56,9 +53,7 @@ const STALE_RELEVANT_DOMAINS = new Set([
 const isStaleRelevantDomain = (entityId: string): boolean =>
   STALE_RELEVANT_DOMAINS.has(computeDomain(entityId));
 
-const normalizeStaleThresholdHours = (
-  hours?: number,
-): number => {
+const normalizeStaleThresholdHours = (hours?: number): number => {
   if (hours === undefined || Number.isNaN(hours) || hours <= 0) {
     return DEFAULT_STALE_THRESHOLD_HOURS;
   }

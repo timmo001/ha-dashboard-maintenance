@@ -46,18 +46,12 @@ const MODULE_DRAWINGS: Record<MaintenanceModuleId, string> = {
     rect(42, 21, 30, 4, 0.12) +
     rect(42, 29, 36, 4, 0.12),
   availability:
-    dot(22, 22, 8, 0.48) +
-    dot(47, 22, 8, 0.48) +
-    ring(72, 22, 7, 0.32),
-  stale:
-    ring(47, 22, 13, 0.48) +
-    line("M47 14 L47 22 L53 26", 0.72),
-  integrations: columns(
-    4,
-    (i) =>
-      i === 3
-        ? outline(12 + i * 18, 14, 14, 16, 3)
-        : rect(12 + i * 18, 14, 14, 16, 0.32, 3),
+    dot(22, 22, 8, 0.48) + dot(47, 22, 8, 0.48) + ring(72, 22, 7, 0.32),
+  stale: ring(47, 22, 13, 0.48) + line("M47 14 L47 22 L53 26", 0.72),
+  integrations: columns(4, (i) =>
+    i === 3
+      ? outline(12 + i * 18, 14, 14, 16, 3)
+      : rect(12 + i * 18, 14, 14, 16, 0.32, 3),
   ),
 };
 
@@ -69,7 +63,9 @@ const TILE_FEATURE_DRAWINGS: Record<BatteryTileFeature, string> = {
 };
 
 const TILE =
-  dot(17, 15, 7, 0.12) + rect(30, 9, 30, 3, 0.48, 1.5) + rect(30, 16, 20, 3, 0.32, 1.5);
+  dot(17, 15, 7, 0.12) +
+  rect(30, 9, 30, 3, 0.48, 1.5) +
+  rect(30, 16, 20, 3, 0.32, 1.5);
 
 const image = (drawing: string, dark: boolean) => {
   const ink = dark ? "white" : "black";

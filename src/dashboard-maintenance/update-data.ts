@@ -27,7 +27,8 @@ export interface MaintenanceUpdateEntity {
 }
 
 const updateAvailable = (stateObj: HassEntity, showSkipped = false): boolean =>
-  stateObj.state === "on" || (showSkipped && !!stateObj.attributes.skipped_version);
+  stateObj.state === "on" ||
+  (showSkipped && !!stateObj.attributes.skipped_version);
 
 const supportsInstall = (stateObj: HassEntity): boolean => {
   const supportedFeatures = Number(stateObj.attributes.supported_features) || 0;
@@ -35,13 +36,11 @@ const supportsInstall = (stateObj: HassEntity): boolean => {
   return (supportedFeatures & UPDATE_FEATURE_INSTALL) !== 0;
 };
 
-export const updateCanInstall = (
-  update: MaintenanceUpdateEntity,
-): boolean => update.isAvailable && update.supportsInstall && !update.isUnavailable;
+export const updateCanInstall = (update: MaintenanceUpdateEntity): boolean =>
+  update.isAvailable && update.supportsInstall && !update.isUnavailable;
 
-export const updateCanNotInstall = (
-  update: MaintenanceUpdateEntity,
-): boolean => update.isAvailable && !update.supportsInstall && !update.isUnavailable;
+export const updateCanNotInstall = (update: MaintenanceUpdateEntity): boolean =>
+  update.isAvailable && !update.supportsInstall && !update.isUnavailable;
 
 const isVisibleUpdateEntity = (
   entityId: string,
@@ -81,62 +80,60 @@ export const getMaintenanceUpdates = async (
   const entities = await fetchEntityRegistry(hass);
   const hasEntityRegistry = Object.keys(entities).length > 0;
 
-  return (
-    Object.values(hass.states)
-      .filter(
-        (stateObj) =>
-          computeDomain(stateObj.entity_id) === "update" &&
-          isStateVisible(stateObj) &&
-          isVisibleUpdateEntity(stateObj.entity_id, entities, hasEntityRegistry),
-      )
-      .map((stateObj) => {
-        const attributes = stateObj.attributes;
+  return Object.values(hass.states)
+    .filter(
+      (stateObj) =>
+        computeDomain(stateObj.entity_id) === "update" &&
+        isStateVisible(stateObj) &&
+        isVisibleUpdateEntity(stateObj.entity_id, entities, hasEntityRegistry),
+    )
+    .map((stateObj) => {
+      const attributes = stateObj.attributes;
 
-        const title =
-          attributes.title || attributes.friendly_name || stateObj.entity_id;
+      const title =
+        attributes.title || attributes.friendly_name || stateObj.entity_id;
 
-        const skippedCurrentVersion = !!(
-          attributes.latest_version &&
-          attributes.skipped_version === attributes.latest_version
-        );
+      const skippedCurrentVersion = !!(
+        attributes.latest_version &&
+        attributes.skipped_version === attributes.latest_version
+      );
 
-        return {
-          entityId: stateObj.entity_id,
-          inProgress: !!attributes.in_progress,
-          isAvailable: updateAvailable(stateObj, true),
-          isUnavailable:
-            stateObj.state === "unavailable" || stateObj.state === "unknown",
-          skippedCurrentVersion,
-          supportsInstall: supportsInstall(stateObj),
-          title,
-        };
-      })
-      .sort((left, right) => {
-        if (left.title === HOME_ASSISTANT_CORE_TITLE) {
-          return -3;
-        }
+      return {
+        entityId: stateObj.entity_id,
+        inProgress: !!attributes.in_progress,
+        isAvailable: updateAvailable(stateObj, true),
+        isUnavailable:
+          stateObj.state === "unavailable" || stateObj.state === "unknown",
+        skippedCurrentVersion,
+        supportsInstall: supportsInstall(stateObj),
+        title,
+      };
+    })
+    .sort((left, right) => {
+      if (left.title === HOME_ASSISTANT_CORE_TITLE) {
+        return -3;
+      }
 
-        if (right.title === HOME_ASSISTANT_CORE_TITLE) {
-          return 3;
-        }
+      if (right.title === HOME_ASSISTANT_CORE_TITLE) {
+        return 3;
+      }
 
-        if (left.title === HOME_ASSISTANT_OS_TITLE) {
-          return -2;
-        }
+      if (left.title === HOME_ASSISTANT_OS_TITLE) {
+        return -2;
+      }
 
-        if (right.title === HOME_ASSISTANT_OS_TITLE) {
-          return 2;
-        }
+      if (right.title === HOME_ASSISTANT_OS_TITLE) {
+        return 2;
+      }
 
-        if (left.title === HOME_ASSISTANT_SUPERVISOR_TITLE) {
-          return -1;
-        }
+      if (left.title === HOME_ASSISTANT_SUPERVISOR_TITLE) {
+        return -1;
+      }
 
-        if (right.title === HOME_ASSISTANT_SUPERVISOR_TITLE) {
-          return 1;
-        }
+      if (right.title === HOME_ASSISTANT_SUPERVISOR_TITLE) {
+        return 1;
+      }
 
-        return compareText(left.title, right.title, hass.locale?.language);
-      })
-  );
+      return compareText(left.title, right.title, hass.locale?.language);
+    });
 };

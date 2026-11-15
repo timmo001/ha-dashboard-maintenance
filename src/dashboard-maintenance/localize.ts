@@ -138,7 +138,8 @@ const en = {
     "Choose which maintenance summary count this card shows.",
   "summary_card.editor.title_label": "Title",
   "summary_card.editor.icon_label": "Icon",
-  "summary_card.editor.attention_threshold_label": "Battery attention threshold",
+  "summary_card.editor.attention_threshold_label":
+    "Battery attention threshold",
   "summary_card.editor.attention_threshold_helper":
     "Used when the summary metric is batteries.",
   "summary_card.editor.stale_threshold_label": "Stale threshold (hours)",
@@ -207,7 +208,8 @@ const en = {
   "editor.updates_header": "Updates",
   "editor.updates_description": "Pending software and firmware updates",
   "editor.availability_header": "Availability",
-  "editor.availability_description": "Devices and entities that are unavailable",
+  "editor.availability_description":
+    "Devices and entities that are unavailable",
   "editor.availability_safe_list_label": "Known safe offline devices",
   "editor.availability_safe_list_helper":
     "Unavailable devices in this list are hidden from the availability results. You can also click and hold a device icon to add it.",
@@ -250,9 +252,9 @@ export type LocalizeFunc = (
  */
 const languages: Record<string, Partial<Record<TranslationKey, string>>> = {};
 
-export const setupLocalize = (
-  hass?: { locale?: { language?: string } },
-): LocalizeFunc => {
+export const setupLocalize = (hass?: {
+  locale?: { language?: string };
+}): LocalizeFunc => {
   const lang = hass?.locale?.language || "en";
   const baseLang = lang.split("-")[0];
 

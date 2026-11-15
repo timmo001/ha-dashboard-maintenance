@@ -90,10 +90,7 @@ export const getAvailableSystemMetrics = async (
   const metrics: SystemMetricDescriptor[] = [];
 
   if (availability.hardwareStatus) {
-    metrics.push(
-      { metric: "cpu" },
-      { metric: "memory_percent" },
-    );
+    metrics.push({ metric: "cpu" }, { metric: "memory_percent" });
   }
 
   if (availability.supervisor) {
@@ -102,7 +99,10 @@ export const getAvailableSystemMetrics = async (
     // Only show drive health if the hardware reports disk_life_time
     const hostInfo = await fetchHostInfo(hass);
 
-    if (hostInfo?.disk_life_time !== null && hostInfo?.disk_life_time !== undefined) {
+    if (
+      hostInfo?.disk_life_time !== null &&
+      hostInfo?.disk_life_time !== undefined
+    ) {
       metrics.push({ metric: "disk_health" });
     }
 
@@ -149,7 +149,10 @@ export const getSystemEntitySensors = async (
 
   for (const entry of Object.values(entities)) {
     // Must belong to a system integration config entry
-    if (!entry.config_entry_id || !systemConfigEntryIds.has(entry.config_entry_id)) {
+    if (
+      !entry.config_entry_id ||
+      !systemConfigEntryIds.has(entry.config_entry_id)
+    ) {
       continue;
     }
 
@@ -187,9 +190,7 @@ export const getSystemEntitySensors = async (
  * Check whether the system module has any data to show.
  * Returns true if either API metrics or entity sensors are available.
  */
-export const hasSystemData = async (
-  hass: HomeAssistant,
-): Promise<boolean> => {
+export const hasSystemData = async (hass: HomeAssistant): Promise<boolean> => {
   const [metrics, sensors] = await Promise.all([
     getAvailableSystemMetrics(hass),
     getSystemEntitySensors(hass),

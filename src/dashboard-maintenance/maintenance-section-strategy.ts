@@ -118,7 +118,9 @@ export class MaintenanceSectionStrategy extends ReactiveElement {
     if (!isMaintenanceModuleId(config.module)) {
       return {
         type: "grid",
-        cards: [{ type: "markdown", content: localize("section.unknown_module") }],
+        cards: [
+          { type: "markdown", content: localize("section.unknown_module") },
+        ],
       };
     }
 

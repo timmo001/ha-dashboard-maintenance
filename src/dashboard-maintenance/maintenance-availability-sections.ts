@@ -38,7 +38,12 @@ export const makeAvailabilitySummarySection = (
     return Promise.resolve(null);
   }
 
-  return makeAvailabilitySummarySectionContent(localize, hass, entities, options);
+  return makeAvailabilitySummarySectionContent(
+    localize,
+    hass,
+    entities,
+    options,
+  );
 };
 
 const makeAvailabilitySummarySectionContent = async (
@@ -51,9 +56,14 @@ const makeAvailabilitySummarySectionContent = async (
     navigationPath?: string;
   },
 ): Promise<LovelaceSectionConfig> => {
-  const unavailableEntities = entities.filter((entity) => entity.state === "unavailable");
+  const unavailableEntities = entities.filter(
+    (entity) => entity.state === "unavailable",
+  );
 
-  const unavailableGrouped = await groupAvailabilityByDevice(hass, unavailableEntities);
+  const unavailableGrouped = await groupAvailabilityByDevice(
+    hass,
+    unavailableEntities,
+  );
 
   const summaryCards = [
     ...unavailableGrouped.devices.map((device) =>
@@ -74,7 +84,11 @@ const makeAvailabilitySummarySectionContent = async (
     ),
   ];
 
-  const { items: shownCards, hiddenCount } = limitItems(summaryCards, options?.limit);
+  const { items: shownCards, hiddenCount } = limitItems(
+    summaryCards,
+    options?.limit,
+  );
+
   const cards = [...shownCards];
 
   if (options?.showMorePath && hiddenCount > 0) {
@@ -113,12 +127,16 @@ const buildDeviceCards = (
     return [];
   }
 
-  const cards: LovelaceCardConfig[] = [
-    makeHeadingCard(heading, { icon }),
-  ];
+  const cards: LovelaceCardConfig[] = [makeHeadingCard(heading, { icon })];
 
   for (const device of devices) {
-    const subtitle = deviceSubtitle(localize, device, subtitleOneKey, subtitleOtherKey);
+    const subtitle = deviceSubtitle(
+      localize,
+      device,
+      subtitleOneKey,
+      subtitleOtherKey,
+    );
+
     cards.push(makeAvailabilityDeviceCard(device, subtitle));
   }
 
@@ -146,7 +164,10 @@ export const makeAvailabilitySections = async (
 
   const unavailableEntities = entities.filter((e) => e.state === "unavailable");
 
-  const unavailableGrouped = await groupAvailabilityByDevice(hass, unavailableEntities);
+  const unavailableGrouped = await groupAvailabilityByDevice(
+    hass,
+    unavailableEntities,
+  );
 
   const cards: LovelaceCardConfig[] = [];
 
@@ -161,9 +182,7 @@ export const makeAvailabilitySections = async (
     ),
   );
 
-  const allUngrouped = [
-    ...unavailableGrouped.ungrouped,
-  ];
+  const allUngrouped = [...unavailableGrouped.ungrouped];
 
   if (allUngrouped.length > 0) {
     cards.push(

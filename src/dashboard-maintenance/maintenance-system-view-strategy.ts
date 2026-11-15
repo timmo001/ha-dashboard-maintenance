@@ -20,13 +20,19 @@ export class MaintenanceSystemViewStrategy extends ReactiveElement {
     const sections = await makeSystemSections(localize, hass);
 
     if (sections.length === 0) {
-      return makeViewConfig(localize, config, "system", [
-        makeEmptyStateSection(
-          localize("system.empty_title"),
-          localize("system.empty_content"),
-          "mdi:server",
-        ),
-      ], { maxColumns: 1 });
+      return makeViewConfig(
+        localize,
+        config,
+        "system",
+        [
+          makeEmptyStateSection(
+            localize("system.empty_title"),
+            localize("system.empty_content"),
+            "mdi:server",
+          ),
+        ],
+        { maxColumns: 1 },
+      );
     }
 
     return makeViewConfig(localize, config, "system", sections);

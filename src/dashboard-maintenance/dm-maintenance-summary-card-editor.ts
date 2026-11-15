@@ -59,7 +59,9 @@ const isDefaultNavigateAction = (action?: SummaryTapAction): boolean =>
   action.action === undefined ||
   (action.action === "navigate" && !cleanText(action.navigation_path));
 
-const normalizeTapAction = (value?: SummaryTapAction): SummaryTapAction | undefined => {
+const normalizeTapAction = (
+  value?: SummaryTapAction,
+): SummaryTapAction | undefined => {
   if (!value) {
     return undefined;
   }
@@ -71,13 +73,17 @@ const normalizeTapAction = (value?: SummaryTapAction): SummaryTapAction | undefi
   if (value.action === "navigate") {
     const path = cleanText(value.navigation_path);
 
-    return path ? { action: "navigate", navigation_path: path } : { action: "navigate" };
+    return path
+      ? { action: "navigate", navigation_path: path }
+      : { action: "navigate" };
   }
 
   return undefined;
 };
 
-const normalizeHoldAction = (value?: SummaryTapAction): SummaryTapAction | undefined => {
+const normalizeHoldAction = (
+  value?: SummaryTapAction,
+): SummaryTapAction | undefined => {
   const action = normalizeTapAction(value);
 
   if (!action || action.action === "none") {
@@ -155,7 +161,9 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
       );
 
       if (result) {
-        this._resolvedMaintenanceSummaryPath = buildDashboardSummaryPath(result.urlPath);
+        this._resolvedMaintenanceSummaryPath = buildDashboardSummaryPath(
+          result.urlPath,
+        );
       }
     } catch {
       // Keep fallback behavior.
@@ -168,7 +176,9 @@ class DmMaintenanceSummaryCardEditor extends LitElement {
     const summary = normalizeSummary(config.summary ?? config.metric);
 
     const defaultNavigationPath =
-      config.navigation_path || this._resolvedMaintenanceSummaryPath || "summary";
+      config.navigation_path ||
+      this._resolvedMaintenanceSummaryPath ||
+      "summary";
 
     return {
       summary,

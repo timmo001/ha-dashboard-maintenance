@@ -38,12 +38,18 @@ export class MaintenanceSummaryViewStrategy extends ReactiveElement {
     const sections: LovelaceSectionConfig[] = [];
 
     for (const module of getEnabledModules(config)) {
-      const section = await makeModuleSummarySection(module, localize, hass, config, {
-        limit: SUMMARY_ITEM_LIMIT,
-        showMorePath: module,
-        navigationPath:
-          module === "batteries" ? config.heading_navigation_path : module,
-      });
+      const section = await makeModuleSummarySection(
+        module,
+        localize,
+        hass,
+        config,
+        {
+          limit: SUMMARY_ITEM_LIMIT,
+          showMorePath: module,
+          navigationPath:
+            module === "batteries" ? config.heading_navigation_path : module,
+        },
+      );
 
       if (section) {
         sections.push(section);

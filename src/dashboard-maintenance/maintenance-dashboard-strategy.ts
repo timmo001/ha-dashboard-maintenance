@@ -29,7 +29,10 @@ interface LovelaceDashboardConfig {
   views: LovelaceViewConfig[];
 }
 
-const compareAreas = (left: AreaRegistryEntry, right: AreaRegistryEntry): number =>
+const compareAreas = (
+  left: AreaRegistryEntry,
+  right: AreaRegistryEntry,
+): number =>
   left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
 
 const buildSummaryView = (
@@ -318,7 +321,10 @@ class MaintenanceDashboardStrategy extends ReactiveElement {
     hass: HomeAssistant,
   ): Promise<LovelaceDashboardConfig> {
     const localize = setupLocalize(hass);
-    const areas = Object.values(await getMaintenanceAreas(hass)).sort(compareAreas);
+
+    const areas = Object.values(await getMaintenanceAreas(hass)).sort(
+      compareAreas,
+    );
 
     const views: LovelaceViewConfig[] = [
       await buildSummaryView(config, localize, hass),

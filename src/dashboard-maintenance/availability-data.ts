@@ -14,10 +14,7 @@ import {
   fetchDeviceRegistry,
   fetchEntityRegistry,
 } from "./maintenance-data";
-import type {
-  HassEntity,
-  HomeAssistant,
-} from "./types";
+import type { HassEntity, HomeAssistant } from "./types";
 
 export const normalizeAvailabilitySafeListDeviceIds = (
   deviceIds?: string[],
@@ -51,7 +48,8 @@ export interface MaintenanceAvailabilityEntity {
 export const isRelevantAvailabilityIssue = (
   stateObj: HassEntity,
 ): stateObj is HassEntity & { state: "unavailable" } =>
-  isAvailabilityIssue(stateObj) && isAvailabilityDomainRelevant(stateObj.entity_id);
+  isAvailabilityIssue(stateObj) &&
+  isAvailabilityDomainRelevant(stateObj.entity_id);
 
 interface CommonControlResult {
   entities: string[];
@@ -65,9 +63,10 @@ const getCommonControlUsagePrediction = async (
   }
 
   try {
-    const result = await hass.connection.sendMessagePromise<CommonControlResult>({
-      type: "usage_prediction/common_control",
-    });
+    const result =
+      await hass.connection.sendMessagePromise<CommonControlResult>({
+        type: "usage_prediction/common_control",
+      });
 
     return result.entities;
   } catch {
@@ -83,12 +82,13 @@ export const getMaintenanceAvailabilityEntities = async (
     normalizeAvailabilitySafeListDeviceIds(safeListDeviceIds),
   );
 
-  const [entities, devices, configEntries, mostUsedEntities] = await Promise.all([
-    fetchEntityRegistry(hass),
-    fetchDeviceRegistry(hass),
-    fetchConfigEntries(hass),
-    getCommonControlUsagePrediction(hass),
-  ]);
+  const [entities, devices, configEntries, mostUsedEntities] =
+    await Promise.all([
+      fetchEntityRegistry(hass),
+      fetchDeviceRegistry(hass),
+      fetchConfigEntries(hass),
+      getCommonControlUsagePrediction(hass),
+    ]);
 
   const hasEntityRegistry = Object.keys(entities).length > 0;
 
@@ -117,7 +117,9 @@ export const getMaintenanceAvailabilityEntities = async (
           entry?.config_entry_id,
           device?.primary_config_entry,
           ...(device?.config_entries ?? []),
-        ].filter((configEntryId): configEntryId is string => Boolean(configEntryId)),
+        ].filter((configEntryId): configEntryId is string =>
+          Boolean(configEntryId),
+        ),
       );
 
       const hasDisabledConfigEntry = [...relatedConfigEntryIds].some(
@@ -155,7 +157,8 @@ export const getMaintenanceAvailabilityEntities = async (
         Number(mostUsedEntityOrder.has(left.entityId) === false) -
           Number(mostUsedEntityOrder.has(right.entityId) === false) ||
         (mostUsedEntityOrder.get(left.entityId) ?? Number.MAX_SAFE_INTEGER) -
-          (mostUsedEntityOrder.get(right.entityId) ?? Number.MAX_SAFE_INTEGER) ||
+          (mostUsedEntityOrder.get(right.entityId) ??
+            Number.MAX_SAFE_INTEGER) ||
         parseTimestamp(right.lastChanged) - parseTimestamp(left.lastChanged) ||
         compareText(left.displayName, right.displayName),
     );

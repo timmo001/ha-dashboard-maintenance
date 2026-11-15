@@ -11,33 +11,35 @@ const computeObjectId = (entityId: string): string =>
   entityId.split(".", 2)[1] || entityId;
 
 /** Map of entity domains to their Material Design icons. */
-const DOMAIN_ICONS = new Map<string, string>(Object.entries({
-  alert: "mdi:alert",
-  automation: "mdi:robot",
-  binary_sensor: "mdi:binary-sensor",
-  button: "mdi:button-pointer",
-  camera: "mdi:camera",
-  climate: "mdi:thermostat",
-  cover: "mdi:blinds",
-  device_tracker: "mdi:device-tracker",
-  fan: "mdi:fan",
-  group: "mdi:group",
-  light: "mdi:lightbulb",
-  lock: "mdi:lock",
-  media_player: "mdi:cast",
-  notify: "mdi:bell",
-  number: "mdi:numeric",
-  scene: "mdi:palette",
-  script: "mdi:script-text",
-  select: "mdi:form-dropdown",
-  sensor: "mdi:sensor",
-  siren: "mdi:bullhorn",
-  switch: "mdi:switch",
-  text: "mdi:text",
-  update: "mdi:package-up",
-  vacuum: "mdi:vacuum",
-  water_heater: "mdi:water-boiler",
-}));
+const DOMAIN_ICONS = new Map<string, string>(
+  Object.entries({
+    alert: "mdi:alert",
+    automation: "mdi:robot",
+    binary_sensor: "mdi:binary-sensor",
+    button: "mdi:button-pointer",
+    camera: "mdi:camera",
+    climate: "mdi:thermostat",
+    cover: "mdi:blinds",
+    device_tracker: "mdi:device-tracker",
+    fan: "mdi:fan",
+    group: "mdi:group",
+    light: "mdi:lightbulb",
+    lock: "mdi:lock",
+    media_player: "mdi:cast",
+    notify: "mdi:bell",
+    number: "mdi:numeric",
+    scene: "mdi:palette",
+    script: "mdi:script-text",
+    select: "mdi:form-dropdown",
+    sensor: "mdi:sensor",
+    siren: "mdi:bullhorn",
+    switch: "mdi:switch",
+    text: "mdi:text",
+    update: "mdi:package-up",
+    vacuum: "mdi:vacuum",
+    water_heater: "mdi:water-boiler",
+  }),
+);
 
 /**
  * Get the default icon for an entity domain.
@@ -49,16 +51,20 @@ export const computeDomainIcon = (entityId: string): string => {
   return DOMAIN_ICONS.get(domain) || "mdi:exclamation-thick";
 };
 
-export const compareText = (left: string, right: string, language?: string): number =>
-  left.localeCompare(right, language, { sensitivity: "base" });
+export const compareText = (
+  left: string,
+  right: string,
+  language?: string,
+): number => left.localeCompare(right, language, { sensitivity: "base" });
 
 export const computeStateName = (stateObj: HassEntity): string =>
   stateObj.attributes.friendly_name === undefined
     ? computeObjectId(stateObj.entity_id).replace(/_/g, " ")
     : String(stateObj.attributes.friendly_name ?? "");
 
-export const computeDeviceName = (device: DeviceRegistryEntry | undefined): string | undefined =>
-  (device?.name_by_user || device?.name)?.trim();
+export const computeDeviceName = (
+  device: DeviceRegistryEntry | undefined,
+): string | undefined => (device?.name_by_user || device?.name)?.trim();
 
 const computeEntityEntryName = (
   entry: EntityRegistryEntry | undefined,
@@ -89,7 +95,8 @@ export const computeEntityDisplayName = (
   return deviceName ? `${deviceName} ${entityName}` : entityName;
 };
 
-export const isDefined = <T>(value: T | undefined): value is T => value !== undefined;
+export const isDefined = <T>(value: T | undefined): value is T =>
+  value !== undefined;
 
 export const parseTimestamp = (value?: string): number => {
   if (!value) {

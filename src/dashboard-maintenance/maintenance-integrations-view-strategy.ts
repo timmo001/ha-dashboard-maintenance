@@ -1,8 +1,14 @@
 import { ReactiveElement } from "lit";
 import { customElement } from "lit/decorators.js";
-import { countIntegrationErrors, getGroupedIntegrationErrors } from "./integrations-data";
+import {
+  countIntegrationErrors,
+  getGroupedIntegrationErrors,
+} from "./integrations-data";
 import { makeIntegrationsSections } from "./maintenance-integrations-sections";
-import { makeViewConfig, type LovelaceViewConfig } from "./maintenance-view-helpers";
+import {
+  makeViewConfig,
+  type LovelaceViewConfig,
+} from "./maintenance-view-helpers";
 import { setupLocalize } from "./localize";
 import type { HomeAssistant, MaintenanceViewStrategyConfig } from "./types";
 

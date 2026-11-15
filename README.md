@@ -84,6 +84,7 @@ Shows entities whose state has not been updated within a configurable time windo
 - Unavailable entities are excluded because they are unreachable rather than stale.
 
 <!-- ha-marketplace:exclude-start -->
+
 ## Install with HACS
 
 [![Open your Home Assistant instance and open a repository in the Marketplace.](https://my.home-assistant.io/badges/marketplace_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=timmo001&repository=ha-dashboard-maintenance&category=plugin)
@@ -125,6 +126,7 @@ If you run Home Assistant OS or Supervised, you can use the SSH app:
 - Use the HACS `/hacsfiles/...` URL for installed releases.
 - Use the `/local/...` URL for the default local publish flow.
 - Set the resource type to `module`.
+
 <!-- ha-marketplace:exclude-end -->
 
 ## Use as a full dashboard
@@ -170,8 +172,8 @@ sections:
 
 The section shows the same list as that module's part of the summary view, with every item rather than the first 12. It hides itself on the dashboard while the module has nothing to show, and stays visible while you edit the dashboard. The repairs, updates and integrations headings link to their Home Assistant settings pages.
 
-| Key | Type | Description |
-|-----|------|-------------|
+| Key      | Type                                                                                               | Description                     |
+| -------- | -------------------------------------------------------------------------------------------------- | ------------------------------- |
 | `module` | `"system" \| "batteries" \| "repairs" \| "updates" \| "availability" \| "stale" \| "integrations"` | Which module the section shows. |
 
 The module's own options from the [common options](#common-options-dashboard-and-view-strategy) apply too: `battery_attention_threshold`, `battery_threshold_overrides` and `battery_tile_feature` for batteries, `availability_safe_list_device_ids` for availability, and `stale_threshold_hours` for stale.
@@ -190,14 +192,14 @@ hold_action:
 
 ### Summary card options
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `summary` | `"batteries" \| "repairs" \| "updates" \| "availability" \| "stale"` | `"batteries"` | Which summary count to display. |
-| `tap_action` | action config | auto-detected maintenance summary path | Frontend-style tap action. If unset, the card auto-detects a maintenance dashboard summary path. |
-| `hold_action` | action config | `none` | Optional frontend-style hold action. |
-| `navigation_path` | `string` | detected summary path | Shortcut path for navigation (used when `tap_action` is not set). |
-| `title` | `string` | `Maintenance` | Optional primary label override. |
-| `icon` | `string` | `mdi:home-heart` | Optional icon override. |
+| Key               | Type                                                                 | Default                                | Description                                                                                      |
+| ----------------- | -------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `summary`         | `"batteries" \| "repairs" \| "updates" \| "availability" \| "stale"` | `"batteries"`                          | Which summary count to display.                                                                  |
+| `tap_action`      | action config                                                        | auto-detected maintenance summary path | Frontend-style tap action. If unset, the card auto-detects a maintenance dashboard summary path. |
+| `hold_action`     | action config                                                        | `none`                                 | Optional frontend-style hold action.                                                             |
+| `navigation_path` | `string`                                                             | detected summary path                  | Shortcut path for navigation (used when `tap_action` is not set).                                |
+| `title`           | `string`                                                             | `Maintenance`                          | Optional primary label override.                                                                 |
+| `icon`            | `string`                                                             | `mdi:home-heart`                       | Optional icon override.                                                                          |
 
 ## Configuration
 
@@ -205,14 +207,14 @@ All options are optional. Omitting a key uses the default shown below.
 
 ### Common options (dashboard and view strategy)
 
-| Key | Type | Default | Description |
-|-----|------|---------|-------------|
-| `modules` | `("system" \| "batteries" \| "repairs" \| "updates" \| "availability" \| "integrations" \| "stale")[]` | every module, in this order | The modules shown, in view order. The summary view lists their sections in the same order. Leave a module out to hide it. |
-| `battery_attention_threshold` | `number` | `30` | Battery percentage (0 – 100) below which a device is flagged as needing attention. |
-| `battery_threshold_overrides` | `{ entity_id: string; threshold: number; note?: string }[]` | `[]` | Per-battery thresholds (0 – 100) that replace `battery_attention_threshold` for the listed battery sensor entities. `note` is optional and shown in the editor. |
-| `show_attention_batteries_in_areas` | `boolean` | `true` | Show attention-flagged batteries inside per-area sections. |
-| `availability_safe_list_device_ids` | `string[]` | `[]` | Device IDs to exclude from availability checks. |
-| `stale_threshold_hours` | `number` | `6` | Hours (1 – 72) after which an entity is considered stale. |
+| Key                                 | Type                                                                                                   | Default                     | Description                                                                                                                                                     |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------ | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `modules`                           | `("system" \| "batteries" \| "repairs" \| "updates" \| "availability" \| "integrations" \| "stale")[]` | every module, in this order | The modules shown, in view order. The summary view lists their sections in the same order. Leave a module out to hide it.                                       |
+| `battery_attention_threshold`       | `number`                                                                                               | `30`                        | Battery percentage (0 – 100) below which a device is flagged as needing attention.                                                                              |
+| `battery_threshold_overrides`       | `{ entity_id: string; threshold: number; note?: string }[]`                                            | `[]`                        | Per-battery thresholds (0 – 100) that replace `battery_attention_threshold` for the listed battery sensor entities. `note` is optional and shown in the editor. |
+| `show_attention_batteries_in_areas` | `boolean`                                                                                              | `true`                      | Show attention-flagged batteries inside per-area sections.                                                                                                      |
+| `availability_safe_list_device_ids` | `string[]`                                                                                             | `[]`                        | Device IDs to exclude from availability checks.                                                                                                                 |
+| `stale_threshold_hours`             | `number`                                                                                               | `6`                         | Hours (1 – 72) after which an entity is considered stale.                                                                                                       |
 
 Older configs that turn modules off with `<module>_enabled: false` still work while `modules` is unset. The editor replaces them with `modules` on the next change.
 
@@ -220,15 +222,15 @@ Older configs that turn modules off with `<module>_enabled: false` still work wh
 
 These options are only used when the strategy is placed on a single view.
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `view` | `"summary" \| "batteries" \| "repairs" \| "updates" \| "availability" \| "stale"` | Which view to render. |
-| `title` | `string` | Title shown in the view heading. |
-| `path` | `string` | URL path for the view. |
-| `icon` | `string` | Icon shown in the navigation. |
-| `subview` | `boolean` | Mark this view as a subview (hides it from the sidebar). |
-| `area_id` | `string` | Restrict the view to a single Home Assistant area. |
-| `heading_navigation_path` | `string` | Navigation path displayed in the view heading. |
+| Key                       | Type                                                                              | Description                                              |
+| ------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `view`                    | `"summary" \| "batteries" \| "repairs" \| "updates" \| "availability" \| "stale"` | Which view to render.                                    |
+| `title`                   | `string`                                                                          | Title shown in the view heading.                         |
+| `path`                    | `string`                                                                          | URL path for the view.                                   |
+| `icon`                    | `string`                                                                          | Icon shown in the navigation.                            |
+| `subview`                 | `boolean`                                                                         | Mark this view as a subview (hides it from the sidebar). |
+| `area_id`                 | `string`                                                                          | Restrict the view to a single Home Assistant area.       |
+| `heading_navigation_path` | `string`                                                                          | Navigation path displayed in the view heading.           |
 
 ### Full example
 
@@ -265,6 +267,7 @@ strategy:
 - The strategy will not load until the Lovelace resource is registered.
 
 <!-- ha-marketplace:exclude-start -->
+
 ## Development
 
 ```bash
@@ -282,4 +285,5 @@ pnpm run check
 - Local build output: `dist/ha-dashboard-maintenance.js`
 - Local publish target: `/config/www/community/ha-dashboard-maintenance/ha-dashboard-maintenance.js`
 - Recommended local dev resource URL: `/local/community/ha-dashboard-maintenance/ha-dashboard-maintenance.js`
+
 <!-- ha-marketplace:exclude-end -->
