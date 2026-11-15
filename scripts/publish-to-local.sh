@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# The SSH commands expand the publish path on the client on purpose, and one
+# warning prints a literal command.
+# shellcheck disable=SC2016,SC2029
+
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -53,11 +57,6 @@ set +a
 
 SSH_ARGS=()
 RSYNC_RSH="ssh"
-REMOTE_TRANSFER_USER="${PUBLISH_TARGET%%@*}"
-
-if [[ "${PUBLISH_TARGET}" != *"@"* ]]; then
-  REMOTE_TRANSFER_USER="${USER}"
-fi
 
 if [[ -n "${PUBLISH_PORT:-}" ]]; then
   SSH_ARGS+=("-p" "${PUBLISH_PORT}")
