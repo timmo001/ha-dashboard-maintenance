@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permissions": [
+    {
+      "action": "gh.write *",
+      "resource": "gh_* timmo001/ha-dashboard-maintenance*",
+      "effect": "allow"
+    },
+    {
+      "action": "gh.write *",
+      "resource": "gh_*delete* timmo001/ha-dashboard-maintenance*",
+      "effect": "ask"
+    }
+  ]
+}
