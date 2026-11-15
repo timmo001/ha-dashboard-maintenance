@@ -1,0 +1,16 @@
+// Pre-push checks: the shared base from timmo001/workflows, plus the lint of
+// this repository. Tests, types and formatting are left to CI and `mise run
+// check`. Run them by hand with `hk check`.
+amends "package://github.com/timmo001/workflows/releases/download/20261114.0/hk-base@20261114.0.0#/base.pkl"
+
+exclude = List(".agents/skills/**", ".mise/**", "pnpm-lock.yaml", "vendor/**")
+
+hooks {
+  ["pre-push"] {
+    steps {
+      ["lint"] {
+        check = "mise run lint"
+      }
+    }
+  }
+}

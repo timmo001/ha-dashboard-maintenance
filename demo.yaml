@@ -8,6 +8,7 @@
 # out), pending updates, unavailable devices and sensors that have stopped
 # reporting. The embed has no other dashboards, so the tiles use the default
 # thresholds.
+---
 entities:
   # Batteries: two below the default 30% threshold, one charging, the rest fine
   - entity_id: sensor.front_door_lock_battery
