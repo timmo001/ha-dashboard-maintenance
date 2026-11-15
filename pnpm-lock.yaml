@@ -183,8 +183,8 @@ importers:
         specifier: 1.93.0
         version: 1.93.0
       '@timmo001/oxlint-rules':
-        specifier: 0.6.4
-        version: 0.6.4(@oxlint/plugins@1.93.0)(oxlint@1.93.0(oxlint-tsgolint@7.0.2007))
+        specifier: 0.6.5
+        version: 0.6.5(@oxlint/plugins@1.93.0)(oxlint@1.93.0(oxlint-tsgolint@7.0.2007))
       oxlint:
         specifier: 1.93.0
         version: 1.93.0(oxlint-tsgolint@7.0.2007)
@@ -491,8 +491,8 @@ packages:
   '@rolldown/pluginutils@1.1.0':
     resolution: {integrity: sha512-K+NU2HDCEem4sClgHH4ZZXwdJeNFkJo+hRk479DIwdIviAPN2hFJH1KHHwg8CxHQXvi0M5XY4deTXINfIiSG6w==}
 
-  '@timmo001/oxlint-rules@0.6.4':
-    resolution: {integrity: sha512-FHVvFrgyhw8JuE+eL+1/ABEWTynttmornkOU5a2WutAZeAkNQK38olP//u0OGOEKgtmHORTbUWD9jq9CmeJXmA==}
+  '@timmo001/oxlint-rules@0.6.5':
+    resolution: {integrity: sha512-BFDZ+yFyzT0jQA3A5Cgb533e5BwJBS4wWG4Z7JNQ+yjyZJspzssMLRRdoFk1bx7g1mWWvSFgl920vmtTXJJGZQ==}
     engines: {node: '>=20'}
     hasBin: true
     peerDependencies:
@@ -837,7 +837,7 @@ snapshots:
 
   '@rolldown/pluginutils@1.1.0': {}
 
-  '@timmo001/oxlint-rules@0.6.4(@oxlint/plugins@1.93.0)(oxlint@1.93.0(oxlint-tsgolint@7.0.2007))':
+  '@timmo001/oxlint-rules@0.6.5(@oxlint/plugins@1.93.0)(oxlint@1.93.0(oxlint-tsgolint@7.0.2007))':
     dependencies:
       '@oxlint/plugins': 1.93.0
       oxlint: 1.93.0(oxlint-tsgolint@7.0.2007)
