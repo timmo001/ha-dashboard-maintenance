@@ -28,11 +28,22 @@ It is distributed as a HACS `Dashboard` repository, not as a custom integration.
 
 Run all commands from the repository root unless noted otherwise.
 
-### Install frontend build dependencies
+### Install tools and frontend build dependencies
 
 ```bash
+mise install
 pnpm install
 ```
+
+`mise` pins Node, pnpm, hk and the linters in `mise.toml`. Run `hk install` once per checkout to set up the pre-push lints from `hk.pkl`.
+
+### Run every check
+
+```bash
+mise run check
+```
+
+This runs Oxlint, the Prettier check and the build. `mise run format` rewrites files with Prettier, and `mise run format:check` only reports them.
 
 ### Build generated frontend assets
 
