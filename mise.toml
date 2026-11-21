@@ -10,7 +10,7 @@ uv = "0.13.9"
 # yamllint's PyYAML has no wheels for newer Pythons, and mise won't build it from source.
 python = "3.15.2"
 "pipx:yamllint" = "1.38.0"
-"npm:markdownlint-cli2" = "0.24.1"
+"npm:markdownlint-cli2" = "0.24.2"
 actionlint = "1.7.12"
 shellcheck = "0.11.0"
 
