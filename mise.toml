@@ -6,7 +6,7 @@ pnpm = "12.23.0"
 # The linters the shared hk pre-push hook runs, matching CI.
 hk = "2.14.0"
 pkl = "0.33.1"
-uv = "0.13.9"
+uv = "0.13.10"
 # yamllint's PyYAML has no wheels for newer Pythons, and mise won't build it from source.
 python = "3.15.2"
 "pipx:yamllint" = "1.38.0"
