@@ -2,7 +2,7 @@ min_version = "2025.1.0"
 
 [tools]
 node = "26.13.1"
-pnpm = "12.23.0"
+pnpm = "12.24.0"
 # The linters the shared hk pre-push hook runs, matching CI.
 hk = "2.14.0"
 pkl = "0.33.1"
